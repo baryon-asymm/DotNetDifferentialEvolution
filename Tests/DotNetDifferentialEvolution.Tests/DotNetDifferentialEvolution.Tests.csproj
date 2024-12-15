@@ -24,4 +24,8 @@
       <ProjectReference Include="..\..\Src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="FitnessFunctions\" />
+    </ItemGroup>
+
 </Project>
