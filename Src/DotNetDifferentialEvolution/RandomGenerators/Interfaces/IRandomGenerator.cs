@@ -6,7 +6,7 @@ public interface IRandomGenerator
     
     public double NextDouble(int individualIndex);
 
-    public double NextInt();
+    public int NextInt();
     
-    public double NextInt(int individualIndex);
+    public int NextInt(int individualIndex);
 }

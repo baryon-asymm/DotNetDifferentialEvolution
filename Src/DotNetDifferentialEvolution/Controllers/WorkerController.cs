@@ -4,7 +4,9 @@ namespace DotNetDifferentialEvolution.Controllers;
 
 public class WorkerController : IDisposable
 {
-    private static volatile int _workerIdCounter;
+    private static volatile int _workerIdCounter = -1;
+    
+    private int _workerId;
     
     private readonly object _lock = new();
 
@@ -22,8 +24,9 @@ public class WorkerController : IDisposable
 
     public WorkerController(IWorkerExecutor workerExecutor)
     {
+        _workerId = Interlocked.Increment(ref _workerIdCounter);
         _workerExecutor = workerExecutor;
-        _workerThreadName = $"DEWorkerThread_{Interlocked.Increment(ref _workerIdCounter)}";
+        _workerThreadName = $"DEWorkerThread_{_workerId}";
     }
 
     public bool IsRunning()
@@ -70,7 +73,7 @@ public class WorkerController : IDisposable
             while (_passLoopPermitted == false) ;
             _passLoopPermitted = false;
         
-            _workerExecutor.Execute();
+            _workerExecutor.Execute(_workerId);
 
             _isPassLoopCompleted = true;
         }
