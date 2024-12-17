@@ -21,7 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj" />
+        <ProjectReference Include="..\..\Src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj"/>
     </ItemGroup>
 
 </Project>

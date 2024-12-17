@@ -5,34 +5,44 @@ namespace DotNetDifferentialEvolution.Controllers;
 public class WorkerController : IDisposable
 {
     private static volatile int _workerIdCounter = -1;
-    
-    private int _workerId;
-    
+
     private readonly object _lock = new();
 
     private readonly IWorkerExecutor _workerExecutor;
-    
-    private volatile bool _workerShouldStop;
-    
-    private readonly string _workerThreadName;
-    private Thread? _workerThread;
-    
-    private volatile bool _passLoopPermitted;
-    private volatile bool _isPassLoopCompleted;
-    
-    public bool IsPassLoopCompleted => _isPassLoopCompleted;
 
-    public WorkerController(IWorkerExecutor workerExecutor)
+    private readonly string _workerThreadName;
+    private volatile bool _isPassLoopCompleted;
+
+    private volatile bool _passLoopPermitted;
+
+    private readonly int _workerId;
+
+    private volatile bool _workerShouldStop;
+    private Thread? _workerThread;
+
+    public WorkerController(
+        IWorkerExecutor workerExecutor)
     {
         _workerId = Interlocked.Increment(ref _workerIdCounter);
         _workerExecutor = workerExecutor;
         _workerThreadName = $"DEWorkerThread_{_workerId}";
     }
 
+    public bool IsPassLoopCompleted => _isPassLoopCompleted;
+
+    public void Dispose()
+    {
+        // dispose
+
+        Interlocked.Decrement(ref _workerIdCounter);
+    }
+
     public bool IsRunning()
     {
         lock (_lock)
+        {
             return _workerThread?.IsAlive == true;
+        }
     }
 
     public void Start()
@@ -46,7 +56,7 @@ public class WorkerController : IDisposable
                 Name = _workerThreadName,
                 Priority = ThreadPriority.Highest
             };
-            
+
             _workerThread.Start();
         }
     }
@@ -72,8 +82,9 @@ public class WorkerController : IDisposable
         {
             while (_passLoopPermitted == false) ;
             _passLoopPermitted = false;
-        
-            _workerExecutor.Execute(_workerId);
+
+            //_workerExecutor.Execute(_workerId,
+            //                        out _);
 
             _isPassLoopCompleted = true;
         }
@@ -83,7 +94,7 @@ public class WorkerController : IDisposable
     {
         if (_workerThread != null && _workerThread.IsAlive)
             throw new InvalidOperationException("The worker is already running.");
-        
+
         _passLoopPermitted = false;
         _isPassLoopCompleted = false;
     }
@@ -97,18 +108,11 @@ public class WorkerController : IDisposable
     private void StopAndWaitUntilWorkerStopped()
     {
         _workerShouldStop = true;
-        
+
         var spinWait = new SpinWait();
         while (_workerThread != null && _workerThread.IsAlive)
             spinWait.SpinOnce();
-        
+
         _workerShouldStop = false;
-    }
-
-    public void Dispose()
-    {
-        // dispose
-
-        Interlocked.Decrement(ref _workerIdCounter);
     }
 }

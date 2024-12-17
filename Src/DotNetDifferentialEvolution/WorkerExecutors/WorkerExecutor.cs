@@ -2,33 +2,28 @@ using System.Runtime.InteropServices;
 using DotNetDifferentialEvolution.Interfaces;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
+using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.WorkerExecutors.Interfaces;
 
 namespace DotNetDifferentialEvolution.WorkerExecutors;
 
 public class WorkerExecutor : IWorkerExecutor
 {
-    private readonly int _populationSize;
+    private readonly IFitnessFunctionEvaluator _fitnessFunctionEvaluator;
     private readonly int _genomeSize;
 
     private readonly int _individualHandlerStepSize;
 
-    private readonly Memory<double> _populationFfValues;
-    private readonly Memory<double> _population;
-
-    private readonly Memory<double> _bufferPopulationFfFfValues;
-    private readonly Memory<double> _bufferPopulation;
-
     private readonly IMutationStrategy _mutationStrategy;
 
-    private readonly IFitnessFunctionEvaluator _fitnessFunctionEvaluator;
+    private readonly ISelectionStrategy _selectionStrategy;
+    private readonly int _populationSize;
+
+    private readonly Memory<double> _tempIndividual;
 
     public WorkerExecutor(
-        Memory<double> populationFfValues,
-        Memory<double> population,
-        Memory<double> bufferPopulationFfValues,
-        Memory<double> bufferPopulation,
         IMutationStrategy mutationStrategy,
+        ISelectionStrategy selectionStrategy,
         DEContext context)
     {
         _populationSize = context.PopulationSize;
@@ -36,30 +31,36 @@ public class WorkerExecutor : IWorkerExecutor
 
         _individualHandlerStepSize = context.WorkersCount;
 
-        _populationFfValues = populationFfValues;
-        _population = population;
-
-        _bufferPopulationFfFfValues = bufferPopulationFfValues;
-        _bufferPopulation = bufferPopulation;
-
         _mutationStrategy = mutationStrategy;
+        _selectionStrategy = selectionStrategy;
 
         _fitnessFunctionEvaluator = context.FitnessFunctionEvaluator;
+
+        _tempIndividual = new double[_genomeSize];
     }
 
-    public void Execute(int workerId)
+    public void Execute(
+        int workerId,
+        Span<double> population,
+        Span<double> populationFfValues,
+        Span<double> bufferPopulation,
+        Span<double> bufferPopulationFfValues,
+        out int bestHandledIndividualIndex)
     {
-        var population = MemoryMarshal.Cast<double, double>(_population.Span);
-        var bufferPopulation = MemoryMarshal.Cast<double, double>(_bufferPopulation.Span);
+        var tempIndividual = MemoryMarshal.Cast<double, double>(_tempIndividual.Span);
 
-        var bufferPopulationFfValues = MemoryMarshal.Cast<double, double>(_bufferPopulationFfFfValues.Span);
-
-        for (int i = workerId; i < _populationSize; i += _individualHandlerStepSize)
+        bestHandledIndividualIndex = workerId;
+        for (var i = workerId; i < _populationSize; i += _individualHandlerStepSize)
         {
-            _mutationStrategy.Mutate(i, population, bufferPopulation);
-            
-            ReadOnlySpan<double> genes = population.Slice(i * _genomeSize, _genomeSize);
-            bufferPopulationFfValues[i] = _fitnessFunctionEvaluator.Evaluate(genes);
+            _mutationStrategy.Mutate(i, population, tempIndividual);
+
+            var tempIndividualFfValue = _fitnessFunctionEvaluator.Evaluate(tempIndividual);
+
+            _selectionStrategy.Select(i, tempIndividualFfValue, tempIndividual, populationFfValues, population,
+                                      bufferPopulationFfValues, bufferPopulation);
+
+            if (bufferPopulationFfValues[i] < bufferPopulationFfValues[bestHandledIndividualIndex])
+                bestHandledIndividualIndex = i;
         }
     }
 }

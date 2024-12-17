@@ -4,10 +4,11 @@ namespace DotNetDifferentialEvolution.Tests.FitnessFunctionEvaluators;
 
 public class SimpleSumEvaluator : IFitnessFunctionEvaluator
 {
-    public double Evaluate(ReadOnlySpan<double> genes)
+    public double Evaluate(
+        ReadOnlySpan<double> genes)
     {
         var sum = 0.0;
-        
+
         foreach (var gene in genes)
             sum += gene;
 

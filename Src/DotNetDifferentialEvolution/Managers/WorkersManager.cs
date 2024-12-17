@@ -5,19 +5,26 @@ namespace DotNetDifferentialEvolution.Managers;
 
 public class WorkersManager : IDisposable
 {
-    private Memory<WorkerController> _workerControllers;
+    private readonly Memory<WorkerController> _workerControllers;
 
     private IWorkerExecutor _workerExecutor;
 
-    public WorkersManager(IWorkerExecutor executor)
+    public WorkersManager(
+        IWorkerExecutor executor)
     {
         _workerControllers = Memory<WorkerController>.Empty;
-        
+
         _workerExecutor = executor;
         EnsureWorkerExecutor();
     }
 
-    public void SetWorkerExecutor(IWorkerExecutor executor)
+    public void Dispose()
+    {
+        // TODO release managed resources here
+    }
+
+    public void SetWorkerExecutor(
+        IWorkerExecutor executor)
     {
         _workerExecutor = executor;
         EnsureWorkerExecutor();
@@ -33,10 +40,5 @@ public class WorkersManager : IDisposable
     {
         if (_workerControllers.Length == 0)
             throw new InvalidOperationException("The worker controllers are not initialized.");
-    }
-    
-    public void Dispose()
-    {
-        // TODO release managed resources here
     }
 }

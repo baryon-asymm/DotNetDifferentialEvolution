@@ -9,10 +9,10 @@ public class DEContext
     public int GenomeSize { get; init; }
 
     public int WorkersCount { get; init; }
-    
+
     public ReadOnlyMemory<double> GenesLowerBound { get; init; }
-    
+
     public ReadOnlyMemory<double> GenesUpperBound { get; init; }
-    
+
     public IFitnessFunctionEvaluator FitnessFunctionEvaluator { get; init; }
 }
