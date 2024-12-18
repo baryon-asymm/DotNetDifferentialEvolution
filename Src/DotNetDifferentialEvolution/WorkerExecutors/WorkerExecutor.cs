@@ -9,17 +9,17 @@ namespace DotNetDifferentialEvolution.WorkerExecutors;
 
 public class WorkerExecutor : IWorkerExecutor
 {
-    private readonly IFitnessFunctionEvaluator _fitnessFunctionEvaluator;
-    private readonly int _genomeSize;
-
+    private readonly int _populationSize;
     private readonly int _individualHandlerStepSize;
 
-    private readonly IMutationStrategy _mutationStrategy;
-
-    private readonly ISelectionStrategy _selectionStrategy;
-    private readonly int _populationSize;
-
     private readonly Memory<double> _tempIndividual;
+
+    private readonly DEContext _context;
+
+    private readonly IMutationStrategy _mutationStrategy;
+    private readonly ISelectionStrategy _selectionStrategy;
+    
+    private readonly IFitnessFunctionEvaluator _fitnessFunctionEvaluator;
 
     public WorkerExecutor(
         IMutationStrategy mutationStrategy,
@@ -27,27 +27,28 @@ public class WorkerExecutor : IWorkerExecutor
         DEContext context)
     {
         _populationSize = context.PopulationSize;
-        _genomeSize = context.GenomeSize;
-
         _individualHandlerStepSize = context.WorkersCount;
+
+        _tempIndividual = new double[context.GenomeSize];
+
+        _context = context;
 
         _mutationStrategy = mutationStrategy;
         _selectionStrategy = selectionStrategy;
 
         _fitnessFunctionEvaluator = context.FitnessFunctionEvaluator;
-
-        _tempIndividual = new double[_genomeSize];
     }
 
     public void Execute(
         int workerId,
-        Span<double> population,
-        Span<double> populationFfValues,
-        Span<double> bufferPopulation,
-        Span<double> bufferPopulationFfValues,
         out int bestHandledIndividualIndex)
     {
         var tempIndividual = MemoryMarshal.Cast<double, double>(_tempIndividual.Span);
+
+        var population = MemoryMarshal.Cast<double, double>(_context.Population.Span);
+        var populationFfValues = MemoryMarshal.Cast<double, double>(_context.PopulationFfValues.Span);
+        var tempPopulation = MemoryMarshal.Cast<double, double>(_context.TempPopulation.Span);
+        var tempPopulationFfValues = MemoryMarshal.Cast<double, double>(_context.TempPopulationFfValues.Span);
 
         bestHandledIndividualIndex = workerId;
         for (var i = workerId; i < _populationSize; i += _individualHandlerStepSize)
@@ -56,10 +57,15 @@ public class WorkerExecutor : IWorkerExecutor
 
             var tempIndividualFfValue = _fitnessFunctionEvaluator.Evaluate(tempIndividual);
 
-            _selectionStrategy.Select(i, tempIndividualFfValue, tempIndividual, populationFfValues, population,
-                                      bufferPopulationFfValues, bufferPopulation);
+            _selectionStrategy.Select(individualIndex: i,
+                                      tempIndividualFfValue,
+                                      tempIndividual,
+                                      populationFfValues,
+                                      population,
+                                      tempPopulationFfValues,
+                                      tempPopulation);
 
-            if (bufferPopulationFfValues[i] < bufferPopulationFfValues[bestHandledIndividualIndex])
+            if (tempPopulationFfValues[i] < tempPopulationFfValues[bestHandledIndividualIndex])
                 bestHandledIndividualIndex = i;
         }
     }

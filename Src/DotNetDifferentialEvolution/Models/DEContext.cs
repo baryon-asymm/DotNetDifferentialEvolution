@@ -15,4 +15,12 @@ public class DEContext
     public ReadOnlyMemory<double> GenesUpperBound { get; init; }
 
     public IFitnessFunctionEvaluator FitnessFunctionEvaluator { get; init; }
+
+    public Memory<double> Population { get; set; }
+
+    public Memory<double> PopulationFfValues { get; set; }
+
+    public Memory<double> TempPopulation { get; set; }
+
+    public Memory<double> TempPopulationFfValues { get; set; }
 }
