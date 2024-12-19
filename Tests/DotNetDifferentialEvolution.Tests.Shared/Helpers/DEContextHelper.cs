@@ -1,7 +1,7 @@
 using DotNetDifferentialEvolution.Models;
-using DotNetDifferentialEvolution.Tests.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
 
-namespace DotNetDifferentialEvolution.Tests.Helpers;
+namespace DotNetDifferentialEvolution.Tests.Shared.Helpers;
 
 public static class DEContextHelper
 {

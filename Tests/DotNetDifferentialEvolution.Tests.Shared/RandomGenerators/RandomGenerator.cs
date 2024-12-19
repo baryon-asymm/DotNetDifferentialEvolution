@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.RandomGenerators.Interfaces;
 
-namespace DotNetDifferentialEvolution.Tests.RandomGenerators;
+namespace DotNetDifferentialEvolution.Tests.Shared.RandomGenerators;
 
 public class RandomGenerator : IRandomGenerator
 {
