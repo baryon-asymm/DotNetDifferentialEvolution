@@ -1,8 +1,9 @@
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
-using DotNetDifferentialEvolution.RandomGenerators.Interfaces;
+using DotNetDifferentialEvolution.RandomProviders;
 
 namespace DotNetDifferentialEvolution.MutationStrategies;
 
@@ -19,12 +20,14 @@ public class MutationStrategy : IMutationStrategy
     private readonly ReadOnlyMemory<double> _lowerBound;
     private readonly ReadOnlyMemory<double> _upperBound;
     
-    private readonly IRandomGenerator _randomGenerator;
+    private readonly RandomProvider _randomProvider;
+    
+    private readonly Memory<double> _randomValuesVector;
     
     public MutationStrategy(
         double mutationForce,
         double crossoverProbability,
-        IRandomGenerator randomGenerator,
+        RandomProvider randomProvider,
         DEContext context)
     {
         _mutationForce = mutationForce;
@@ -36,7 +39,13 @@ public class MutationStrategy : IMutationStrategy
         _lowerBound = context.GenesLowerBound;
         _upperBound = context.GenesUpperBound;
         
-        _randomGenerator = randomGenerator;
+        _randomProvider = randomProvider;
+        
+        _randomValuesVector = new double[Vector<double>.Count];
+        for (int i = 0; i < _randomValuesVector.Length; i++)
+        {
+            _randomValuesVector.Span[i] = _randomProvider.NextDouble();
+        }
     }
 
     public void Mutate(
@@ -51,7 +60,7 @@ public class MutationStrategy : IMutationStrategy
         for (int i = 0; i < NumberOfIndividualsToChoose; i++)
         {
             var sizeWithoutCurrent = _populationSize - 1;
-            indexes[i] = _randomGenerator.NextInt(maxValue: sizeWithoutCurrent);
+            indexes[i] = _randomProvider.Next(maxValue: sizeWithoutCurrent);
             if (indexes[i] >= individualIndex) indexes[i]++;
 
             for (int j = 0; j < i; j++)
@@ -90,12 +99,12 @@ public class MutationStrategy : IMutationStrategy
         var upperBound = _upperBound.Span;
         for (int i = 0; i < trialIndividual.Length; i++)
         {
-            if (_randomGenerator.NextDouble() <= _crossoverProbability)
+            if (_randomProvider.NextDouble() <= _crossoverProbability)
             {
                 if (trialIndividual[i] < lowerBound[i] || trialIndividual[i] > upperBound[i])
                 {
                     trialIndividual[i] =
-                        _randomGenerator.NextDouble() * (upperBound[i] - lowerBound[i]) + lowerBound[i];
+                        _randomProvider.NextDouble() * (upperBound[i] - lowerBound[i]) + lowerBound[i];
                 }
             }
             else
@@ -103,6 +112,43 @@ public class MutationStrategy : IMutationStrategy
                 trialIndividual[i] = population[individualIndex * _genomeSize + i];
             }
         }
+        
+        /*var lowerBound = MemoryMarshal.Cast<double, Vector<double>>(_lowerBound.Span);
+        var upperBound = MemoryMarshal.Cast<double, Vector<double>>(_upperBound.Span);
+        
+        var randomValuesVector = MemoryMarshal.Cast<double, Vector<double>>(_randomValuesVector.Span)[0];
+
+        var populationVectors =
+            MemoryMarshal.Cast<double, Vector<double>>(population.Slice(individualIndex * _genomeSize, _genomeSize));
+        
+        var crossoverProbability = new Vector<double>(_crossoverProbability);
+        
+        Unsafe.SkipInit(out Vector<double> inboundsGenes);
+        Unsafe.SkipInit(out Vector<long> maskLessThanLowerBound);
+        Unsafe.SkipInit(out Vector<long> maskGreaterThanUpperBound);
+        Unsafe.SkipInit(out Vector<long> maskCrossover);
+        for (int i = 0; i < lowerBound.Length; i++)
+        {
+            inboundsGenes = randomValuesVector * (upperBound[i] - lowerBound[i]) + lowerBound[i];
+
+            randomValuesVector = _randomProvider.NextVectorByXorShift64(randomValuesVector);
+            
+            maskLessThanLowerBound = Vector.LessThan(trialIndividualVectors[i], lowerBound[i]);
+            maskGreaterThanUpperBound = Vector.GreaterThan(trialIndividualVectors[i], upperBound[i]);
+
+            trialIndividualVectors[i] =
+                Vector.ConditionalSelect(maskLessThanLowerBound, inboundsGenes, trialIndividualVectors[i]);
+            trialIndividualVectors[i] =
+                Vector.ConditionalSelect(maskGreaterThanUpperBound, inboundsGenes, trialIndividualVectors[i]);
+            
+            maskCrossover = Vector.GreaterThanOrEqual(randomValuesVector, crossoverProbability);
+            trialIndividualVectors[i] =
+                Vector.ConditionalSelect(maskCrossover, populationVectors[i], trialIndividualVectors[i]);
+            
+            randomValuesVector = _randomProvider.NextVectorByXorShift64(randomValuesVector);
+        }
+
+        randomValuesVector.StoreUnsafe(ref _randomValuesVector.Span[0]);*/
 
 #endregion
     }

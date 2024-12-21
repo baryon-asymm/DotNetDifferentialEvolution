@@ -3,17 +3,16 @@ using DotNetDifferentialEvolution.AlgorithmExecutors.Interfaces;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
-using DotNetDifferentialEvolution.RandomGenerators.Interfaces;
+using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.Tests.Shared.Helpers;
-using DotNetDifferentialEvolution.Tests.Shared.RandomGenerators;
 
 namespace DotNetDifferentialEvolution.Tests.AlgorithmExecutionTesters;
 
 public class AlgorithmExecutionTester
 {
-    private readonly IRandomGenerator _randomGenerator;
+    private readonly RandomProvider _randomProvider;
     private readonly IMutationStrategy _mutationStrategy;
     private readonly ISelectionStrategy _selectionStrategy;
     private readonly IAlgorithmExecutor _algorithmExecutor;
@@ -24,8 +23,8 @@ public class AlgorithmExecutionTester
     {
         var context = DEContextHelper.CreateContext();
 
-        _randomGenerator = new RandomGenerator();
-        _mutationStrategy = new MutationStrategy(0.5, 0.9, _randomGenerator, context);
+        _randomProvider = new RandomProvider();
+        _mutationStrategy = new MutationStrategy(0.5, 0.9, _randomProvider, context);
         _selectionStrategy = new SelectionStrategy(context);
         _algorithmExecutor = new AlgorithmExecutor(_mutationStrategy,
                                                    _selectionStrategy,
