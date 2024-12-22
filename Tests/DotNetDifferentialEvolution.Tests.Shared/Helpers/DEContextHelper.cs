@@ -1,7 +1,7 @@
 using DotNetDifferentialEvolution.Models;
-using DotNetDifferentialEvolution.Tests.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
 
-namespace DotNetDifferentialEvolution.Tests.Helpers;
+namespace DotNetDifferentialEvolution.Tests.Shared.Helpers;
 
 public static class DEContextHelper
 {
@@ -29,8 +29,8 @@ public static class DEContextHelper
             WorkersCount = 1,
             Population = populationHelper.Population,
             PopulationFfValues = populationHelper.PopulationFfValues,
-            TempPopulation = populationHelper.BufferPopulation,
-            TempPopulationFfValues = populationHelper.BufferPopulationFfValues
+            TrialPopulation = populationHelper.BufferPopulation,
+            TrialPopulationFfValues = populationHelper.BufferPopulationFfValues
         };
 
         return context;

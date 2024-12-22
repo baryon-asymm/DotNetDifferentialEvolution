@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.Interfaces;
 
-namespace DotNetDifferentialEvolution.Tests.Helpers;
+namespace DotNetDifferentialEvolution.Tests.Shared.Helpers;
 
 public class PopulationHelper
 {

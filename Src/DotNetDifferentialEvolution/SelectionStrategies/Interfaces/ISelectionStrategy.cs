@@ -4,10 +4,10 @@ public interface ISelectionStrategy
 {
     public void Select(
         int individualIndex,
-        double tempIndividualFfValue,
-        Span<double> tempIndividual,
+        double trialIndividualFfValue,
+        Span<double> trialIndividual,
         Span<double> populationFfValues,
         Span<double> population,
-        Span<double> bufferPopulationFfValues,
-        Span<double> bufferPopulation);
+        Span<double> nextPopulationFfValues,
+        Span<double> nextPopulation);
 }

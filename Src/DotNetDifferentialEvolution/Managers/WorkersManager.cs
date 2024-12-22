@@ -1,5 +1,5 @@
+using DotNetDifferentialEvolution.AlgorithmExecutors.Interfaces;
 using DotNetDifferentialEvolution.Controllers;
-using DotNetDifferentialEvolution.WorkerExecutors.Interfaces;
 
 namespace DotNetDifferentialEvolution.Managers;
 
@@ -7,14 +7,14 @@ public class WorkersManager : IDisposable
 {
     private readonly Memory<WorkerController> _workerControllers;
 
-    private IWorkerExecutor _workerExecutor;
+    private IAlgorithmExecutor _algorithmExecutor;
 
     public WorkersManager(
-        IWorkerExecutor executor)
+        IAlgorithmExecutor executor)
     {
         _workerControllers = Memory<WorkerController>.Empty;
 
-        _workerExecutor = executor;
+        _algorithmExecutor = executor;
         EnsureWorkerExecutor();
     }
 
@@ -24,15 +24,15 @@ public class WorkersManager : IDisposable
     }
 
     public void SetWorkerExecutor(
-        IWorkerExecutor executor)
+        IAlgorithmExecutor executor)
     {
-        _workerExecutor = executor;
+        _algorithmExecutor = executor;
         EnsureWorkerExecutor();
     }
 
     private void EnsureWorkerExecutor()
     {
-        if (_workerExecutor == null)
+        if (_algorithmExecutor == null)
             throw new InvalidOperationException("The worker executor is not initialized.");
     }
 

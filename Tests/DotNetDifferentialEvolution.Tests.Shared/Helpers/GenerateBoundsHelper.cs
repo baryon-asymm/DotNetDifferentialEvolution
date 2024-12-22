@@ -1,4 +1,4 @@
-namespace DotNetDifferentialEvolution.Tests.Helpers;
+namespace DotNetDifferentialEvolution.Tests.Shared.Helpers;
 
 public static class GenerateBoundsHelper
 {

@@ -20,7 +20,7 @@ public class DEContext
 
     public Memory<double> PopulationFfValues { get; set; }
 
-    public Memory<double> TempPopulation { get; set; }
+    public Memory<double> TrialPopulation { get; set; }
 
-    public Memory<double> TempPopulationFfValues { get; set; }
+    public Memory<double> TrialPopulationFfValues { get; set; }
 }

@@ -1,4 +1,4 @@
-using DotNetDifferentialEvolution.WorkerExecutors.Interfaces;
+using DotNetDifferentialEvolution.AlgorithmExecutors.Interfaces;
 
 namespace DotNetDifferentialEvolution.Controllers;
 
@@ -8,7 +8,7 @@ public class WorkerController : IDisposable
 
     private readonly object _lock = new();
 
-    private readonly IWorkerExecutor _workerExecutor;
+    private readonly IAlgorithmExecutor _algorithmExecutor;
 
     private readonly string _workerThreadName;
     private volatile bool _isPassLoopCompleted;
@@ -21,10 +21,10 @@ public class WorkerController : IDisposable
     private Thread? _workerThread;
 
     public WorkerController(
-        IWorkerExecutor workerExecutor)
+        IAlgorithmExecutor algorithmExecutor)
     {
         _workerId = Interlocked.Increment(ref _workerIdCounter);
-        _workerExecutor = workerExecutor;
+        _algorithmExecutor = algorithmExecutor;
         _workerThreadName = $"DEWorkerThread_{_workerId}";
     }
 
@@ -83,7 +83,7 @@ public class WorkerController : IDisposable
             while (_passLoopPermitted == false) ;
             _passLoopPermitted = false;
 
-            //_workerExecutor.Execute(_workerId,
+            //_algorithmExecutor.Execute(_workerId,
             //                        out _);
 
             _isPassLoopCompleted = true;

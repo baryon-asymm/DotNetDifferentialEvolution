@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.Interfaces;
 
-namespace DotNetDifferentialEvolution.Tests.FitnessFunctionEvaluators;
+namespace DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
 
 public class SimpleSumEvaluator : IFitnessFunctionEvaluator
 {
