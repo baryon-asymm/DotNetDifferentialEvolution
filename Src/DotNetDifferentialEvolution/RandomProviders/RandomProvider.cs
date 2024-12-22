@@ -1,13 +1,17 @@
 namespace DotNetDifferentialEvolution.RandomProviders;
 
-public class RandomProvider : Random
+public class RandomProvider : BaseRandomProvider
 {
-    public RandomProvider()
+    private readonly Random _random = Random.Shared;
+    
+    public override int Next(
+        int maxValue)
     {
+        return _random.Next(maxValue);
     }
 
-    public RandomProvider(
-        int Seed) : base(Seed)
+    public override double NextDouble()
     {
+        return _random.NextDouble();
     }
 }

@@ -14,7 +14,7 @@ namespace DotNetDifferentialEvolution.Benchmark.BenchmarkTesters;
 
 public class SimpleSumTester
 {
-    private readonly RandomProvider _randomProvider;
+    private readonly BaseRandomProvider _randomProvider;
     private readonly IMutationStrategy _mutationStrategy;
     private readonly ISelectionStrategy _selectionStrategy;
     private readonly IAlgorithmExecutor _algorithmExecutor;

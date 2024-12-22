@@ -12,7 +12,7 @@ namespace DotNetDifferentialEvolution.Tests.AlgorithmExecutionTesters;
 
 public class AlgorithmExecutionTester
 {
-    private readonly RandomProvider _randomProvider;
+    private readonly BaseRandomProvider _randomProvider;
     private readonly IMutationStrategy _mutationStrategy;
     private readonly ISelectionStrategy _selectionStrategy;
     private readonly IAlgorithmExecutor _algorithmExecutor;

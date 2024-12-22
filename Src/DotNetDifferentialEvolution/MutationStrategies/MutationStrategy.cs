@@ -19,12 +19,12 @@ public class MutationStrategy : IMutationStrategy
     private readonly ReadOnlyMemory<double> _lowerBound;
     private readonly ReadOnlyMemory<double> _upperBound;
     
-    private readonly RandomProvider _randomProvider;
+    private readonly BaseRandomProvider _randomProvider;
     
     public MutationStrategy(
         double mutationForce,
         double crossoverProbability,
-        RandomProvider randomProvider,
+        BaseRandomProvider randomProvider,
         DEContext context)
     {
         _mutationForce = mutationForce;
