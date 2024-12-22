@@ -8,7 +8,7 @@ public class SelectionStrategy : ISelectionStrategy
     private readonly int _genomeSize;
 
     public SelectionStrategy(
-        DEContext context)
+        ProblemContext context)
     {
         _genomeSize = context.GenomeSize;
     }

@@ -19,11 +19,11 @@ public class SimpleSumTester
     private readonly ISelectionStrategy _selectionStrategy;
     private readonly IAlgorithmExecutor _algorithmExecutor;
     
-    private readonly DEContext _context;
+    private readonly ProblemContext _context;
     
     public SimpleSumTester()
     {
-        var context = DEContextHelper.CreateContext();
+        var context = ProblemContextHelper.CreateContext();
 
         const int seed = 0x12345678;
         _randomProvider = new DeterminedRandomProvider(seed);

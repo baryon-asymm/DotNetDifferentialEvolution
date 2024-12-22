@@ -25,7 +25,7 @@ public class MutationStrategy : IMutationStrategy
         double mutationForce,
         double crossoverProbability,
         BaseRandomProvider randomProvider,
-        DEContext context)
+        ProblemContext context)
     {
         _mutationForce = mutationForce;
         _crossoverProbability = crossoverProbability;

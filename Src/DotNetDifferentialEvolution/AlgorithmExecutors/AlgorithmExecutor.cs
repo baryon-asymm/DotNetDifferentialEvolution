@@ -15,12 +15,12 @@ public class AlgorithmExecutor : IAlgorithmExecutor
     private readonly IMutationStrategy _mutationStrategy;
     private readonly ISelectionStrategy _selectionStrategy;
 
-    private readonly DEContext _context;
+    private readonly ProblemContext _context;
 
     public AlgorithmExecutor(
         IMutationStrategy mutationStrategy,
         ISelectionStrategy selectionStrategy,
-        DEContext context)
+        ProblemContext context)
     {
         _populationSize = context.PopulationSize;
         _individualHandlerStepSize = context.WorkersCount;

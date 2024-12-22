@@ -22,13 +22,13 @@ public class PopulationHelper
 
     public Memory<double> Population => _memory[..(_populationSize * _genomeSize)];
 
-    public Memory<double> BufferPopulation =>
+    public Memory<double> TrialPopulation =>
         _memory[(_populationSize * _genomeSize)..(2 * _populationSize * _genomeSize)];
 
     public Memory<double> PopulationFfValues =>
         _memory[(2 * _populationSize * _genomeSize)..(2 * _populationSize * _genomeSize + _populationSize)];
 
-    public Memory<double> BufferPopulationFfValues => _memory[(2 * _populationSize * _genomeSize + _populationSize)..];
+    public Memory<double> TrialPopulationFfValues => _memory[(2 * _populationSize * _genomeSize + _populationSize)..];
 
     public void InitializePopulationWithRandomValues()
     {
