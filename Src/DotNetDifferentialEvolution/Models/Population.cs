@@ -48,6 +48,6 @@ public class Population : IIndividualCursorUpdater
         ref ReadOnlyMemory<double> genes)
     {
         fitnessFunctionValue = _fitnessFunctionValues.Span[individualIndex];
-        genes = genes.Slice(individualIndex * GenomeSize, GenomeSize);
+        genes = _genes.Slice(individualIndex * GenomeSize, GenomeSize);
     }
 }
