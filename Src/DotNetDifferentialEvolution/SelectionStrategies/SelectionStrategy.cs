@@ -8,33 +8,33 @@ public class SelectionStrategy : ISelectionStrategy
     private readonly int _genomeSize;
 
     public SelectionStrategy(
-        DEContext context)
+        ProblemContext context)
     {
         _genomeSize = context.GenomeSize;
     }
 
     public void Select(
         int individualIndex,
-        double tempIndividualFfValue,
-        Span<double> tempIndividual,
+        double trialIndividualFfValue,
+        Span<double> trialIndividual,
         Span<double> populationFfValues,
         Span<double> population,
-        Span<double> bufferPopulationFfValues,
-        Span<double> bufferPopulation)
+        Span<double> nextPopulationFfValues,
+        Span<double> nextPopulation)
     {
-        if (tempIndividualFfValue < populationFfValues[individualIndex])
+        if (trialIndividualFfValue < populationFfValues[individualIndex])
         {
-            tempIndividual.CopyTo(
-                bufferPopulation[(individualIndex * _genomeSize)..(individualIndex * _genomeSize + _genomeSize)]);
+            trialIndividual.CopyTo(
+                nextPopulation.Slice(individualIndex * _genomeSize, _genomeSize));
 
-            bufferPopulationFfValues[individualIndex] = tempIndividualFfValue;
+            nextPopulationFfValues[individualIndex] = trialIndividualFfValue;
         }
         else
         {
-            population[(individualIndex * _genomeSize)..(individualIndex * _genomeSize + _genomeSize)].CopyTo(
-                bufferPopulation[(individualIndex * _genomeSize)..(individualIndex * _genomeSize + _genomeSize)]);
+            population.Slice(individualIndex * _genomeSize, _genomeSize).CopyTo(
+                nextPopulation.Slice(individualIndex * _genomeSize, _genomeSize));
 
-            bufferPopulationFfValues[individualIndex] = populationFfValues[individualIndex];
+            nextPopulationFfValues[individualIndex] = populationFfValues[individualIndex];
         }
     }
 }
