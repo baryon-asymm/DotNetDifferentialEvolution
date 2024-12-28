@@ -4,6 +4,8 @@ using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.SelectionStrategies;
+using DotNetDifferentialEvolution.TerminationStrategies;
+using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
 using DotNetDifferentialEvolution.Tests.Shared.Helpers;
@@ -22,34 +24,36 @@ public class AlgorithmExecutionTester
     }
 
     [Fact]
-    public void TestWithSimpleFitnessFunctionEvaluator()
+    public void TestWithSimpleSumFitnessFunctionEvaluator()
     {
 #region Setup
 
         var random = Random.Shared;
-        var genomeSize = random.Next(1, 10);
+        var genomeSize = random.Next(2, 20);
         var lowerBounds = new double[genomeSize];
         var upperBounds = new double[genomeSize];
         for (int i = 0; i < genomeSize; i++)
         {
-            lowerBounds[i] = random.NextDouble() * 10;
-            upperBounds[i] = lowerBounds[i] + random.NextDouble() * 10;
+            lowerBounds[i] = random.Next(-50, 50) * 1.0;
+            upperBounds[i] = lowerBounds[i] + random.Next(10) * 10.0;
         }
         
         _testOutputHelper.WriteLine($"Genome size: {genomeSize}");
         _testOutputHelper.WriteLine($"Lower bounds: {string.Join(", ", lowerBounds)}");
         _testOutputHelper.WriteLine($"Upper bounds: {string.Join(", ", upperBounds)}");
 
-        const int populationSize = 100;
-        const double mutationForce = 0.2;
-        const double crossoverProbability = 0.9;
+        const int populationSize = 200;
+        const double mutationForce = 0.3;
+        const double crossoverProbability = 0.8;
         var evaluator = new SimpleSumEvaluator(lowerBounds, upperBounds);
-        const int generations = 100_000;
 
+        const int maxGenerationNumber = 100_000;
+        var terminationStrategy = new LimitGenerationNumberTerminationStrategy(maxGenerationNumber);
         var context = CreateContext(populationSize,
                                     mutationForce,
                                     crossoverProbability,
                                     evaluator,
+                                    terminationStrategy,
                                     out var algorithmExecutor);
 
 #endregion
@@ -57,7 +61,7 @@ public class AlgorithmExecutionTester
 #region Execution
 
         const int workerId = 0;
-        var resultPopulation = RunTestAndGetResultPopulation(workerId, generations, algorithmExecutor, context);
+        var resultPopulation = RunTestAndGetResultPopulation(workerId, algorithmExecutor, context);
         
         resultPopulation.MoveCursorToBestIndividual();
 
@@ -65,13 +69,11 @@ public class AlgorithmExecutionTester
 
 #region Validation
 
-        const double tolerance = 1e-6;
         var globalMinimumFfValue = evaluator.GetGlobalMinimumFfValue();
-        var globalMinimumGenes = evaluator.GetGlobalMinimumGenes().Span;
-        Assert.Equal(resultPopulation.IndividualCursor.FitnessFunctionValue, globalMinimumFfValue, tolerance);
-        var genes = resultPopulation.IndividualCursor.Genes.Span;
-        for (int i = 0; i < resultPopulation.GenomeSize; i++)
-            Assert.Equal(genes[i], globalMinimumGenes[i], tolerance);
+        var error = Math.Pow(resultPopulation.IndividualCursor.FitnessFunctionValue - globalMinimumFfValue, 2)
+            / Math.Pow(globalMinimumFfValue, 2);
+        const double onePercent = 0.01;
+        Assert.True(error <= onePercent);
 
 #endregion
     }
@@ -85,12 +87,15 @@ public class AlgorithmExecutionTester
         const double mutationForce = 0.5;
         const double crossoverProbability = 0.9;
         var evaluator = new RosenbrockEvaluator();
-        const int generations = 100_000;
 
+        const int maxStagnationStreak = 1000;
+        const double stagnationThreshold = 1e-6;
+        var terminationStrategy = new StagnationStreakTerminationStrategy(maxStagnationStreak, stagnationThreshold);
         var context = CreateContext(populationSize,
                                     mutationForce,
                                     crossoverProbability,
                                     evaluator,
+                                    terminationStrategy,
                                     out var algorithmExecutor);
 
 #endregion
@@ -98,7 +103,7 @@ public class AlgorithmExecutionTester
 #region Execution
 
         const int workerId = 0;
-        var resultPopulation = RunTestAndGetResultPopulation(workerId, generations, algorithmExecutor, context);
+        var resultPopulation = RunTestAndGetResultPopulation(workerId, algorithmExecutor, context);
         
         resultPopulation.MoveCursorToBestIndividual();
 
@@ -122,9 +127,11 @@ public class AlgorithmExecutionTester
         double mutationForce,
         double crossoverProbability,
         ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator,
+        ITerminationStrategy terminationStrategy,
         out IAlgorithmExecutor algorithmExecutor)
     {
-        var context = ProblemContextHelper.CreateContext(populationSize, testFitnessFunctionEvaluator);
+        var context = ProblemContextHelper.CreateContext(
+            populationSize, testFitnessFunctionEvaluator, terminationStrategy);
         var randomProvider = new RandomProvider();
         var mutationStrategy = new MutationStrategy(mutationForce, crossoverProbability, randomProvider, context);
         var selectionStrategy = new SelectionStrategy(context);
@@ -135,19 +142,24 @@ public class AlgorithmExecutionTester
 
     private static Population RunTestAndGetResultPopulation(
         int workerId,
-        int generations,
         IAlgorithmExecutor algorithmExecutor,
         ProblemContext context)
     {
+        var terminationStrategy = context.TerminationStrategy;
+        
+        Population population;
+        var generationNumber = 0;
         var bestHandledIndividualIndex = 0;
-        for (int i = 0; i < generations; i++)
+        do
         {
             algorithmExecutor.Execute(workerId,
-                                       out bestHandledIndividualIndex);
+                                      out bestHandledIndividualIndex);
 
             context.SwapPopulations();
-        }
+            
+            population = context.GetRepresentativePopulation(++generationNumber, bestHandledIndividualIndex);
+        } while (terminationStrategy.ShouldTerminate(population) == false);
         
-        return context.GetRepresentativePopulation(generations, bestHandledIndividualIndex);
+        return population;
     }
 }

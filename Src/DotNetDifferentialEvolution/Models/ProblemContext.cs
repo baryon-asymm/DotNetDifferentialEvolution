@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Interfaces;
+using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.Models;
 
@@ -18,6 +19,8 @@ public class ProblemContext
     public ReadOnlyMemory<double> GenesUpperBound { get; init; }
 
     public IFitnessFunctionEvaluator FitnessFunctionEvaluator { get; init; }
+    
+    public ITerminationStrategy TerminationStrategy { get; init; }
 
     public Memory<double> Population { get; private set; }
 
@@ -34,6 +37,7 @@ public class ProblemContext
         ReadOnlyMemory<double> genesLowerBound,
         ReadOnlyMemory<double> genesUpperBound,
         IFitnessFunctionEvaluator fitnessFunctionEvaluator,
+        ITerminationStrategy terminationStrategy,
         Memory<double> population,
         Memory<double> populationFfValues,
         Memory<double> trialPopulation,
@@ -45,6 +49,7 @@ public class ProblemContext
         GenesLowerBound = genesLowerBound;
         GenesUpperBound = genesUpperBound;
         FitnessFunctionEvaluator = fitnessFunctionEvaluator;
+        TerminationStrategy = terminationStrategy;
         Population = population;
         PopulationFfValues = populationFfValues;
         TrialPopulation = trialPopulation;
@@ -69,10 +74,10 @@ public class ProblemContext
     }
     
     public Population GetRepresentativePopulation(
-        int generation,
+        int generationNumber,
         int bestIndividualIndex)
     {
-        _population.Generation = generation;
+        _population.GenerationNumber = generationNumber;
         _population.BestIndividualIndex = bestIndividualIndex;
         
         return _population;

@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
 
@@ -8,7 +9,8 @@ public static class ProblemContextHelper
 {
     public static ProblemContext CreateContext(
         int populationSize,
-        ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator)
+        ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator,
+        ITerminationStrategy terminationStrategy)
     {
         var lowerBound = testFitnessFunctionEvaluator.GetLowerBounds();
         var upperBound = testFitnessFunctionEvaluator.GetUpperBounds();
@@ -29,6 +31,7 @@ public static class ProblemContextHelper
             genesLowerBound: lowerBound,
             genesUpperBound: upperBound,
             fitnessFunctionEvaluator: testFitnessFunctionEvaluator,
+            terminationStrategy: terminationStrategy,
             population: populationHelper.Population,
             populationFfValues: populationHelper.PopulationFfValues,
             trialPopulation: populationHelper.TrialPopulation,

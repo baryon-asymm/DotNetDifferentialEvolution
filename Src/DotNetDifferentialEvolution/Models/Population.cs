@@ -9,7 +9,7 @@ public class Population : IIndividualCursorUpdater
     
     public IndividualCursor IndividualCursor { get; init; }
     
-    public int Generation { get; set; }
+    public int GenerationNumber { get; set; }
 
     public int GenomeSize => _genes.Length / PopulationSize;
 
