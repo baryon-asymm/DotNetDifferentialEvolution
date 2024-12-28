@@ -1,31 +1,34 @@
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
 
 namespace DotNetDifferentialEvolution.Tests.Shared.Helpers;
 
 public static class ProblemContextHelper
 {
-    public static ProblemContext CreateContext()
+    public static ProblemContext CreateContext(
+        int populationSize,
+        ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator)
     {
-        const int populationSize = 300;
-        const int boundsSize = 20;
-        const double lowerBoundValue = -1.0;
-        const double upperBoundValue = 1.0;
-
-        var fFEvaluator = new SimpleSumEvaluator();
-
+        var lowerBound = testFitnessFunctionEvaluator.GetLowerBounds();
+        var upperBound = testFitnessFunctionEvaluator.GetUpperBounds();
+        
+        if (lowerBound.Length != upperBound.Length)
+            throw new ArgumentException("Lower and upper bounds must have the same size");
+        
+        var boundsSize = lowerBound.Length;
         var populationHelper = new PopulationHelper(populationSize, boundsSize);
         
-        populationHelper.InitializePopulationWithRandomValues();
-        populationHelper.EvaluatePopulationFfValues(fFEvaluator);
+        populationHelper.InitializePopulationWithRandomValues(lowerBound.Span, upperBound.Span);
+        populationHelper.EvaluatePopulationFfValues(testFitnessFunctionEvaluator);
 
         var context = new ProblemContext(
             populationSize: populationSize,
             genomeSize: boundsSize,
             workersCount: 1,
-            genesLowerBound: GenerateBoundsHelper.GenerateBounds(boundsSize, lowerBoundValue),
-            genesUpperBound: GenerateBoundsHelper.GenerateBounds(boundsSize, upperBoundValue),
-            fitnessFunctionEvaluator: fFEvaluator,
+            genesLowerBound: lowerBound,
+            genesUpperBound: upperBound,
+            fitnessFunctionEvaluator: testFitnessFunctionEvaluator,
             population: populationHelper.Population,
             populationFfValues: populationHelper.PopulationFfValues,
             trialPopulation: populationHelper.TrialPopulation,
