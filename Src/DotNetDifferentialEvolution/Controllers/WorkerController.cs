@@ -1,40 +1,49 @@
 using DotNetDifferentialEvolution.AlgorithmExecutors.Interfaces;
+using DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers.Interfaces;
 
 namespace DotNetDifferentialEvolution.Controllers;
 
 public class WorkerController : IDisposable
 {
-    private static volatile int _workerIdCounter = -1;
-
+    private static volatile int _globalWorkerCounter = 0;
+    
     private readonly object _lock = new();
-
-    private readonly IAlgorithmExecutor _algorithmExecutor;
-
+    
+    private bool _isDisposed;
+    
+    private readonly int _workerId;
     private readonly string _workerThreadName;
-    private volatile bool _isPassLoopCompleted;
 
+    private volatile bool _isPassLoopCompleted;
     private volatile bool _passLoopPermitted;
 
-    private readonly int _workerId;
-
     private volatile bool _workerShouldStop;
+    
+    private volatile int _bestHandledIndividualIndex;
+    
     private Thread? _workerThread;
 
-    public WorkerController(
-        IAlgorithmExecutor algorithmExecutor)
-    {
-        _workerId = Interlocked.Increment(ref _workerIdCounter);
-        _algorithmExecutor = algorithmExecutor;
-        _workerThreadName = $"DEWorkerThread_{_workerId}";
-    }
+    private readonly IAlgorithmExecutor _algorithmExecutor;
+    
+    private readonly IWorkerPassLoopDoneHandler? _workerPassLoopDoneHandler;
 
+    public static int GlobalWorkerCounter => _globalWorkerCounter;
+    
+    public int WorkerId => _workerId;
+    
     public bool IsPassLoopCompleted => _isPassLoopCompleted;
+    
+    public int BestHandledIndividualIndex => _bestHandledIndividualIndex;
 
-    public void Dispose()
+    public WorkerController(
+        int workerId,
+        IAlgorithmExecutor algorithmExecutor,
+        IWorkerPassLoopDoneHandler? workerPassLoopDoneHandler = null)
     {
-        // dispose
-
-        Interlocked.Decrement(ref _workerIdCounter);
+        _workerId = workerId;
+        _workerThreadName = $"{Interlocked.Increment(ref _globalWorkerCounter)}-DEWorkerThread_{_workerId}";
+        _algorithmExecutor = algorithmExecutor;
+        _workerPassLoopDoneHandler = workerPassLoopDoneHandler;
     }
 
     public bool IsRunning()
@@ -61,16 +70,20 @@ public class WorkerController : IDisposable
         }
     }
 
-    public void Stop()
+    public void Stop(bool waitUntilStopped = false)
     {
         lock (_lock)
         {
             EnsureRunningState();
-            StopAndWaitUntilWorkerStopped();
+            
+            if (waitUntilStopped)
+                StopAndWaitUntilWorkerStopped();
+            else
+                SendStopSignal();
         }
     }
 
-    public void PermitPassLoop()
+    public void PermitToPassLoop()
     {
         _passLoopPermitted = true;
         _isPassLoopCompleted = false;
@@ -80,13 +93,19 @@ public class WorkerController : IDisposable
     {
         while (_workerShouldStop == false)
         {
-            while (_passLoopPermitted == false) ;
+            while (_passLoopPermitted == false && _workerShouldStop == false) ;
             _passLoopPermitted = false;
+            
+            if (_workerShouldStop)
+                return;
 
-            //_algorithmExecutor.Execute(_workerId,
-            //                        out _);
+            _algorithmExecutor.Execute(_workerId,
+                                       out var bestHandledIndividualIndex);
+            _bestHandledIndividualIndex = bestHandledIndividualIndex;
 
             _isPassLoopCompleted = true;
+            
+            _workerPassLoopDoneHandler?.Handle(this);
         }
     }
 
@@ -95,8 +114,9 @@ public class WorkerController : IDisposable
         if (_workerThread != null && _workerThread.IsAlive)
             throw new InvalidOperationException("The worker is already running.");
 
-        _passLoopPermitted = false;
-        _isPassLoopCompleted = false;
+        _workerShouldStop = false;
+        
+        PermitToPassLoop();
     }
 
     private void EnsureRunningState()
@@ -107,12 +127,41 @@ public class WorkerController : IDisposable
 
     private void StopAndWaitUntilWorkerStopped()
     {
-        _workerShouldStop = true;
+        SendStopSignal();
 
         var spinWait = new SpinWait();
         while (_workerThread != null && _workerThread.IsAlive)
             spinWait.SpinOnce();
+    }
 
-        _workerShouldStop = false;
+    private void SendStopSignal()
+    {
+        _workerShouldStop = true;
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+    
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_isDisposed)
+            return;
+
+        if (disposing)
+        {
+            StopAndWaitUntilWorkerStopped();
+            
+            Interlocked.Decrement(ref _globalWorkerCounter);
+        }
+
+        _isDisposed = true;
+    }
+    
+    ~WorkerController()
+    {
+        Dispose(false);
     }
 }

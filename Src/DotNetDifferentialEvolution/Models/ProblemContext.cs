@@ -21,6 +21,8 @@ public class ProblemContext
     public IFitnessFunctionEvaluator FitnessFunctionEvaluator { get; init; }
     
     public ITerminationStrategy TerminationStrategy { get; init; }
+    
+    public IPopulationUpdatedHandler? PopulationUpdatedHandler { get; init; }
 
     public Memory<double> Population { get; private set; }
 
