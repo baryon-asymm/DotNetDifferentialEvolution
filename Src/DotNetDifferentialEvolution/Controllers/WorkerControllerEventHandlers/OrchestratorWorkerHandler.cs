@@ -26,28 +26,43 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     }
     
     public void Handle(
-        WorkerController workerController)
+        WorkerController sender,
+        out bool shouldTerminate)
     {
-        _nextHandler?.Handle(workerController);
+        _nextHandler?.Handle(sender, out _);
         
-        WaitUntilAllWorkersCompletePassLoop();
-
-        _context.SwapPopulations();
+        WaitAllWorkersOrThemExceptions(
+            sender,
+            out var hasException);
         
-        var bestIndividualIndex = GetBestIndividualIndex(workerController);
-        var population = _context.GetRepresentativePopulation(++_passLoopCounter, bestIndividualIndex);
-        
-        _context.PopulationUpdatedHandler?.Handle(population);
-        var shouldTerminate = _context.TerminationStrategy.ShouldTerminate(population);
-
-        if (shouldTerminate)
+        if (hasException)
         {
-            StopAllWorkers(workerController);
-            _resultPopulationTcs.SetResult(population);
+            StopAllWorkers();
+            
+            var aggregateException = GetAggregateException(sender);
+            _resultPopulationTcs.SetException(aggregateException);
+            
+            shouldTerminate = true;
         }
         else
         {
-            PermitAllWorkersToStartPassLoop(workerController);
+            _context.SwapPopulations();
+        
+            var bestIndividualIndex = GetBestIndividualIndex(sender);
+            var population = _context.GetRepresentativePopulation(++_passLoopCounter, bestIndividualIndex);
+        
+            _context.PopulationUpdatedHandler?.Handle(population);
+            
+            shouldTerminate = _context.TerminationStrategy.ShouldTerminate(population);
+            if (shouldTerminate)
+            {
+                StopAllWorkers();
+                _resultPopulationTcs.SetResult(population);
+            }
+            else
+            {
+                PermitAllWorkersToStartPassLoop(sender);
+            }
         }
     }
     
@@ -56,13 +71,34 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         return _resultPopulationTcs.Task;
     }
     
-    private void WaitUntilAllWorkersCompletePassLoop()
+    private void WaitAllWorkersOrThemExceptions(
+        WorkerController workerController,
+        out bool hasException)
     {
+        hasException = workerController.HasException;
         var otherWorkerControllers = _otherWorkerControllers.Span;
         for (int i = 0; i < otherWorkerControllers.Length; i++)
         {
-            while (otherWorkerControllers[i].IsPassLoopCompleted == false) ;
+            while (otherWorkerControllers[i].IsPassLoopCompleted == false
+                   && otherWorkerControllers[i].HasException == false) ;
+            hasException |= otherWorkerControllers[i].HasException;
         }
+    }
+    
+    private AggregateException GetAggregateException(
+        WorkerController workerController)
+    {
+        var exceptions = new List<Exception>();
+        if (workerController.HasException)
+            exceptions.Add(workerController.Exception!);
+        var otherWorkerControllers = _otherWorkerControllers.Span;
+        for (int i = 0; i < otherWorkerControllers.Length; i++)
+        {
+            if (otherWorkerControllers[i].HasException)
+                exceptions.Add(otherWorkerControllers[i].Exception!);
+        }
+        
+        return new AggregateException(exceptions);
     }
     
     private int GetBestIndividualIndex(
@@ -97,12 +133,10 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             otherWorkerControllers[i].PermitToPassLoop();
     }
     
-    private void StopAllWorkers(
-        WorkerController workerController)
+    private void StopAllWorkers()
     {
-        workerController.Stop();
         var otherWorkerControllers = _otherWorkerControllers.Span;
         for (int i = 0; i < otherWorkerControllers.Length; i++)
-            otherWorkerControllers[i].Stop(waitUntilStopped: true);
+            otherWorkerControllers[i].Stop();
     }
 }

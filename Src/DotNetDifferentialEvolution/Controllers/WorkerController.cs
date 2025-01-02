@@ -17,15 +17,23 @@ public class WorkerController : IDisposable
     private volatile bool _isPassLoopCompleted;
     private volatile bool _passLoopPermitted;
 
+    private volatile bool _isRunning;
     private volatile bool _workerShouldStop;
     
     private volatile int _bestHandledIndividualIndex;
     
     private Thread? _workerThread;
+    private Exception? _exception;
 
     private readonly IAlgorithmExecutor _algorithmExecutor;
     
     private readonly IWorkerPassLoopDoneHandler? _workerPassLoopDoneHandler;
+
+    public bool IsRunning => _isRunning;
+    
+    public bool HasException => _exception != null;
+
+    public Exception? Exception => _exception;
 
     public static int GlobalWorkerCounter => _globalWorkerCounter;
     
@@ -46,20 +54,22 @@ public class WorkerController : IDisposable
         _workerPassLoopDoneHandler = workerPassLoopDoneHandler;
     }
 
-    public bool IsRunning()
+    public void Start(bool throwIfRunning = false)
     {
         lock (_lock)
         {
-            return _workerThread?.IsAlive == true;
-        }
-    }
-
-    public void Start()
-    {
-        lock (_lock)
-        {
+            if (_isRunning)
+            {
+                if (throwIfRunning)
+                {
+                    throw new InvalidOperationException("The worker is already running.");
+                }
+                
+                return;
+            }
+            
             EnsureRunReadyState();
-
+            
             _workerThread = new Thread(RunWorkerLoop)
             {
                 Name = _workerThreadName,
@@ -67,19 +77,25 @@ public class WorkerController : IDisposable
             };
 
             _workerThread.Start();
+            _isRunning = true;
         }
     }
 
-    public void Stop(bool waitUntilStopped = false)
+    public void Stop(bool throwIfStopped = false)
     {
         lock (_lock)
         {
-            EnsureRunningState();
+            if (_isRunning == false)
+            {
+                if (throwIfStopped)
+                {
+                    throw new InvalidOperationException("The worker is already stopped.");
+                }
+                
+                return;
+            }
             
-            if (waitUntilStopped)
-                StopAndWaitUntilWorkerStopped();
-            else
-                SendStopSignal();
+            StopAndWaitUntilWorkerStopped();
         }
     }
 
@@ -91,52 +107,54 @@ public class WorkerController : IDisposable
 
     private void RunWorkerLoop()
     {
-        while (_workerShouldStop == false)
+        try
         {
-            while (_passLoopPermitted == false && _workerShouldStop == false) ;
-            _passLoopPermitted = false;
-            
-            if (_workerShouldStop)
-                return;
+            while (_workerShouldStop == false)
+            {
+                while (_passLoopPermitted == false && _workerShouldStop == false) ;
+                _passLoopPermitted = false;
 
-            _algorithmExecutor.Execute(_workerId,
-                                       out var bestHandledIndividualIndex);
-            _bestHandledIndividualIndex = bestHandledIndividualIndex;
+                if (_workerShouldStop)
+                    break;
 
-            _isPassLoopCompleted = true;
-            
-            _workerPassLoopDoneHandler?.Handle(this);
+                _algorithmExecutor.Execute(_workerId,
+                                           out var bestHandledIndividualIndex);
+                _bestHandledIndividualIndex = bestHandledIndividualIndex;
+
+                _isPassLoopCompleted = true;
+
+                var shouldTerminate = false;
+                _workerPassLoopDoneHandler?.Handle(this, out shouldTerminate);
+                if (shouldTerminate)
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _exception = ex;
+            _workerPassLoopDoneHandler?.Handle(this, out _);
+        }
+        finally
+        {
+            _isRunning = false;
         }
     }
 
     private void EnsureRunReadyState()
     {
-        if (_workerThread != null && _workerThread.IsAlive)
-            throw new InvalidOperationException("The worker is already running.");
-
         _workerShouldStop = false;
+        _exception = null;
         
         PermitToPassLoop();
     }
 
-    private void EnsureRunningState()
-    {
-        if (_workerThread == null || _workerThread.IsAlive == false)
-            throw new InvalidOperationException("The worker is not running.");
-    }
-
     private void StopAndWaitUntilWorkerStopped()
     {
-        SendStopSignal();
+        _workerShouldStop = true;
 
         var spinWait = new SpinWait();
-        while (_workerThread != null && _workerThread.IsAlive)
+        while (_isRunning)
             spinWait.SpinOnce();
-    }
-
-    private void SendStopSignal()
-    {
-        _workerShouldStop = true;
     }
 
     public void Dispose()

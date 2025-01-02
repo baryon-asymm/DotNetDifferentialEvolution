@@ -7,7 +7,7 @@ public class RosenbrockEvaluator : ITestFitnessFunctionEvaluator
     public const double A = 1.0;
     public const double B = 100.0;
     
-    public double Evaluate(
+    public virtual double Evaluate(
         ReadOnlySpan<double> genes)
     {
         var x = genes[0];

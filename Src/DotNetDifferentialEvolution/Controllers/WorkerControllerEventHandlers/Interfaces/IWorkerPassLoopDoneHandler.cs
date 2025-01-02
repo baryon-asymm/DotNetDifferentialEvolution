@@ -2,5 +2,5 @@ namespace DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers.
 
 public interface IWorkerPassLoopDoneHandler
 {
-    public void Handle(WorkerController workerController);
+    public void Handle(WorkerController sender, out bool shouldTerminate);
 }
