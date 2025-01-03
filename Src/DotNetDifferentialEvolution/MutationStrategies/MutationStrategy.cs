@@ -68,17 +68,29 @@ public class MutationStrategy : IMutationStrategy
 
 #region CreatingTrialIndividual
 
-        var firstIndividual = MemoryMarshal.Cast<double, Vector<double>>(
-            population.Slice(indexes[0] * _genomeSize, _genomeSize));
-        var secondIndividual = MemoryMarshal.Cast<double, Vector<double>>(
-            population.Slice(indexes[1] * _genomeSize, _genomeSize));
-        var thirdIndividual = MemoryMarshal.Cast<double, Vector<double>>(
-            population.Slice(indexes[2] * _genomeSize, _genomeSize));
+        var firstIndividual = population.Slice(indexes[0] * _genomeSize, _genomeSize);
+        var secondIndividual = population.Slice(indexes[1] * _genomeSize, _genomeSize);
+        var thirdIndividual = population.Slice(indexes[2] * _genomeSize, _genomeSize);
 
-        var trialIndividualVectors = MemoryMarshal.Cast<double, Vector<double>>(trialIndividual);
-        for (int i = 0; i < trialIndividualVectors.Length; i++)
+        if (Vector<double>.Count <= _genomeSize)
         {
-            trialIndividualVectors[i] =
+            var firstIndividualVectors = MemoryMarshal.Cast<double, Vector<double>>(firstIndividual);
+            var secondIndividualVectors = MemoryMarshal.Cast<double, Vector<double>>(secondIndividual);
+            var thirdIndividualVectors = MemoryMarshal.Cast<double, Vector<double>>(thirdIndividual);
+
+            var trialIndividualVectors = MemoryMarshal.Cast<double, Vector<double>>(trialIndividual);
+            for (int i = 0; i < trialIndividualVectors.Length; i++)
+            {
+                trialIndividualVectors[i] =
+                    firstIndividualVectors[i] + _mutationForce * (secondIndividualVectors[i] - thirdIndividualVectors[i]);
+            }
+        }
+        
+        // Handling the remaining genes
+        var handledGenesCount = _genomeSize - _genomeSize % Vector<double>.Count;
+        for (int i = handledGenesCount; i < _genomeSize; i++)
+        {
+            trialIndividual[i] =
                 firstIndividual[i] + _mutationForce * (secondIndividual[i] - thirdIndividual[i]);
         }
 
