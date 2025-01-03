@@ -49,7 +49,7 @@ public class WorkerControllerTester
             context);
 
         const int workerId = 0;
-        var workerController = new WorkerController(workerId, algorithmExecutor, orchestratorWorkerHandler);
+        using var workerController = new WorkerController(workerId, algorithmExecutor, orchestratorWorkerHandler);
 
 #endregion
 
@@ -66,11 +66,13 @@ public class WorkerControllerTester
 
         const double tolerance = 1e-6;
         var globalMinimumFfValue = evaluator.GetGlobalMinimumFfValue();
+        Assert.Equal(globalMinimumFfValue, resultPopulation.IndividualCursor.FitnessFunctionValue, tolerance);
         var globalMinimumGenes = evaluator.GetGlobalMinimumGenes();
-        Assert.Equal(resultPopulation.IndividualCursor.FitnessFunctionValue, globalMinimumFfValue, tolerance);
         var genes = resultPopulation.IndividualCursor.Genes;
         for (int i = 0; i < resultPopulation.GenomeSize; i++)
-            Assert.Equal(genes.Span[i], globalMinimumGenes.Span[i], tolerance);
+            Assert.Equal(globalMinimumGenes.Span[i], genes.Span[i], tolerance);
+        
+        Assert.False(workerController.IsRunning);
 
 #endregion
     }
@@ -100,13 +102,19 @@ public class WorkerControllerTester
             context);
 
         const int workerId = 0;
-        var workerController = new WorkerController(workerId, algorithmExecutor, orchestratorWorkerHandler);
+        using var workerController = new WorkerController(workerId, algorithmExecutor, orchestratorWorkerHandler);
 
 #endregion
 
 #region Execution
 
         workerController.Start();
+
+        while (workerController.IsRunning)
+        {
+            _testOutputHelper.WriteLine($"Worker {workerId} is running... IsRunning: {workerController.IsRunning}, HasException: {workerController.HasException}, State: {workerController.State}, Completed: {workerController.IsPassLoopCompleted}");
+            await Task.Delay(TimeSpan.FromSeconds(3));
+        }
 
 #endregion
 
@@ -116,6 +124,8 @@ public class WorkerControllerTester
                                      () => orchestratorWorkerHandler.GetResultPopulationTask());
         Assert.Single(aggregateException.InnerExceptions);
         Assert.IsType<RosenbrockException>(aggregateException.InnerExceptions.First());
+        
+        Assert.False(workerController.IsRunning);
 
 #endregion
     }
@@ -221,15 +231,15 @@ public class WorkerControllerTester
 
 #region Validation
 
-        Assert.False(workerController.IsRunning);
-
         const double tolerance = 1e-6;
         var globalMinimumFfValue = evaluator.GetGlobalMinimumFfValue();
+        Assert.Equal(globalMinimumFfValue, resultPopulation.IndividualCursor.FitnessFunctionValue, tolerance);
         var globalMinimumGenes = evaluator.GetGlobalMinimumGenes();
-        Assert.Equal(resultPopulation.IndividualCursor.FitnessFunctionValue, globalMinimumFfValue, tolerance);
         var genes = resultPopulation.IndividualCursor.Genes;
         for (int i = 0; i < resultPopulation.GenomeSize; i++)
-            Assert.Equal(genes.Span[i], globalMinimumGenes.Span[i], tolerance);
+            Assert.Equal(globalMinimumGenes.Span[i], genes.Span[i], tolerance);
+        
+        Assert.False(workerController.IsRunning);
 
 #endregion
     }

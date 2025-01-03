@@ -3,8 +3,20 @@ using DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers.Inte
 
 namespace DotNetDifferentialEvolution.Controllers;
 
+public enum WorkerState
+{
+    AlgorithmExecution,
+    AlgorithmExecutionDone,
+    WaitingPermission,
+    PermittedToPassLoop,
+    ThrewException,
+    Stopped
+}
+
 public class WorkerController : IDisposable
 {
+    public WorkerState State { get; private set; }
+    
     private static volatile int _globalWorkerCounter = 0;
     
     private readonly object _lock = new();
@@ -68,16 +80,7 @@ public class WorkerController : IDisposable
                 return;
             }
             
-            EnsureRunReadyState();
-            
-            _workerThread = new Thread(RunWorkerLoop)
-            {
-                Name = _workerThreadName,
-                Priority = ThreadPriority.Highest
-            };
-
-            _workerThread.Start();
-            _isRunning = true;
+            StartAndWaitUntilWorkerStarted();
         }
     }
 
@@ -101,25 +104,31 @@ public class WorkerController : IDisposable
 
     public void PermitToPassLoop()
     {
-        _passLoopPermitted = true;
         _isPassLoopCompleted = false;
+        _passLoopPermitted = true;
     }
 
     private void RunWorkerLoop()
     {
         try
         {
+            _isRunning = true;
+            
             while (_workerShouldStop == false)
             {
+                State = WorkerState.WaitingPermission;
                 while (_passLoopPermitted == false && _workerShouldStop == false) ;
                 _passLoopPermitted = false;
+                State = WorkerState.PermittedToPassLoop;
 
                 if (_workerShouldStop)
                     break;
 
+                State = WorkerState.AlgorithmExecution;
                 _algorithmExecutor.Execute(_workerId,
                                            out var bestHandledIndividualIndex);
                 _bestHandledIndividualIndex = bestHandledIndividualIndex;
+                State = WorkerState.AlgorithmExecutionDone;
 
                 _isPassLoopCompleted = true;
 
@@ -131,13 +140,32 @@ public class WorkerController : IDisposable
         }
         catch (Exception ex)
         {
+            State = WorkerState.ThrewException;
             _exception = ex;
             _workerPassLoopDoneHandler?.Handle(this, out _);
         }
         finally
         {
+            State = WorkerState.Stopped;
             _isRunning = false;
         }
+    }
+    
+    private void StartAndWaitUntilWorkerStarted()
+    {
+        EnsureRunReadyState();
+        
+        _workerThread = new Thread(RunWorkerLoop)
+        {
+            Name = _workerThreadName,
+            Priority = ThreadPriority.Highest
+        };
+        
+        _workerThread.Start();
+        
+        var spinWait = new SpinWait();
+        while (_isRunning == false)
+            spinWait.SpinOnce();
     }
 
     private void EnsureRunReadyState()
@@ -170,7 +198,10 @@ public class WorkerController : IDisposable
 
         if (disposing)
         {
-            StopAndWaitUntilWorkerStopped();
+            lock (_lock)
+            {
+                StopAndWaitUntilWorkerStopped();
+            }
             
             Interlocked.Decrement(ref _globalWorkerCounter);
         }

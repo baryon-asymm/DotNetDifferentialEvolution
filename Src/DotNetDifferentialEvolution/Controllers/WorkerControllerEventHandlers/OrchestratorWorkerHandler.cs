@@ -48,7 +48,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         {
             _context.SwapPopulations();
         
-            var bestIndividualIndex = GetBestIndividualIndex(sender);
+            var bestIndividualIndex = GetBestIndividualIndex(sender, _context.PopulationFfValues.Span);
             var population = _context.GetRepresentativePopulation(++_passLoopCounter, bestIndividualIndex);
         
             _context.PopulationUpdatedHandler?.Handle(population);
@@ -102,18 +102,18 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     }
     
     private int GetBestIndividualIndex(
-        WorkerController workerController)
+        WorkerController workerController,
+        Span<double> populationFfValues)
     {
         var otherWorkerControllers = _otherWorkerControllers.Span;
-        var trialPopulationFfValues = _context.TrialPopulationFfValues.Span;
         
         var bestIndividualIndex = workerController.BestHandledIndividualIndex;
-        var bestIndividualFfValue = trialPopulationFfValues[bestIndividualIndex];
+        var bestIndividualFfValue = populationFfValues[bestIndividualIndex];
 
         for (int i = 0; i < otherWorkerControllers.Length; i++)
         {
             var otherBestHandledIndividualIndex = otherWorkerControllers[i].BestHandledIndividualIndex;
-            var otherBestHandledIndividualFfValue = trialPopulationFfValues[otherBestHandledIndividualIndex];
+            var otherBestHandledIndividualFfValue = populationFfValues[otherBestHandledIndividualIndex];
             if (otherBestHandledIndividualFfValue < bestIndividualFfValue)
             {
                 bestIndividualIndex = otherBestHandledIndividualIndex;

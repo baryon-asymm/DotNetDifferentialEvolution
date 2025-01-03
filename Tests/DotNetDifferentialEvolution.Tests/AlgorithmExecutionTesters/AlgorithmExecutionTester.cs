@@ -114,11 +114,11 @@ public class AlgorithmExecutionTester
 
         const double tolerance = 1e-6;
         var globalMinimumFfValue = evaluator.GetGlobalMinimumFfValue();
-        var globalMinimumGenes = evaluator.GetGlobalMinimumGenes().Span;
-        Assert.Equal(resultPopulation.IndividualCursor.FitnessFunctionValue, globalMinimumFfValue, tolerance);
-        var genes = resultPopulation.IndividualCursor.Genes.Span;
+        Assert.Equal(globalMinimumFfValue, resultPopulation.IndividualCursor.FitnessFunctionValue, tolerance);
+        var globalMinimumGenes = evaluator.GetGlobalMinimumGenes();
+        var genes = resultPopulation.IndividualCursor.Genes;
         for (int i = 0; i < resultPopulation.GenomeSize; i++)
-            Assert.Equal(genes[i], globalMinimumGenes[i], tolerance);
+            Assert.Equal(globalMinimumGenes.Span[i], genes.Span[i], tolerance);
 
 #endregion
     }

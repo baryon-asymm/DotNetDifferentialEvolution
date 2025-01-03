@@ -10,8 +10,6 @@ public class AlgorithmExecutor : IAlgorithmExecutor
     private readonly int _populationSize;
     private readonly int _individualHandlerStepSize;
 
-    private readonly Memory<double> _trialIndividual;
-
     private readonly IMutationStrategy _mutationStrategy;
     private readonly ISelectionStrategy _selectionStrategy;
 
@@ -25,8 +23,6 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         _populationSize = context.PopulationSize;
         _individualHandlerStepSize = context.WorkersCount;
 
-        _trialIndividual = new double[context.GenomeSize];
-
         _mutationStrategy = mutationStrategy;
         _selectionStrategy = selectionStrategy;
 
@@ -37,7 +33,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         int workerId,
         out int bestHandledIndividualIndex)
     {
-        var trialIndividual = _trialIndividual.Span;
+        Span<double> trialIndividual = stackalloc double[_context.GenomeSize];
 
         var population = _context.Population.Span;
         var populationFfValues = _context.PopulationFfValues.Span;
