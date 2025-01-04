@@ -42,8 +42,18 @@ public class SimpleSumTester
 
         const int seed = 0x12345678;
         _randomProvider = new DeterminedRandomProvider(seed);
-        _mutationStrategy = new MutationStrategy(0.5, 0.9, _randomProvider, context);
-        _selectionStrategy = new SelectionStrategy(context);
+        
+        const double mutationForce = 0.5;
+        const double crossoverProbability = 0.9;
+        
+        _mutationStrategy = new MutationStrategy(
+            mutationForce: mutationForce,
+            crossoverProbability: crossoverProbability,
+            populationSize: populationSize,
+            lowerBound: context.GenesLowerBound,
+            upperBound: context.GenesUpperBound,
+            randomProvider: _randomProvider);
+        _selectionStrategy = new SelectionStrategy(genomeSize);
         _algorithmExecutor = new AlgorithmExecutor(_mutationStrategy,
                                                    _selectionStrategy,
                                                    context);

@@ -37,7 +37,7 @@ public class DifferentialEvolution : IDisposable
         _workerControllers = workers.ToArray();
     }
 
-    public Task<Population> GetResultAsync()
+    public Task<Population> RunAsync()
     {
         var task = _orchestratorWorkerHandler.GetResultPopulationTask();
         

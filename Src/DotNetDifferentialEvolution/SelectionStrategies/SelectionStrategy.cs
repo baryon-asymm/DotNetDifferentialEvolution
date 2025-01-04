@@ -1,4 +1,3 @@
-using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.SelectionStrategies;
@@ -8,9 +7,9 @@ public class SelectionStrategy : ISelectionStrategy
     private readonly int _genomeSize;
 
     public SelectionStrategy(
-        ProblemContext context)
+        int genomeSize)
     {
-        _genomeSize = context.GenomeSize;
+        _genomeSize = genomeSize;
     }
 
     public void Select(

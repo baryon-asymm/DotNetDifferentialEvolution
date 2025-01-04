@@ -57,6 +57,8 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             if (shouldTerminate)
             {
                 StopAllWorkers();
+                
+                population.MoveCursorToBestIndividual();
                 _resultPopulationTcs.SetResult(population);
             }
             else

@@ -1,8 +1,10 @@
 using DotNetDifferentialEvolution.AlgorithmExecutors;
 using DotNetDifferentialEvolution.Interfaces;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.PopulationSamplingMaker;
+using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 
@@ -25,11 +27,11 @@ public class DifferentialEvolutionBuilder
     
     private int _populationSize;
     
-    private IPopulationSamplingMaker _populationSamplingMaker;
+    private IPopulationSamplingMaker? _populationSamplingMaker;
     
-    private IMutationStrategy _mutationStrategy;
-    private ISelectionStrategy _selectionStrategy;
-    private ITerminationStrategy _terminationStrategy;
+    private IMutationStrategy? _mutationStrategy;
+    private ISelectionStrategy? _selectionStrategy;
+    private ITerminationStrategy? _terminationStrategy;
     
     private int _workersCount;
     
@@ -61,8 +63,8 @@ public class DifferentialEvolutionBuilder
 
         for (int i = 0; i < lowerBound.Length; i++)
         {
-            if (lowerBound.Span[i] >= upperBound.Span[i])
-                throw new ArgumentException("Lower bound must be less than upper bound.");
+            if (lowerBound.Span[i] > upperBound.Span[i])
+                throw new ArgumentException("Lower bound must be less than or equal upper bound.");
         }
         
         _lowerBound = lowerBound;
@@ -109,12 +111,33 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    public ISelectionStrategyRequired WithDefaultMutationStrategy(
+        double mutationForce,
+        double crossoverProbability)
+    {
+        _mutationStrategy = new MutationStrategy(
+            mutationForce: mutationForce,
+            crossoverProbability: crossoverProbability,
+            populationSize: _populationSize,
+            lowerBound: _lowerBound,
+            upperBound: _upperBound);
+        
+        return this;
+    }
+
     public ITerminationConditionRequired WithSelectionStrategy(
         ISelectionStrategy selectionStrategy)
     {
         ArgumentNullException.ThrowIfNull(selectionStrategy);
         
         _selectionStrategy = selectionStrategy;
+        
+        return this;
+    }
+
+    public ITerminationConditionRequired WithDefaultSelectionStrategy()
+    {
+        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
         
         return this;
     }
@@ -166,7 +189,7 @@ public class DifferentialEvolutionBuilder
         var trialPopulation = new double[_populationSize * genomeSize];
         var trialPopulationFfValues = new double[_populationSize];
         
-        _populationSamplingMaker.SamplePopulation(population);
+        _populationSamplingMaker!.SamplePopulation(population);
 
         EvaluatePopulationFfValues(
             population,
@@ -179,7 +202,7 @@ public class DifferentialEvolutionBuilder
             genesLowerBound: _lowerBound,
             genesUpperBound: _upperBound,
             fitnessFunctionEvaluator: _fitnessFunctionEvaluator,
-            terminationStrategy: _terminationStrategy,
+            terminationStrategy: _terminationStrategy!,
             population: population,
             populationFfValues: populationFfValues,
             trialPopulation: trialPopulation,
@@ -189,8 +212,8 @@ public class DifferentialEvolutionBuilder
         };
         
         var algorithmExecutor = new AlgorithmExecutor(
-            _mutationStrategy,
-            _selectionStrategy,
+            _mutationStrategy!,
+            _selectionStrategy!,
             context);
         
         return new DifferentialEvolution(context, algorithmExecutor);
@@ -263,12 +286,18 @@ public interface IMutationStrategyRequired
 {
     public ISelectionStrategyRequired WithMutationStrategy(
         IMutationStrategy mutationStrategy);
+    
+    public ISelectionStrategyRequired WithDefaultMutationStrategy(
+        double mutationForce,
+        double crossoverProbability);
 }
 
 public interface ISelectionStrategyRequired
 {
     public ITerminationConditionRequired WithSelectionStrategy(
         ISelectionStrategy selectionStrategy);
+    
+    public ITerminationConditionRequired WithDefaultSelectionStrategy();
 }
 
 public interface ITerminationConditionRequired

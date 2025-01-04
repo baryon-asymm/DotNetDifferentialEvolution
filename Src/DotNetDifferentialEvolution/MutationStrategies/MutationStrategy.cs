@@ -1,6 +1,5 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
-using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.RandomProviders;
 
@@ -24,17 +23,40 @@ public class MutationStrategy : IMutationStrategy
     public MutationStrategy(
         double mutationForce,
         double crossoverProbability,
-        BaseRandomProvider randomProvider,
-        ProblemContext context)
+        int populationSize,
+        ReadOnlyMemory<double> lowerBound,
+        ReadOnlyMemory<double> upperBound,
+        BaseRandomProvider randomProvider)
     {
         _mutationForce = mutationForce;
         _crossoverProbability = crossoverProbability;
         
-        _populationSize = context.PopulationSize;
-        _genomeSize = context.GenomeSize;
+        _populationSize = populationSize;
+        _genomeSize = lowerBound.Length;
         
-        _lowerBound = context.GenesLowerBound;
-        _upperBound = context.GenesUpperBound;
+        _lowerBound = lowerBound;
+        _upperBound = upperBound;
+        
+        _randomProvider = randomProvider;
+    }
+
+    public MutationStrategy(
+        double mutationForce,
+        double crossoverProbability,
+        int populationSize,
+        ReadOnlyMemory<double> lowerBound,
+        ReadOnlyMemory<double> upperBound)
+    {
+        var randomProvider = new RandomProvider();
+        
+        _mutationForce = mutationForce;
+        _crossoverProbability = crossoverProbability;
+        
+        _populationSize = populationSize;
+        _genomeSize = lowerBound.Length;
+        
+        _lowerBound = lowerBound;
+        _upperBound = upperBound;
         
         _randomProvider = randomProvider;
     }

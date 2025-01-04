@@ -136,8 +136,14 @@ public class AlgorithmExecutionTester
         var context = ProblemContextHelper.CreateContext(
             populationSize, testFitnessFunctionEvaluator, terminationStrategy);
         var randomProvider = new RandomProvider();
-        var mutationStrategy = new MutationStrategy(mutationForce, crossoverProbability, randomProvider, context);
-        var selectionStrategy = new SelectionStrategy(context);
+        var mutationStrategy = new MutationStrategy(
+            mutationForce: mutationForce,
+            crossoverProbability: crossoverProbability,
+            populationSize: populationSize,
+            lowerBound: context.GenesLowerBound,
+            upperBound: context.GenesUpperBound,
+            randomProvider: randomProvider);
+        var selectionStrategy = new SelectionStrategy(context.GenomeSize);
         algorithmExecutor = new AlgorithmExecutor(mutationStrategy, selectionStrategy, context);
         
         return context;

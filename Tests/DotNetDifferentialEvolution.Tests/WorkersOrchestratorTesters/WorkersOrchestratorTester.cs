@@ -69,7 +69,6 @@ public class WorkersOrchestratorTester
             slaveWorker.Start();
 
         var resultPopulation = await orchestratorWorkerHandler.GetResultPopulationTask();
-        resultPopulation.MoveCursorToBestIndividual();
 
 #endregion
 
@@ -164,8 +163,14 @@ public class WorkersOrchestratorTester
         var context = ProblemContextHelper.CreateContext(
             populationSize, testFitnessFunctionEvaluator, terminationStrategy, workersCount);
         var randomProvider = new RandomProvider();
-        var mutationStrategy = new MutationStrategy(mutationForce, crossoverProbability, randomProvider, context);
-        var selectionStrategy = new SelectionStrategy(context);
+        var mutationStrategy = new MutationStrategy(
+            mutationForce: mutationForce,
+            crossoverProbability: crossoverProbability,
+            populationSize: populationSize,
+            lowerBound: context.GenesLowerBound,
+            upperBound: context.GenesUpperBound,
+            randomProvider: randomProvider);
+        var selectionStrategy = new SelectionStrategy(context.GenomeSize);
         algorithmExecutor = new AlgorithmExecutor(mutationStrategy, selectionStrategy, context);
 
         return context;
