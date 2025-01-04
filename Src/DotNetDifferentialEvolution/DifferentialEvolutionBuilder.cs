@@ -152,13 +152,13 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
-    public IDifferentialEvolutionBuilder WithWorkersCount(
-        int workersCount)
+    public IDifferentialEvolutionBuilder UseProcessors(
+        int processorsCount)
     {
-        if (workersCount <= 0)
-            throw new ArgumentException("Workers count must be greater than 0.");
+        if (processorsCount <= 0)
+            throw new ArgumentException("Processors count must be greater than 0.");
         
-        _workersCount = workersCount;
+        _workersCount = processorsCount;
         
         return this;
     }
@@ -308,8 +308,8 @@ public interface ITerminationConditionRequired
 
 public interface IWorkersCountRequired
 {
-    public IDifferentialEvolutionBuilder WithWorkersCount(
-        int workersCount);
+    public IDifferentialEvolutionBuilder UseProcessors(
+        int processorsCount);
     
     public IDifferentialEvolutionBuilder UseAllProcessors();
 }
