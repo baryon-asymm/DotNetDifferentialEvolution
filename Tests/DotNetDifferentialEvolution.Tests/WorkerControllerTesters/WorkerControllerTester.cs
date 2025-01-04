@@ -110,12 +110,6 @@ public class WorkerControllerTester
 
         workerController.Start();
 
-        while (workerController.IsRunning)
-        {
-            _testOutputHelper.WriteLine($"Worker {workerId} is running... IsRunning: {workerController.IsRunning}, HasException: {workerController.HasException}, State: {workerController.State}, Completed: {workerController.IsPassLoopCompleted}");
-            await Task.Delay(TimeSpan.FromSeconds(3));
-        }
-
 #endregion
 
 #region Validation

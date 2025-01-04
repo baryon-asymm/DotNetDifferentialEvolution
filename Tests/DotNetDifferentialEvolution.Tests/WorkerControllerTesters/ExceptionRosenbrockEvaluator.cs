@@ -21,9 +21,7 @@ public class ExceptionRosenbrockEvaluator : RosenbrockEvaluator
     {
         var result = base.Evaluate(genes);
         
-        _evaluationsCount++;
-        
-        if (_evaluationsCount == ThrowExceptionAt)
+        if (Interlocked.Increment(ref _evaluationsCount) >= ThrowExceptionAt)
         {
             throw new RosenbrockException();
         }

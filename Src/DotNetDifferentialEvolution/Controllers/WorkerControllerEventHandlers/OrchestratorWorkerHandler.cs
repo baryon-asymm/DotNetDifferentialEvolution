@@ -7,7 +7,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
 {
     private int _passLoopCounter;
     
-    private readonly ReadOnlyMemory<WorkerController> _otherWorkerControllers;
+    private readonly ReadOnlyMemory<WorkerController> _slaveWorkers;
     
     private readonly ProblemContext _context;
     
@@ -16,11 +16,11 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     private readonly TaskCompletionSource<Population> _resultPopulationTcs = new();
     
     public OrchestratorWorkerHandler(
-        ReadOnlyMemory<WorkerController> otherWorkerControllers,
+        ReadOnlyMemory<WorkerController> slaveWorkers,
         ProblemContext context,
         IWorkerPassLoopDoneHandler? nextHandler = null)
     {
-        _otherWorkerControllers = otherWorkerControllers;
+        _slaveWorkers = slaveWorkers;
         _context = context;
         _nextHandler = nextHandler;
     }
@@ -66,58 +66,53 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         }
     }
     
-    public Task<Population> GetResultPopulationTask()
-    {
-        return _resultPopulationTcs.Task;
-    }
+    public Task<Population> GetResultPopulationTask() => _resultPopulationTcs.Task;
     
     private void WaitAllWorkersOrThemExceptions(
-        WorkerController workerController,
+        WorkerController masterWorker,
         out bool hasException)
     {
-        hasException = workerController.HasException;
-        var otherWorkerControllers = _otherWorkerControllers.Span;
-        for (int i = 0; i < otherWorkerControllers.Length; i++)
+        hasException = masterWorker.HasException;
+        foreach (var slaveWorker in _slaveWorkers.Span)
         {
-            while (otherWorkerControllers[i].IsPassLoopCompleted == false
-                   && otherWorkerControllers[i].HasException == false) ;
-            hasException |= otherWorkerControllers[i].HasException;
+            while (slaveWorker.IsPassLoopCompleted == false
+                   && slaveWorker.HasException == false) ;
+            hasException |= slaveWorker.HasException;
         }
     }
     
     private AggregateException GetAggregateException(
-        WorkerController workerController)
+        WorkerController masterWorker)
     {
         var exceptions = new List<Exception>();
-        if (workerController.HasException)
-            exceptions.Add(workerController.Exception!);
-        var otherWorkerControllers = _otherWorkerControllers.Span;
-        for (int i = 0; i < otherWorkerControllers.Length; i++)
+        if (masterWorker.HasException)
+            exceptions.Add(masterWorker.Exception!);
+        foreach (var slaveWorker in _slaveWorkers.Span)
         {
-            if (otherWorkerControllers[i].HasException)
-                exceptions.Add(otherWorkerControllers[i].Exception!);
+            if (slaveWorker.HasException)
+                exceptions.Add(slaveWorker.Exception!);
         }
         
         return new AggregateException(exceptions);
     }
     
     private int GetBestIndividualIndex(
-        WorkerController workerController,
+        WorkerController masterWorker,
         Span<double> populationFfValues)
     {
-        var otherWorkerControllers = _otherWorkerControllers.Span;
+        var slaveWorkers = _slaveWorkers.Span;
         
-        var bestIndividualIndex = workerController.BestHandledIndividualIndex;
+        var bestIndividualIndex = masterWorker.BestHandledIndividualIndex;
         var bestIndividualFfValue = populationFfValues[bestIndividualIndex];
 
-        for (int i = 0; i < otherWorkerControllers.Length; i++)
+        for (int i = 0; i < slaveWorkers.Length; i++)
         {
-            var otherBestHandledIndividualIndex = otherWorkerControllers[i].BestHandledIndividualIndex;
-            var otherBestHandledIndividualFfValue = populationFfValues[otherBestHandledIndividualIndex];
-            if (otherBestHandledIndividualFfValue < bestIndividualFfValue)
+            var slaveBestHandledIndividualIndex = slaveWorkers[i].BestHandledIndividualIndex;
+            var slaveBestHandledIndividualFfValue = populationFfValues[slaveBestHandledIndividualIndex];
+            if (slaveBestHandledIndividualFfValue < bestIndividualFfValue)
             {
-                bestIndividualIndex = otherBestHandledIndividualIndex;
-                bestIndividualFfValue = otherBestHandledIndividualFfValue;
+                bestIndividualIndex = slaveBestHandledIndividualIndex;
+                bestIndividualFfValue = slaveBestHandledIndividualFfValue;
             }
         }
         
@@ -125,18 +120,16 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     }
     
     private void PermitAllWorkersToStartPassLoop(
-        WorkerController workerController)
+        WorkerController masterWorker)
     {
-        workerController.PermitToPassLoop();
-        var otherWorkerControllers = _otherWorkerControllers.Span;
-        for (int i = 0; i < otherWorkerControllers.Length; i++)
-            otherWorkerControllers[i].PermitToPassLoop();
+        masterWorker.PermitToPassLoop();
+        foreach (var slaveWorker in _slaveWorkers.Span)
+            slaveWorker.PermitToPassLoop();
     }
     
     private void StopAllWorkers()
     {
-        var otherWorkerControllers = _otherWorkerControllers.Span;
-        for (int i = 0; i < otherWorkerControllers.Length; i++)
-            otherWorkerControllers[i].Stop();
+        foreach (var slaveWorker in _slaveWorkers.Span)
+            slaveWorker.Stop();
     }
 }

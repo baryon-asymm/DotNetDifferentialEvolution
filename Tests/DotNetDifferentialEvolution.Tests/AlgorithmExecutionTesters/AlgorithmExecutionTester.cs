@@ -68,13 +68,15 @@ public class AlgorithmExecutionTester
 #endregion
 
 #region Validation
-
+        
+        const double tolerance = 1e-6;
         var globalMinimumFfValue = evaluator.GetGlobalMinimumFfValue();
-        var error = Math.Pow(resultPopulation.IndividualCursor.FitnessFunctionValue - globalMinimumFfValue, 2)
-            / Math.Pow(globalMinimumFfValue, 2);
-        var errorPercent = error * 100;
-        const double maxErrorPercent = 5;
-        Assert.True(errorPercent <= maxErrorPercent);
+        Assert.Equal(globalMinimumFfValue, resultPopulation.IndividualCursor.FitnessFunctionValue, tolerance);
+        
+        var globalMinimumGenes = evaluator.GetGlobalMinimumGenes();
+        var genes = resultPopulation.IndividualCursor.Genes;
+        for (int i = 0; i < resultPopulation.GenomeSize; i++)
+            Assert.Equal(globalMinimumGenes.Span[i], genes.Span[i], tolerance);
 
 #endregion
     }

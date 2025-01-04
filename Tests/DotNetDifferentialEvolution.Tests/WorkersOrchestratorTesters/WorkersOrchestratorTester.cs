@@ -100,7 +100,7 @@ public class WorkersOrchestratorTester
         const int populationSize = 300;
         const double mutationForce = 0.5;
         const double crossoverProbability = 0.9;
-        const int throwExceptionAtEvaluationStep = 5 * populationSize;
+        const int throwExceptionAtEvaluationStep = 2 * populationSize + 1;
         var evaluator = new ExceptionRosenbrockEvaluator(throwExceptionAtEvaluationStep);
 
         const int maxGenerationNumber = 100_000;
