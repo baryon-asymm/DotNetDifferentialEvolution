@@ -183,7 +183,10 @@ public class WorkerController : IDisposable
 
         if (disposing)
         {
-            _workerShouldStop = true;
+            lock (_lock)
+            {
+                StopAndWaitUntilWorkerStopped();
+            }
             
             Interlocked.Decrement(ref _globalWorkerCounter);
         }
