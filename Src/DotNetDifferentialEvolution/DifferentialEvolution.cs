@@ -18,6 +18,9 @@ public class DifferentialEvolution : IDisposable
         ProblemContext problemContext,
         IAlgorithmExecutor algorithmExecutor)
     {
+        ArgumentNullException.ThrowIfNull(problemContext);
+        ArgumentNullException.ThrowIfNull(algorithmExecutor);
+        
         _problemContext = problemContext;
 
         var workers = new List<WorkerController>(_problemContext.WorkersCount);
