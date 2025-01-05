@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Title>DotNetDifferentialEvolution</Title>
+        <Authors>Eduard Burachek</Authors>
+        <Description>A .NET library for Differential Evolution optimization with multi-processing and SIMD acceleration.</Description>
+        <Copyright>Copyright (c) Eduard Burachek, 2025</Copyright>
+        <PackageProjectUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>differential-evolution de optimization .net</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="../../LICENSE" Pack="true" PackagePath="\" />
+        <None Include="../../README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+</Project>
