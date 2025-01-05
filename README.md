@@ -70,7 +70,7 @@ public class RosenbrockEvaluator : IFitnessFunctionEvaluator
     public const double A = 1.0;
     public const double B = 100.0;
     
-    public virtual double Evaluate(
+    public double Evaluate(
         ReadOnlySpan<double> genes)
     {
         var x = genes[0];
@@ -78,6 +78,10 @@ public class RosenbrockEvaluator : IFitnessFunctionEvaluator
         
         return Math.Pow(A - x, 2) + B * Math.Pow(y - x * x, 2);
     }
+
+    public double Evaluate(
+        int workerIndex,
+        ReadOnlySpan<double> genes) => Evaluate(genes);
 }
 ```
 
