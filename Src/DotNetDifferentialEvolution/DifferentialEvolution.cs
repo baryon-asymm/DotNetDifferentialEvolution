@@ -5,6 +5,9 @@ using DotNetDifferentialEvolution.Models;
 
 namespace DotNetDifferentialEvolution;
 
+/// <summary>
+/// Represents the Differential Evolution algorithm.
+/// </summary>
 public class DifferentialEvolution : IDisposable
 {
     private bool _isDisposed;
@@ -14,6 +17,11 @@ public class DifferentialEvolution : IDisposable
     private readonly Memory<WorkerController> _workerControllers;
     private readonly OrchestratorWorkerHandler _orchestratorWorkerHandler;
     
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DifferentialEvolution"/> class.
+    /// </summary>
+    /// <param name="problemContext">The context of the problem to solve.</param>
+    /// <param name="algorithmExecutor">The executor for the algorithm.</param>
     public DifferentialEvolution(
         ProblemContext problemContext,
         IAlgorithmExecutor algorithmExecutor)
@@ -37,6 +45,10 @@ public class DifferentialEvolution : IDisposable
         _workerControllers = workers.ToArray();
     }
 
+    /// <summary>
+    /// Runs the Differential Evolution algorithm asynchronously.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the final population.</returns>
     public Task<Population> RunAsync()
     {
         var task = _orchestratorWorkerHandler.GetResultPopulationTask();
@@ -50,12 +62,19 @@ public class DifferentialEvolution : IDisposable
         return _orchestratorWorkerHandler.GetResultPopulationTask();
     }
     
+    /// <summary>
+    /// Releases the resources used by the <see cref="DifferentialEvolution"/> class.
+    /// </summary>
     public void Dispose()
     {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Releases the unmanaged resources used by the <see cref="DifferentialEvolution"/> class and optionally releases the managed resources.
+    /// </summary>
+    /// <param name="disposing">A value indicating whether to release both managed and unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (_isDisposed)
@@ -70,6 +89,9 @@ public class DifferentialEvolution : IDisposable
         _isDisposed = true;
     }
     
+    /// <summary>
+    /// Finalizes an instance of the <see cref="DifferentialEvolution"/> class.
+    /// </summary>
     ~DifferentialEvolution()
     {
         Dispose(disposing: false);

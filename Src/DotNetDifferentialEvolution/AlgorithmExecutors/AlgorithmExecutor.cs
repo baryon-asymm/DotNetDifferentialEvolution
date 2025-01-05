@@ -5,6 +5,9 @@ using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.AlgorithmExecutors;
 
+/// <summary>
+/// Class for executing the differential evolution algorithm.
+/// </summary>
 public class AlgorithmExecutor : IAlgorithmExecutor
 {
     private readonly int _populationSize;
@@ -15,6 +18,12 @@ public class AlgorithmExecutor : IAlgorithmExecutor
 
     private readonly ProblemContext _context;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AlgorithmExecutor"/> class.
+    /// </summary>
+    /// <param name="mutationStrategy">The mutation strategy to be used.</param>
+    /// <param name="selectionStrategy">The selection strategy to be used.</param>
+    /// <param name="context">The problem context containing population and other parameters.</param>
     public AlgorithmExecutor(
         IMutationStrategy mutationStrategy,
         ISelectionStrategy selectionStrategy,
@@ -29,6 +38,11 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         _context = context;
     }
 
+    /// <summary>
+    /// Executes the algorithm.
+    /// </summary>
+    /// <param name="workerId">The index of the worker executing the algorithm.</param>
+    /// <param name="bestHandledIndividualIndex">The index of the best handled individual.</param>
     public void Execute(
         int workerId,
         out int bestHandledIndividualIndex)

@@ -10,6 +10,9 @@ using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution;
 
+/// <summary>
+/// Provides a builder for creating instances of the <see cref="DifferentialEvolution"/> class.
+/// </summary>
 public class DifferentialEvolutionBuilder 
     : IBoundsRequired,
       IPopulationSizeRequired,
@@ -37,6 +40,10 @@ public class DifferentialEvolutionBuilder
     
     private IPopulationUpdatedHandler? _populationUpdatedHandler;
     
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DifferentialEvolutionBuilder"/> class.
+    /// </summary>
+    /// <param name="fitnessFunctionEvaluator">The evaluator for the fitness function.</param>
     private DifferentialEvolutionBuilder(
         IFitnessFunctionEvaluator fitnessFunctionEvaluator)
     {
@@ -45,12 +52,23 @@ public class DifferentialEvolutionBuilder
         _fitnessFunctionEvaluator = fitnessFunctionEvaluator;
     }
     
+    /// <summary>
+    /// Creates a new builder for the specified fitness function evaluator.
+    /// </summary>
+    /// <param name="fitnessFunctionEvaluator">The evaluator for the fitness function.</param>
+    /// <returns>An instance of <see cref="IBoundsRequired"/> to set the bounds.</returns>
     public static IBoundsRequired ForFunction(
         IFitnessFunctionEvaluator fitnessFunctionEvaluator)
     {
         return new DifferentialEvolutionBuilder(fitnessFunctionEvaluator);
     }
     
+    /// <summary>
+    /// Sets the bounds for the population.
+    /// </summary>
+    /// <param name="lowerBound">The lower bound of the population.</param>
+    /// <param name="upperBound">The upper bound of the population.</param>
+    /// <returns>An instance of <see cref="IPopulationSizeRequired"/> to set the population size.</returns>
     public IPopulationSizeRequired WithBounds(
         ReadOnlyMemory<double> lowerBound,
         ReadOnlyMemory<double> upperBound)
@@ -73,6 +91,11 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the population size.
+    /// </summary>
+    /// <param name="populationSize">The size of the population.</param>
+    /// <returns>An instance of <see cref="IPopulationSamplingRequired"/> to set the population sampling method.</returns>
     public IPopulationSamplingRequired WithPopulationSize(
         int populationSize)
     {
@@ -84,6 +107,11 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the population sampling method.
+    /// </summary>
+    /// <param name="populationSamplingMaker">The population sampling maker.</param>
+    /// <returns>An instance of <see cref="IMutationStrategyRequired"/> to set the mutation strategy.</returns>
     public IMutationStrategyRequired WithPopulationSampling(
         IPopulationSamplingMaker populationSamplingMaker)
     {
@@ -94,6 +122,10 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the population sampling method to uniform random sampling.
+    /// </summary>
+    /// <returns>An instance of <see cref="IMutationStrategyRequired"/> to set the mutation strategy.</returns>
     public IMutationStrategyRequired WithUniformPopulationSampling()
     {
         _populationSamplingMaker = new UniformRandomSamplingMaker(_lowerBound, _upperBound);
@@ -101,6 +133,11 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the mutation strategy.
+    /// </summary>
+    /// <param name="mutationStrategy">The mutation strategy.</param>
+    /// <returns>An instance of <see cref="ISelectionStrategyRequired"/> to set the selection strategy.</returns>
     public ISelectionStrategyRequired WithMutationStrategy(
         IMutationStrategy mutationStrategy)
     {
@@ -111,6 +148,12 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the default mutation strategy.
+    /// </summary>
+    /// <param name="mutationForce">The mutation force.</param>
+    /// <param name="crossoverProbability">The crossover probability.</param>
+    /// <returns>An instance of <see cref="ISelectionStrategyRequired"/> to set the selection strategy.</returns>
     public ISelectionStrategyRequired WithDefaultMutationStrategy(
         double mutationForce,
         double crossoverProbability)
@@ -125,6 +168,11 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the selection strategy.
+    /// </summary>
+    /// <param name="selectionStrategy">The selection strategy.</param>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
     public ITerminationConditionRequired WithSelectionStrategy(
         ISelectionStrategy selectionStrategy)
     {
@@ -135,6 +183,10 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the default selection strategy.
+    /// </summary>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
     public ITerminationConditionRequired WithDefaultSelectionStrategy()
     {
         _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
@@ -142,6 +194,11 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the termination condition.
+    /// </summary>
+    /// <param name="terminationStrategy">The termination strategy.</param>
+    /// <returns>An instance of <see cref="IWorkersCountRequired"/> to set the number of workers.</returns>
     public IWorkersCountRequired WithTerminationCondition(
         ITerminationStrategy terminationStrategy)
     {
@@ -152,6 +209,11 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the number of processors to use.
+    /// </summary>
+    /// <param name="processorsCount">The number of processors.</param>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
     public IDifferentialEvolutionBuilder UseProcessors(
         int processorsCount)
     {
@@ -163,6 +225,10 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the number of processors to use to the total number of available processors.
+    /// </summary>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
     public IDifferentialEvolutionBuilder UseAllProcessors()
     {
         _workersCount = Environment.ProcessorCount;
@@ -170,6 +236,11 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the population update handler.
+    /// </summary>
+    /// <param name="populationUpdatedHandler">The population update handler.</param>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
     public IDifferentialEvolutionBuilder WithPopulationUpdateHandler(
         IPopulationUpdatedHandler populationUpdatedHandler)
     {
@@ -178,6 +249,10 @@ public class DifferentialEvolutionBuilder
         return this;
     }
 
+    /// <summary>
+    /// Builds the Differential Evolution instance.
+    /// </summary>
+    /// <returns>An instance of <see cref="DifferentialEvolution"/>.</returns>
     public DifferentialEvolution Build()
     {
         EnsureReadyStateToBuild();
@@ -219,6 +294,9 @@ public class DifferentialEvolutionBuilder
         return new DifferentialEvolution(context, algorithmExecutor);
     }
 
+    /// <summary>
+    /// Ensures that all required parameters are set before building the Differential Evolution instance.
+    /// </summary>
     private void EnsureReadyStateToBuild()
     {
         if (_lowerBound.Length == 0)
@@ -246,6 +324,11 @@ public class DifferentialEvolutionBuilder
             throw new InvalidOperationException("Workers count must be set.");
     }
     
+    /// <summary>
+    /// Evaluates the fitness function values for the population.
+    /// </summary>
+    /// <param name="population">The population of individuals.</param>
+    /// <param name="populationFfValues">The fitness function values of the population.</param>
     private void EvaluatePopulationFfValues(
         ReadOnlySpan<double> population,
         Span<double> populationFfValues)
@@ -261,63 +344,150 @@ public class DifferentialEvolutionBuilder
     }
 }
 
+/// <summary>
+/// Interface for setting the bounds in the Differential Evolution builder.
+/// </summary>
 public interface IBoundsRequired
 {
+    /// <summary>
+    /// Sets the bounds for the population.
+    /// </summary>
+    /// <param name="lowerBound">The lower bound of the population.</param>
+    /// <param name="upperBound">The upper bound of the population.</param>
+    /// <returns>An instance of <see cref="IPopulationSizeRequired"/> to set the population size.</returns>
     public IPopulationSizeRequired WithBounds(
         ReadOnlyMemory<double> lowerBound,
         ReadOnlyMemory<double> upperBound);
 }
 
+/// <summary>
+/// Interface for setting the population size in the Differential Evolution builder.
+/// </summary>
 public interface IPopulationSizeRequired
 {
+    /// <summary>
+    /// Sets the population size.
+    /// </summary>
+    /// <param name="populationSize">The size of the population.</param>
+    /// <returns>An instance of <see cref="IPopulationSamplingRequired"/> to set the population sampling method.</returns>
     public IPopulationSamplingRequired WithPopulationSize(
         int populationSize);
 }
 
+/// <summary>
+/// Interface for setting the population sampling method in the Differential Evolution builder.
+/// </summary>
 public interface IPopulationSamplingRequired
 {
+    /// <summary>
+    /// Sets the population sampling method.
+    /// </summary>
+    /// <param name="populationSamplingMaker">The population sampling maker.</param>
+    /// <returns>An instance of <see cref="IMutationStrategyRequired"/> to set the mutation strategy.</returns>
     public IMutationStrategyRequired WithPopulationSampling(
         IPopulationSamplingMaker populationSamplingMaker);
     
+    /// <summary>
+    /// Sets the population sampling method to uniform random sampling.
+    /// </summary>
+    /// <returns>An instance of <see cref="IMutationStrategyRequired"/> to set the mutation strategy.</returns>
     public IMutationStrategyRequired WithUniformPopulationSampling();
 }
 
+/// <summary>
+/// Interface for setting the mutation strategy in the Differential Evolution builder.
+/// </summary>
 public interface IMutationStrategyRequired
 {
+    /// <summary>
+    /// Sets the mutation strategy.
+    /// </summary>
+    /// <param name="mutationStrategy">The mutation strategy.</param>
+    /// <returns>An instance of <see cref="ISelectionStrategyRequired"/> to set the selection strategy.</returns>
     public ISelectionStrategyRequired WithMutationStrategy(
         IMutationStrategy mutationStrategy);
     
+    /// <summary>
+    /// Sets the default mutation strategy.
+    /// </summary>
+    /// <param name="mutationForce">The mutation force.</param>
+    /// <param name="crossoverProbability">The crossover probability.</param>
+    /// <returns>An instance of <see cref="ISelectionStrategyRequired"/> to set the selection strategy.</returns>
     public ISelectionStrategyRequired WithDefaultMutationStrategy(
         double mutationForce,
         double crossoverProbability);
 }
 
+/// <summary>
+/// Interface for setting the selection strategy in the Differential Evolution builder.
+/// </summary>
 public interface ISelectionStrategyRequired
 {
+    /// <summary>
+    /// Sets the selection strategy.
+    /// </summary>
+    /// <param name="selectionStrategy">The selection strategy.</param>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
     public ITerminationConditionRequired WithSelectionStrategy(
         ISelectionStrategy selectionStrategy);
     
+    /// <summary>
+    /// Sets the default selection strategy.
+    /// </summary>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
     public ITerminationConditionRequired WithDefaultSelectionStrategy();
 }
 
+/// <summary>
+/// Interface for setting the termination condition in the Differential Evolution builder.
+/// </summary>
 public interface ITerminationConditionRequired
 {
+    /// <summary>
+    /// Sets the termination condition.
+    /// </summary>
+    /// <param name="terminationStrategy">The termination strategy.</param>
+    /// <returns>An instance of <see cref="IWorkersCountRequired"/> to set the number of workers.</returns>
     public IWorkersCountRequired WithTerminationCondition(
         ITerminationStrategy terminationStrategy);
 }
 
+/// <summary>
+/// Interface for setting the number of workers in the Differential Evolution builder.
+/// </summary>
 public interface IWorkersCountRequired
 {
+    /// <summary>
+    /// Sets the number of processors to use.
+    /// </summary>
+    /// <param name="processorsCount">The number of processors.</param>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
     public IDifferentialEvolutionBuilder UseProcessors(
         int processorsCount);
     
+    /// <summary>
+    /// Sets the number of processors to use to the total number of available processors.
+    /// </summary>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
     public IDifferentialEvolutionBuilder UseAllProcessors();
 }
 
+/// <summary>
+/// Interface for building the Differential Evolution instance.
+/// </summary>
 public interface IDifferentialEvolutionBuilder
 {
+    /// <summary>
+    /// Sets the population update handler.
+    /// </summary>
+    /// <param name="populationUpdatedHandler">The population update handler.</param>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
     public IDifferentialEvolutionBuilder WithPopulationUpdateHandler(
         IPopulationUpdatedHandler populationUpdatedHandler);
     
+    /// <summary>
+    /// Builds the Differential Evolution instance.
+    /// </summary>
+    /// <returns>An instance of <see cref="DifferentialEvolution"/>.</returns>
     public DifferentialEvolution Build();
 }

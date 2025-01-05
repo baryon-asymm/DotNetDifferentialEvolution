@@ -5,8 +5,14 @@ using DotNetDifferentialEvolution.RandomProviders;
 
 namespace DotNetDifferentialEvolution.MutationStrategies;
 
+/// <summary>
+/// Represents a mutation strategy for Differential Evolution.
+/// </summary>
 public class MutationStrategy : IMutationStrategy
 {
+    /// <summary>
+    /// The number of individuals to choose for mutation.
+    /// </summary>
     public const int NumberOfIndividualsToChoose = 3;
     
     private readonly double _mutationForce;
@@ -20,6 +26,15 @@ public class MutationStrategy : IMutationStrategy
     
     private readonly BaseRandomProvider _randomProvider;
     
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MutationStrategy"/> class.
+    /// </summary>
+    /// <param name="mutationForce">The mutation force.</param>
+    /// <param name="crossoverProbability">The crossover probability.</param>
+    /// <param name="populationSize">The size of the population.</param>
+    /// <param name="lowerBound">The lower bound of the genes.</param>
+    /// <param name="upperBound">The upper bound of the genes.</param>
+    /// <param name="randomProvider">The random provider.</param>
     public MutationStrategy(
         double mutationForce,
         double crossoverProbability,
@@ -40,6 +55,14 @@ public class MutationStrategy : IMutationStrategy
         _randomProvider = randomProvider;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MutationStrategy"/> class with a default random provider.
+    /// </summary>
+    /// <param name="mutationForce">The mutation force.</param>
+    /// <param name="crossoverProbability">The crossover probability.</param>
+    /// <param name="populationSize">The size of the population.</param>
+    /// <param name="lowerBound">The lower bound of the genes.</param>
+    /// <param name="upperBound">The upper bound of the genes.</param>
     public MutationStrategy(
         double mutationForce,
         double crossoverProbability,
@@ -61,6 +84,12 @@ public class MutationStrategy : IMutationStrategy
         _randomProvider = randomProvider;
     }
 
+    /// <summary>
+    /// Mutates an individual in the population.
+    /// </summary>
+    /// <param name="individualIndex">The index of the individual to mutate.</param>
+    /// <param name="population">The population of individuals.</param>
+    /// <param name="trialIndividual">The trial individual to be mutated.</param>
     public void Mutate(
         int individualIndex,
         Span<double> population,
@@ -68,8 +97,8 @@ public class MutationStrategy : IMutationStrategy
     {
 #region ChoosingThreeRandomIndividuals
 
+        // Choose three random individuals from the population
         Span<int> indexes = stackalloc int[NumberOfIndividualsToChoose];
-        
         for (int i = 0; i < NumberOfIndividualsToChoose; i++)
         {
             var sizeWithoutCurrent = _populationSize - 1;
@@ -90,6 +119,7 @@ public class MutationStrategy : IMutationStrategy
 
 #region CreatingTrialIndividual
 
+        // Create the trial individual by combining the chosen individuals
         var firstIndividual = population.Slice(indexes[0] * _genomeSize, _genomeSize);
         var secondIndividual = population.Slice(indexes[1] * _genomeSize, _genomeSize);
         var thirdIndividual = population.Slice(indexes[2] * _genomeSize, _genomeSize);
@@ -120,6 +150,7 @@ public class MutationStrategy : IMutationStrategy
 
 #region CorrectingTrialIndividualGenes
 
+        // Correct the trial individual genes to ensure they are within bounds
         var lowerBound = _lowerBound.Span;
         var upperBound = _upperBound.Span;
         for (int i = 0; i < trialIndividual.Length; i++)

@@ -3,6 +3,9 @@ using DotNetDifferentialEvolution.Models;
 
 namespace DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers;
 
+/// <summary>
+/// Handles the orchestration of worker controllers during the differential evolution algorithm execution.
+/// </summary>
 public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
 {
     private int _passLoopCounter;
@@ -15,6 +18,12 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     
     private readonly TaskCompletionSource<Population> _resultPopulationTcs = new();
     
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrchestratorWorkerHandler"/> class.
+    /// </summary>
+    /// <param name="slaveWorkers">The slave workers to be managed by the orchestrator.</param>
+    /// <param name="context">The problem context containing population and other parameters.</param>
+    /// <param name="nextHandler">The next handler in the chain of responsibility.</param>
     public OrchestratorWorkerHandler(
         ReadOnlyMemory<WorkerController> slaveWorkers,
         ProblemContext context,
@@ -25,21 +34,26 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         _nextHandler = nextHandler;
     }
     
+    /// <summary>
+    /// Handles the event when a worker pass loop is done.
+    /// </summary>
+    /// <param name="masterWorker">The worker controller that sent the event.</param>
+    /// <param name="shouldTerminate">A boolean indicating whether the process should terminate.</param>
     public void Handle(
-        WorkerController sender,
+        WorkerController masterWorker,
         out bool shouldTerminate)
     {
-        _nextHandler?.Handle(sender, out _);
+        _nextHandler?.Handle(masterWorker, out _);
         
         WaitAllWorkersOrThemExceptions(
-            sender,
+            masterWorker,
             out var hasException);
         
         if (hasException)
         {
             StopAllWorkers();
             
-            var aggregateException = GetAggregateException(sender);
+            var aggregateException = GetAggregateException(masterWorker);
             _resultPopulationTcs.SetException(aggregateException);
             
             shouldTerminate = true;
@@ -48,7 +62,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         {
             _context.SwapPopulations();
         
-            var bestIndividualIndex = GetBestIndividualIndex(sender, _context.PopulationFfValues.Span);
+            var bestIndividualIndex = GetBestIndividualIndex(masterWorker, _context.PopulationFfValues.Span);
             var population = _context.GetRepresentativePopulation(++_passLoopCounter, bestIndividualIndex);
         
             _context.PopulationUpdatedHandler?.Handle(population);
@@ -63,13 +77,22 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             }
             else
             {
-                PermitAllWorkersToStartPassLoop(sender);
+                PermitAllWorkersToStartPassLoop(masterWorker);
             }
         }
     }
     
+    /// <summary>
+    /// Gets the task that represents the result population.
+    /// </summary>
+    /// <returns>A task that represents the result population.</returns>
     public Task<Population> GetResultPopulationTask() => _resultPopulationTcs.Task;
     
+    /// <summary>
+    /// Waits for all workers to complete their pass loops or encounter exceptions.
+    /// </summary>
+    /// <param name="masterWorker">The master worker controller.</param>
+    /// <param name="hasException">A boolean indicating whether any worker encountered an exception.</param>
     private void WaitAllWorkersOrThemExceptions(
         WorkerController masterWorker,
         out bool hasException)
@@ -83,6 +106,11 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         }
     }
     
+    /// <summary>
+    /// Gets the aggregate exception from all workers.
+    /// </summary>
+    /// <param name="masterWorker">The master worker controller.</param>
+    /// <returns>An aggregate exception containing all exceptions from the workers.</returns>
     private AggregateException GetAggregateException(
         WorkerController masterWorker)
     {
@@ -98,6 +126,12 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         return new AggregateException(exceptions);
     }
     
+    /// <summary>
+    /// Gets the index of the best individual in the population.
+    /// </summary>
+    /// <param name="masterWorker">The master worker controller.</param>
+    /// <param name="populationFfValues">The fitness function values of the population.</param>
+    /// <returns>The index of the best individual in the population.</returns>
     private int GetBestIndividualIndex(
         WorkerController masterWorker,
         Span<double> populationFfValues)
@@ -121,6 +155,10 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         return bestIndividualIndex;
     }
     
+    /// <summary>
+    /// Permits all workers to start their pass loops.
+    /// </summary>
+    /// <param name="masterWorker">The master worker controller.</param>
     private void PermitAllWorkersToStartPassLoop(
         WorkerController masterWorker)
     {
@@ -129,6 +167,9 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             slaveWorker.PermitToPassLoop();
     }
     
+    /// <summary>
+    /// Stops all workers.
+    /// </summary>
     private void StopAllWorkers()
     {
         foreach (var slaveWorker in _slaveWorkers.Span)

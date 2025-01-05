@@ -3,6 +3,9 @@ using DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers.Inte
 
 namespace DotNetDifferentialEvolution.Controllers;
 
+/// <summary>
+/// Manages the execution of a worker thread for the differential evolution algorithm.
+/// </summary>
 public class WorkerController : IDisposable
 {
     private static volatile int _globalWorkerCounter = 0;
@@ -30,20 +33,47 @@ public class WorkerController : IDisposable
     
     private readonly IWorkerPassLoopDoneHandler? _workerPassLoopDoneHandler;
 
+    /// <summary>
+    /// Gets a value indicating whether the worker is running.
+    /// </summary>
     public bool IsRunning => _isRunning;
     
+    /// <summary>
+    /// Gets a value indicating whether the worker has encountered an exception.
+    /// </summary>
     public bool HasException => _exception != null;
 
+    /// <summary>
+    /// Gets the exception encountered by the worker, if any.
+    /// </summary>
     public Exception? Exception => _exception;
 
+    /// <summary>
+    /// Gets the global worker counter.
+    /// </summary>
     public static int GlobalWorkerCounter => _globalWorkerCounter;
     
+    /// <summary>
+    /// Gets the ID (index) of the worker.
+    /// </summary>
     public int WorkerId => _workerId;
     
+    /// <summary>
+    /// Gets a value indicating whether the pass loop is completed.
+    /// </summary>
     public bool IsPassLoopCompleted => _isPassLoopCompleted;
     
+    /// <summary>
+    /// Gets the index of the best handled individual.
+    /// </summary>
     public int BestHandledIndividualIndex => _bestHandledIndividualIndex;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkerController"/> class.
+    /// </summary>
+    /// <param name="workerId">The ID (index) of the worker.</param>
+    /// <param name="algorithmExecutor">The algorithm executor.</param>
+    /// <param name="workerPassLoopDoneHandler">The handler for when the worker pass loop is done.</param>
     public WorkerController(
         int workerId,
         IAlgorithmExecutor algorithmExecutor,
@@ -55,6 +85,10 @@ public class WorkerController : IDisposable
         _workerPassLoopDoneHandler = workerPassLoopDoneHandler;
     }
 
+    /// <summary>
+    /// Starts the worker.
+    /// </summary>
+    /// <param name="throwIfRunning">Indicates whether to throw an exception if the worker is already running.</param>
     public void Start(bool throwIfRunning = false)
     {
         lock (_lock)
@@ -73,6 +107,10 @@ public class WorkerController : IDisposable
         }
     }
 
+    /// <summary>
+    /// Stops the worker.
+    /// </summary>
+    /// <param name="throwIfStopped">Indicates whether to throw an exception if the worker is already stopped.</param>
     public void Stop(bool throwIfStopped = false)
     {
         lock (_lock)
@@ -91,12 +129,18 @@ public class WorkerController : IDisposable
         }
     }
 
+    /// <summary>
+    /// Permits the worker to start the pass loop.
+    /// </summary>
     public void PermitToPassLoop()
     {
         _isPassLoopCompleted = false;
         _passLoopPermitted = true;
     }
 
+    /// <summary>
+    /// Runs the worker loop.
+    /// </summary>
     private void RunWorkerLoop()
     {
         _isRunning = true;
@@ -135,6 +179,9 @@ public class WorkerController : IDisposable
         }
     }
     
+    /// <summary>
+    /// Starts the worker and waits until it is started.
+    /// </summary>
     private void StartAndWaitUntilWorkerStarted()
     {
         EnsureRunReadyState();
@@ -152,6 +199,9 @@ public class WorkerController : IDisposable
             spinWait.SpinOnce();
     }
 
+    /// <summary>
+    /// Ensures the worker is in a ready state to run.
+    /// </summary>
     private void EnsureRunReadyState()
     {
         _isPreparingToRun = true;
@@ -161,6 +211,9 @@ public class WorkerController : IDisposable
         PermitToPassLoop();
     }
 
+    /// <summary>
+    /// Stops the worker and waits until it is stopped.
+    /// </summary>
     private void StopAndWaitUntilWorkerStopped()
     {
         _workerShouldStop = true;
@@ -170,12 +223,19 @@ public class WorkerController : IDisposable
             spinWait.SpinOnce();
     }
 
+    /// <summary>
+    /// Disposes the worker.
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
     
+    /// <summary>
+    /// Disposes the worker.
+    /// </summary>
+    /// <param name="disposing">Indicates whether the worker is being disposed.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (_isDisposed)
@@ -194,6 +254,9 @@ public class WorkerController : IDisposable
         _isDisposed = true;
     }
     
+    /// <summary>
+    /// Finalizes the worker.
+    /// </summary>
     ~WorkerController()
     {
         Dispose(false);
