@@ -8,7 +8,7 @@
         <Title>DotNetDifferentialEvolution</Title>
         <Authors>Eduard Burachek</Authors>
         <Description>A .NET library for Differential Evolution optimization with multi-processing and SIMD acceleration.</Description>
-        <Copyright>Copyright (c) Eduard Burachek, 2024</Copyright>
+        <Copyright>Copyright (c) Eduard Burachek, 2025</Copyright>
         <PackageProjectUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/LICENSE</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution</RepositoryUrl>

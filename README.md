@@ -163,7 +163,7 @@ This project is licensed under the MIT License. See the `LICENSE` file for more 
 ```markdown
 MIT License
 
-Copyright (c) 2024 Eduard Burachek
+Copyright (c) 2025 Eduard Burachek
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
