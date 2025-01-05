@@ -64,7 +64,9 @@ public class AlgorithmExecutor : IAlgorithmExecutor
                 population: population,
                 trialIndividual: trialIndividual);
 
-            var trialIndividualFfValue = fitnessFunctionEvaluator.Evaluate(trialIndividual);
+            var trialIndividualFfValue = fitnessFunctionEvaluator.Evaluate(
+                workerIndex: workerId,
+                genes: trialIndividual);
 
             _selectionStrategy.Select(
                 individualIndex: i,

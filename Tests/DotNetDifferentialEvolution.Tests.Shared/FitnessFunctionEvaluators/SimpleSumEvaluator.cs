@@ -30,6 +30,10 @@ public class SimpleSumEvaluator : ITestFitnessFunctionEvaluator
         return sum;
     }
 
+    public double Evaluate(
+        int workerIndex,
+        ReadOnlySpan<double> genes) => Evaluate(genes);
+
     public ReadOnlyMemory<double> GetLowerBounds() => LowerBounds;
 
     public ReadOnlyMemory<double> GetUpperBounds() => UpperBounds;

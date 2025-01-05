@@ -16,6 +16,10 @@ public class RosenbrockEvaluator : ITestFitnessFunctionEvaluator
         return Math.Pow(A - x, 2) + B * Math.Pow(y - x * x, 2);
     }
 
+    public double Evaluate(
+        int workerIndex,
+        ReadOnlySpan<double> genes) => Evaluate(genes);
+
     public ReadOnlyMemory<double> GetLowerBounds()
     {
         return new[] { -5.0, -5.0 };
