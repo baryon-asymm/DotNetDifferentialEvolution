@@ -16,7 +16,8 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     
     private readonly IWorkerPassLoopDoneHandler? _nextHandler;
     
-    private readonly TaskCompletionSource<Population> _resultPopulationTcs = new();
+    private readonly TaskCompletionSource<Population> _resultPopulationTcs = new(
+        TaskCreationOptions.RunContinuationsAsynchronously);
     
     /// <summary>
     /// Initializes a new instance of the <see cref="OrchestratorWorkerHandler"/> class.
