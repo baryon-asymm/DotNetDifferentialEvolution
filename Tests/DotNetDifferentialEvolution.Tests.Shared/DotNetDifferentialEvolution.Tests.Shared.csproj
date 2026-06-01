@@ -1,11 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
-
+    <!-- Common settings (TFM, nullable, RollForward, …) come from Tests/Directory.Build.props.
+         This is a shared test-support library, not a runnable test project. -->
     <ItemGroup>
       <ProjectReference Include="..\..\Src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj" />
     </ItemGroup>

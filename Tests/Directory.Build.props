@@ -1,0 +1,21 @@
+<Project>
+
+    <!-- Inherit the repo-root strictness settings (analyzers + warnings-as-errors). -->
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+    <!--
+      Shared settings for every project under Tests/. Individual test projects only add
+      their own ProjectReferences and (for runnable test projects) the xUnit/test-SDK
+      packages. RollForward=Major lets the net8.0 test assemblies run on the installed
+      .NET 10 runtime without requiring DOTNET_ROLL_FORWARD to be set by hand.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <RollForward>Major</RollForward>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+</Project>
