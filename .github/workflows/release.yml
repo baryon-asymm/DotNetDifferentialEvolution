@@ -1,7 +1,8 @@
 name: Release
 
-# Publishes the NuGet package when a version tag (vX.Y.Z) is pushed.
-# Requires a repository secret named NUGET_API_KEY (nuget.org push key).
+# Publishes the NuGet package and creates a GitHub Release when a version
+# tag (vX.Y.Z) is pushed. Requires a repository secret named NUGET_API_KEY
+# (nuget.org push key).
 on:
   push:
     tags:
@@ -10,6 +11,10 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    # contents:write is required for the gh CLI to create the GitHub Release.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v5
@@ -46,3 +51,15 @@ jobs:
           --api-key ${{ secrets.NUGET_API_KEY }}
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
+
+      # Create the GitHub Release for this tag with auto-generated notes and
+      # the package attached. Uses the runner's built-in gh CLI + GITHUB_TOKEN.
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${{ github.ref_name }}"
+          --title "${{ github.ref_name }}"
+          --generate-notes
+          --verify-tag
+          "${{ github.workspace }}"/artifacts/*.nupkg
