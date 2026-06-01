@@ -1,3 +1,5 @@
+using DotNetDifferentialEvolution.ControlParameterProviders;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 
@@ -50,6 +52,63 @@ public class ProblemContext
     /// Gets the handler for population updates.
     /// </summary>
     public IPopulationUpdatedHandler? PopulationUpdatedHandler { get; init; }
+
+    /// <summary>
+    /// Gets the provider of per-individual control parameters (F and CR).
+    /// When <see langword="null"/>, mutation strategies fall back to their own fixed parameters.
+    /// </summary>
+    public IControlParameterProvider? ControlParameterProvider { get; init; }
+
+    /// <summary>
+    /// Gets the per-generation adaptation hook. When <see langword="null"/>, no adaptation is performed.
+    /// </summary>
+    public IGenerationStrategy? GenerationStrategy { get; init; }
+
+    /// <summary>
+    /// Gets the per-individual trial outcomes for the current generation. Workers write
+    /// disjoint indices; the generation strategy reads the aggregated buffer.
+    /// </summary>
+    public Memory<TrialRecord> TrialRecords { get; private set; }
+
+    /// <summary>
+    /// Gets or sets the number of active individuals in the population. This equals
+    /// <see cref="PopulationSize"/> unless a strategy (e.g. L-SHADE) reduces it.
+    /// </summary>
+    public int CurrentPopulationSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets the index of the best individual in the current population, refreshed
+    /// each generation so the next generation's mutation can reference it.
+    /// </summary>
+    public int BestIndividualIndex { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of fitness-function evaluations performed so far.
+    /// Used by L-SHADE's population-size reduction and by evaluation-budget termination.
+    /// </summary>
+    public long EvaluationCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the flattened genes of the external archive (length up to capacity * genome size).
+    /// </summary>
+    public Memory<double> Archive { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of individuals currently stored in <see cref="Archive"/>.
+    /// </summary>
+    public int ArchiveSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of individuals the archive may hold. L-SHADE reduces
+    /// this together with the population size; it never exceeds the allocated buffer.
+    /// </summary>
+    public int ArchiveCapacity { get; set; }
+
+    /// <summary>
+    /// Gets the population indices sorted ascending by fitness (best first), maintained by
+    /// p-best strategies for the upcoming generation. Empty until populated.
+    /// </summary>
+    public Memory<int> FitnessSortedIndices { get; private set; }
 
     /// <summary>
     /// Gets the current population.
@@ -109,7 +168,11 @@ public class ProblemContext
         PopulationFfValues = populationFfValues;
         TrialPopulation = trialPopulation;
         TrialPopulationFfValues = trialPopulationFfValues;
-        
+
+        CurrentPopulationSize = populationSize;
+        TrialRecords = new TrialRecord[populationSize];
+        FitnessSortedIndices = new int[populationSize];
+
         _population = new Population(
             population,
             populationFfValues);
@@ -143,7 +206,8 @@ public class ProblemContext
     {
         _population.GenerationNumber = generationNumber;
         _population.BestIndividualIndex = bestIndividualIndex;
-        
+        _population.EvaluationCount = EvaluationCount;
+
         return _population;
     }
 }

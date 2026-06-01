@@ -1,0 +1,35 @@
+# EditorConfig — repo-wide analyzer policy.
+# The build runs the full .NET analyzer set with warnings-as-errors (see Directory.Build.props).
+# The few rules below are intentionally disabled because they are inappropriate for this
+# library; every other rule is expected to pass.
+root = true
+
+[*.cs]
+
+# CA5394 (insecure randomness): by design. This is a stochastic optimizer that requires a fast,
+# reproducible pseudo-random generator (System.Random). Seeding for reproducible runs is a core
+# feature; a cryptographic RNG would be both slower and non-reproducible. Not a security context.
+dotnet_diagnostic.CA5394.severity = none
+
+# CA1716 (identifier matches a reserved keyword): the public API deliberately uses the natural,
+# intention-revealing names Next / Select / Stop. Renaming them would be a gratuitous breaking
+# change for consumers for no real benefit.
+dotnet_diagnostic.CA1716.severity = none
+
+# Non-shipping code (tests + benchmarks): the full analyzer set + warnings-as-errors still
+# applies, but a handful of rules target shipping-library concerns and fight standard test /
+# BenchmarkDotNet conventions. Relaxing them here (and ONLY here) keeps idiomatic test code.
+[{Tests,Benchmarks}/**/*.cs]
+
+# Test method names use the conventional Method_State_Expected / Given_When_Then style.
+dotnet_diagnostic.CA1707.severity = none
+# xUnit and BenchmarkDotNet discover only public test/benchmark classes.
+dotnet_diagnostic.CA1515.severity = none
+# Inline literal arrays in [InlineData]/asserts are idiomatic and cannot be static readonly.
+dotnet_diagnostic.CA1861.severity = none
+# No SynchronizationContext in test runs, so ConfigureAwait(false) is pure noise (xUnit guidance).
+dotnet_diagnostic.CA2007.severity = none
+# Console/diagnostic output in tests and benchmarks is not localized.
+dotnet_diagnostic.CA1303.severity = none
+# Interface-typed fields in test/benchmark helpers are deliberate; the micro-perf hint is irrelevant.
+dotnet_diagnostic.CA1859.severity = none

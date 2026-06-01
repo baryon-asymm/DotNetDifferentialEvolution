@@ -4,19 +4,18 @@ namespace DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
 
 public class SimpleSumEvaluator : ITestFitnessFunctionEvaluator
 {
-    public ReadOnlyMemory<double> LowerBounds { get; init; }
-    
-    public ReadOnlyMemory<double> UpperBounds { get; init; }
-    
+    private readonly ReadOnlyMemory<double> _lowerBounds;
+    private readonly ReadOnlyMemory<double> _upperBounds;
+
     public SimpleSumEvaluator(
         ReadOnlyMemory<double> lowerBounds,
         ReadOnlyMemory<double> upperBounds)
     {
         if (lowerBounds.Length != upperBounds.Length)
             throw new ArgumentException("Lower and upper bounds must have the same length.");
-        
-        LowerBounds = lowerBounds;
-        UpperBounds = upperBounds;
+
+        _lowerBounds = lowerBounds;
+        _upperBounds = upperBounds;
     }
     
     public double Evaluate(
@@ -34,11 +33,11 @@ public class SimpleSumEvaluator : ITestFitnessFunctionEvaluator
         int workerIndex,
         ReadOnlySpan<double> genes) => Evaluate(genes);
 
-    public ReadOnlyMemory<double> GetLowerBounds() => LowerBounds;
+    public ReadOnlyMemory<double> GetLowerBounds() => _lowerBounds;
 
-    public ReadOnlyMemory<double> GetUpperBounds() => UpperBounds;
+    public ReadOnlyMemory<double> GetUpperBounds() => _upperBounds;
 
-    public double GetGlobalMinimumFfValue() => LowerBounds.ToArray().Sum();
+    public double GetGlobalMinimumFfValue() => _lowerBounds.ToArray().Sum();
 
-    public ReadOnlyMemory<double> GetGlobalMinimumGenes() => LowerBounds;
+    public ReadOnlyMemory<double> GetGlobalMinimumGenes() => _lowerBounds;
 }

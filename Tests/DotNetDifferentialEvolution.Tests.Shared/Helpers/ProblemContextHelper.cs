@@ -10,18 +10,23 @@ public static class ProblemContextHelper
         int populationSize,
         ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator,
         ITerminationStrategy terminationStrategy,
-        int workersCount = 1)
+        int workersCount = 1,
+        int? seed = null)
     {
+        ArgumentNullException.ThrowIfNull(testFitnessFunctionEvaluator);
+
         var lowerBound = testFitnessFunctionEvaluator.GetLowerBounds();
         var upperBound = testFitnessFunctionEvaluator.GetUpperBounds();
-        
+
         if (lowerBound.Length != upperBound.Length)
             throw new ArgumentException("Lower and upper bounds must have the same size");
-        
+
         var boundsSize = lowerBound.Length;
         var populationHelper = new PopulationHelper(populationSize, boundsSize);
-        
-        populationHelper.InitializePopulationWithRandomValues(lowerBound.Span, upperBound.Span);
+
+        // A seed makes the initial population reproducible (single-threaded callers only).
+        var random = seed.HasValue ? new Random(seed.Value) : null;
+        populationHelper.InitializePopulationWithRandomValues(lowerBound.Span, upperBound.Span, random);
         populationHelper.EvaluatePopulationFfValues(testFitnessFunctionEvaluator);
 
         var context = new ProblemContext(

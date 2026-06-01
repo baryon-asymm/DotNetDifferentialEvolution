@@ -1,4 +1,11 @@
 using DotNetDifferentialEvolution.AlgorithmExecutors;
+using DotNetDifferentialEvolution.Algorithms.Jade;
+using DotNetDifferentialEvolution.Algorithms.Jde;
+using DotNetDifferentialEvolution.Algorithms.Lshade;
+using DotNetDifferentialEvolution.Algorithms.Shade;
+using DotNetDifferentialEvolution.ControlParameterProviders;
+using DotNetDifferentialEvolution.GenerationStrategies;
+using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Interfaces;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
@@ -35,6 +42,11 @@ public class DifferentialEvolutionBuilder
     private IMutationStrategy? _mutationStrategy;
     private ISelectionStrategy? _selectionStrategy;
     private ITerminationStrategy? _terminationStrategy;
+
+    private IControlParameterProvider? _controlParameterProvider;
+    private IGenerationStrategy? _generationStrategy;
+
+    private int _archiveCapacity;
     
     private int _workersCount;
     
@@ -73,9 +85,6 @@ public class DifferentialEvolutionBuilder
         ReadOnlyMemory<double> lowerBound,
         ReadOnlyMemory<double> upperBound)
     {
-        ArgumentNullException.ThrowIfNull(lowerBound);
-        ArgumentNullException.ThrowIfNull(upperBound);
-        
         if (lowerBound.Length != upperBound.Length)
             throw new ArgumentException("Lower and upper bounds must have the same length.");
 
@@ -164,7 +173,199 @@ public class DifferentialEvolutionBuilder
             populationSize: _populationSize,
             lowerBound: _lowerBound,
             upperBound: _upperBound);
-        
+
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the <c>DE/best/1/bin</c> mutation strategy with constant parameters.
+    /// </summary>
+    /// <param name="mutationForce">The mutation force (F).</param>
+    /// <param name="crossoverProbability">The crossover probability (CR).</param>
+    public ISelectionStrategyRequired WithBestMutationStrategy(
+        double mutationForce,
+        double crossoverProbability)
+        => WithMutationStrategy(
+            new BestMutationStrategy(),
+            new ConstantControlParameterProvider(mutationForce, crossoverProbability));
+
+    /// <summary>
+    /// Sets the <c>DE/current-to-best/1/bin</c> mutation strategy with constant parameters.
+    /// </summary>
+    /// <param name="mutationForce">The mutation force (F).</param>
+    /// <param name="crossoverProbability">The crossover probability (CR).</param>
+    public ISelectionStrategyRequired WithCurrentToBestMutationStrategy(
+        double mutationForce,
+        double crossoverProbability)
+        => WithMutationStrategy(
+            new CurrentToBestMutationStrategy(),
+            new ConstantControlParameterProvider(mutationForce, crossoverProbability));
+
+    /// <summary>
+    /// Sets the <c>DE/rand/2/bin</c> mutation strategy with constant parameters.
+    /// </summary>
+    /// <param name="mutationForce">The mutation force (F).</param>
+    /// <param name="crossoverProbability">The crossover probability (CR).</param>
+    public ISelectionStrategyRequired WithRandTwoMutationStrategy(
+        double mutationForce,
+        double crossoverProbability)
+        => WithMutationStrategy(
+            new RandTwoMutationStrategy(),
+            new ConstantControlParameterProvider(mutationForce, crossoverProbability));
+
+    /// <summary>
+    /// Sets the <c>DE/best/2/bin</c> mutation strategy with constant parameters.
+    /// </summary>
+    /// <param name="mutationForce">The mutation force (F).</param>
+    /// <param name="crossoverProbability">The crossover probability (CR).</param>
+    public ISelectionStrategyRequired WithBestTwoMutationStrategy(
+        double mutationForce,
+        double crossoverProbability)
+        => WithMutationStrategy(
+            new BestTwoMutationStrategy(),
+            new ConstantControlParameterProvider(mutationForce, crossoverProbability));
+
+    /// <summary>
+    /// Sets the mutation strategy together with the control-parameter provider that
+    /// supplies its per-individual F and CR (e.g. <see cref="ConstantControlParameterProvider"/>
+    /// or <see cref="DitheredControlParameterProvider"/>).
+    /// </summary>
+    /// <param name="mutationStrategy">The mutation strategy.</param>
+    /// <param name="controlParameterProvider">The control-parameter provider.</param>
+    public ISelectionStrategyRequired WithMutationStrategy(
+        IMutationStrategy mutationStrategy,
+        IControlParameterProvider controlParameterProvider)
+    {
+        ArgumentNullException.ThrowIfNull(mutationStrategy);
+        ArgumentNullException.ThrowIfNull(controlParameterProvider);
+
+        _mutationStrategy = mutationStrategy;
+        _controlParameterProvider = controlParameterProvider;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the self-adaptive jDE algorithm (Brest et al., 2006): <c>DE/rand/1/bin</c>
+    /// with per-individual self-adapting F and CR and greedy selection. This bundles the
+    /// mutation, control-parameter, generation, and selection strategies.
+    /// </summary>
+    /// <param name="initialMutationForce">The initial mutation factor for every individual.</param>
+    /// <param name="initialCrossoverProbability">The initial crossover probability for every individual.</param>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
+    public ITerminationConditionRequired WithJde(
+        double initialMutationForce = JdeStrategy.DefaultInitialMutationForce,
+        double initialCrossoverProbability = JdeStrategy.DefaultInitialCrossoverProbability)
+    {
+        var jdeStrategy = new JdeStrategy(
+            populationSize: _populationSize,
+            initialMutationForce: initialMutationForce,
+            initialCrossoverProbability: initialCrossoverProbability);
+
+        _mutationStrategy = new RandMutationStrategy();
+        _controlParameterProvider = jdeStrategy;
+        _generationStrategy = jdeStrategy;
+        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the JADE algorithm (Zhang &amp; Sanderson, 2009): <c>DE/current-to-pbest/1</c>
+    /// with an optional external archive and adaptive F/CR. This bundles the mutation,
+    /// control-parameter, generation, and selection strategies.
+    /// </summary>
+    /// <param name="pBestRate">The fraction (0, 1] of top individuals forming the p-best pool.</param>
+    /// <param name="archiveSizeRate">The archive capacity as a multiple of the population size (0 disables the archive).</param>
+    /// <param name="adaptationRate">The adaptation rate (c) for the parameter means.</param>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
+    public ITerminationConditionRequired WithJade(
+        double pBestRate = 0.1,
+        double archiveSizeRate = 1.0,
+        double adaptationRate = JadeStrategy.DefaultAdaptationRate)
+    {
+        if (archiveSizeRate < 0.0)
+            throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
+
+        var jadeStrategy = new JadeStrategy(
+            populationSize: _populationSize,
+            adaptationRate: adaptationRate);
+
+        _mutationStrategy = new CurrentToPBestMutationStrategy(pBestRate);
+        _controlParameterProvider = jadeStrategy;
+        _generationStrategy = jadeStrategy;
+        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
+        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the SHADE algorithm (Tanabe &amp; Fukunaga, 2013): JADE's
+    /// <c>DE/current-to-pbest/1</c> with archive, plus success-history based adaptation of
+    /// F and CR. This bundles the mutation, control-parameter, generation, and selection strategies.
+    /// </summary>
+    /// <param name="pBestRate">The fraction (0, 1] of top individuals forming the p-best pool.</param>
+    /// <param name="archiveSizeRate">The archive capacity as a multiple of the population size (0 disables the archive).</param>
+    /// <param name="memorySize">The size of the success-history memory (H).</param>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
+    public ITerminationConditionRequired WithShade(
+        double pBestRate = 0.1,
+        double archiveSizeRate = 1.0,
+        int memorySize = ShadeStrategy.DefaultMemorySize)
+    {
+        if (archiveSizeRate < 0.0)
+            throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
+
+        var shadeStrategy = new ShadeStrategy(
+            populationSize: _populationSize,
+            memorySize: memorySize);
+
+        _mutationStrategy = new CurrentToPBestMutationStrategy(pBestRate);
+        _controlParameterProvider = shadeStrategy;
+        _generationStrategy = shadeStrategy;
+        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
+        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the L-SHADE algorithm (Tanabe &amp; Fukunaga, 2014): SHADE plus Linear
+    /// Population Size Reduction, the CEC-2014 competition winner. The population size given
+    /// to <see cref="WithPopulationSize"/> is the initial size and shrinks toward 4 as the
+    /// evaluation budget is consumed. Pair with
+    /// <see cref="TerminationStrategies.LimitEvaluationNumberTerminationStrategy"/> using the
+    /// same budget.
+    /// </summary>
+    /// <param name="maxEvaluationNumber">The fitness-evaluation budget driving the reduction.</param>
+    /// <param name="pBestRate">The fraction (0, 1] of top individuals forming the p-best pool.</param>
+    /// <param name="archiveSizeRate">The archive capacity as a multiple of the current population size.</param>
+    /// <param name="memorySize">The size of the success-history memory (H).</param>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
+    public ITerminationConditionRequired WithLShade(
+        long maxEvaluationNumber,
+        double pBestRate = 0.11,
+        double archiveSizeRate = 2.6,
+        int memorySize = 6)
+    {
+        if (maxEvaluationNumber <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxEvaluationNumber), "Evaluation budget must be greater than 0.");
+        if (archiveSizeRate < 0.0)
+            throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
+
+        var lShadeStrategy = new LShadeStrategy(
+            initialPopulationSize: _populationSize,
+            maxEvaluationNumber: maxEvaluationNumber,
+            archiveSizeRate: archiveSizeRate,
+            memorySize: memorySize);
+
+        _mutationStrategy = new CurrentToPBestMutationStrategy(pBestRate);
+        _controlParameterProvider = lShadeStrategy;
+        _generationStrategy = lShadeStrategy;
+        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
+        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize);
+
         return this;
     }
 
@@ -283,9 +484,18 @@ public class DifferentialEvolutionBuilder
             trialPopulation: trialPopulation,
             trialPopulationFfValues: trialPopulationFfValues)
         {
-            PopulationUpdatedHandler = _populationUpdatedHandler
+            PopulationUpdatedHandler = _populationUpdatedHandler,
+            ControlParameterProvider = _controlParameterProvider,
+            GenerationStrategy = _generationStrategy,
+            BestIndividualIndex = FindBestIndividualIndex(populationFfValues),
+            Archive = _archiveCapacity > 0 ? new double[_archiveCapacity * genomeSize] : Memory<double>.Empty,
+            ArchiveCapacity = _archiveCapacity,
+            EvaluationCount = _populationSize
         };
-        
+
+        PopulationSortHelper.SortIndicesByFitness(
+            context.FitnessSortedIndices.Span, populationFfValues, _populationSize, new double[_populationSize]);
+
         var algorithmExecutor = new AlgorithmExecutor(
             _mutationStrategy!,
             _selectionStrategy!,
@@ -324,6 +534,24 @@ public class DifferentialEvolutionBuilder
             throw new InvalidOperationException("Workers count must be set.");
     }
     
+    /// <summary>
+    /// Finds the index of the best (lowest fitness) individual in the initial population.
+    /// </summary>
+    /// <param name="populationFfValues">The fitness function values of the population.</param>
+    /// <returns>The index of the best individual.</returns>
+    private static int FindBestIndividualIndex(
+        ReadOnlySpan<double> populationFfValues)
+    {
+        var bestIndividualIndex = 0;
+        for (int i = 1; i < populationFfValues.Length; i++)
+        {
+            if (populationFfValues[i] < populationFfValues[bestIndividualIndex])
+                bestIndividualIndex = i;
+        }
+
+        return bestIndividualIndex;
+    }
+
     /// <summary>
     /// Evaluates the fitness function values for the population.
     /// </summary>
@@ -416,6 +644,67 @@ public interface IMutationStrategyRequired
     public ISelectionStrategyRequired WithDefaultMutationStrategy(
         double mutationForce,
         double crossoverProbability);
+
+    /// <summary>Sets the <c>DE/best/1/bin</c> mutation strategy with constant parameters.</summary>
+    public ISelectionStrategyRequired WithBestMutationStrategy(
+        double mutationForce,
+        double crossoverProbability);
+
+    /// <summary>Sets the <c>DE/current-to-best/1/bin</c> mutation strategy with constant parameters.</summary>
+    public ISelectionStrategyRequired WithCurrentToBestMutationStrategy(
+        double mutationForce,
+        double crossoverProbability);
+
+    /// <summary>Sets the <c>DE/rand/2/bin</c> mutation strategy with constant parameters.</summary>
+    public ISelectionStrategyRequired WithRandTwoMutationStrategy(
+        double mutationForce,
+        double crossoverProbability);
+
+    /// <summary>Sets the <c>DE/best/2/bin</c> mutation strategy with constant parameters.</summary>
+    public ISelectionStrategyRequired WithBestTwoMutationStrategy(
+        double mutationForce,
+        double crossoverProbability);
+
+    /// <summary>
+    /// Sets the mutation strategy together with the control-parameter provider that supplies
+    /// its per-individual F and CR.
+    /// </summary>
+    public ISelectionStrategyRequired WithMutationStrategy(
+        IMutationStrategy mutationStrategy,
+        IControlParameterProvider controlParameterProvider);
+
+    /// <summary>
+    /// Configures the self-adaptive jDE algorithm (mutation + control parameters + adaptation
+    /// + selection in one step).
+    /// </summary>
+    public ITerminationConditionRequired WithJde(
+        double initialMutationForce = JdeStrategy.DefaultInitialMutationForce,
+        double initialCrossoverProbability = JdeStrategy.DefaultInitialCrossoverProbability);
+
+    /// <summary>
+    /// Configures the JADE algorithm (current-to-pbest/1 with archive and adaptive F/CR).
+    /// </summary>
+    public ITerminationConditionRequired WithJade(
+        double pBestRate = 0.1,
+        double archiveSizeRate = 1.0,
+        double adaptationRate = JadeStrategy.DefaultAdaptationRate);
+
+    /// <summary>
+    /// Configures the SHADE algorithm (current-to-pbest/1 with archive and success-history adaptation).
+    /// </summary>
+    public ITerminationConditionRequired WithShade(
+        double pBestRate = 0.1,
+        double archiveSizeRate = 1.0,
+        int memorySize = ShadeStrategy.DefaultMemorySize);
+
+    /// <summary>
+    /// Configures the L-SHADE algorithm (SHADE plus linear population size reduction).
+    /// </summary>
+    public ITerminationConditionRequired WithLShade(
+        long maxEvaluationNumber,
+        double pBestRate = 0.11,
+        double archiveSizeRate = 2.6,
+        int memorySize = 6);
 }
 
 /// <summary>

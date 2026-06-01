@@ -1,0 +1,23 @@
+<Project>
+
+    <!--
+      Repo-wide build strictness: enable the full set of .NET analyzers and code-style checks,
+      and fail the build on ANY warning. Applies to every project (Src, Benchmarks, Tests);
+      the Tests props import this file so the test projects inherit the same rules.
+    -->
+    <PropertyGroup>
+        <!-- Treat every compiler/analyzer warning as an error → the build crashes on warnings. -->
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+
+        <!-- Maximum static analysis: all .NET analyzer rules at the latest level, plus
+             IDE/code-style rules enforced during build. -->
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <AnalysisLevel>latest-all</AnalysisLevel>
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+        <!-- Surface every warning rather than capping the count. -->
+        <WarningLevel>9999</WarningLevel>
+    </PropertyGroup>
+
+</Project>

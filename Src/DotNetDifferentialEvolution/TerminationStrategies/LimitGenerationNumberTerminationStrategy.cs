@@ -31,6 +31,8 @@ public class LimitGenerationNumberTerminationStrategy : ITerminationStrategy
     public bool ShouldTerminate(
         Population population)
     {
+        ArgumentNullException.ThrowIfNull(population);
+
         return population.GenerationNumber >= MaxGenerationNumber;
     }
 }

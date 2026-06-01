@@ -1,5 +1,11 @@
 # DotNetDifferentialEvolution
 
+[![NuGet](https://img.shields.io/nuget/v/DotNetDifferentialEvolution.svg)](https://www.nuget.org/packages/DotNetDifferentialEvolution/)
+[![Downloads](https://img.shields.io/nuget/dt/DotNetDifferentialEvolution.svg)](https://www.nuget.org/packages/DotNetDifferentialEvolution/)
+[![CI](https://github.com/baryon-asymm/DotNetDifferentialEvolution/actions/workflows/ci.yml/badge.svg)](https://github.com/baryon-asymm/DotNetDifferentialEvolution/actions/workflows/ci.yml)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/LICENSE)
+
 ## Introduction
 
 Differential Evolution (DE) is a stochastic optimization algorithm used for finding global minima or maxima of functions in multi-dimensional spaces.
@@ -124,6 +130,81 @@ var copiedFitnessValue = bestIndividualSnapshot.FitnessFunctionValue;
    When creating a deep copy, the `GetSnapshot` method generates a new instance of the `IndividualCursor` class. This ensures that the genes and fitness value of the individual are independent of the original population data.
 
 This approach ensures efficient access and manipulation of individuals while providing the flexibility to isolate snapshots from future modifications to the Population.
+
+## Algorithm Variants
+
+In addition to the classic `DE/rand/1/bin` scheme, the library ships a range of
+well-established mutation strategies and self-adaptive algorithms, all selectable through
+the fluent builder.
+
+### Mutation strategies (constant parameters)
+
+Replace `WithDefaultMutationStrategy(...)` (which is `DE/rand/1/bin`) with any of:
+
+```csharp
+.WithBestMutationStrategy(mutationForce: 0.5, crossoverProbability: 0.9)          // DE/best/1/bin
+.WithCurrentToBestMutationStrategy(mutationForce: 0.5, crossoverProbability: 0.9) // DE/current-to-best/1/bin
+.WithRandTwoMutationStrategy(mutationForce: 0.5, crossoverProbability: 0.9)       // DE/rand/2/bin
+.WithBestTwoMutationStrategy(mutationForce: 0.5, crossoverProbability: 0.9)       // DE/best/2/bin
+```
+
+You can also supply a mutation strategy together with a control-parameter provider — for
+example, to **dither** the mutation factor (sample F per individual from a range), which
+often improves robustness:
+
+```csharp
+.WithMutationStrategy(
+    new BestMutationStrategy(),
+    new DitheredControlParameterProvider(minMutationForce: 0.3, maxMutationForce: 0.9, crossoverProbability: 0.9))
+```
+
+All strategies use binomial crossover with a guaranteed gene from the mutant (the standard
+`jrand` rule), so a trial always differs from its parent.
+
+### Self-adaptive algorithms
+
+These presets configure mutation, crossover, parameter adaptation and selection in one
+call (so they replace both `With...MutationStrategy(...)` and the selection step). They
+remove the need to hand-tune F and CR:
+
+```csharp
+// jDE (Brest et al., 2006) — per-individual self-adapting F and CR
+.WithJde()
+
+// JADE (Zhang & Sanderson, 2009) — DE/current-to-pbest/1 with optional archive + adaptive F/CR
+.WithJade(pBestRate: 0.1, archiveSizeRate: 1.0)
+
+// SHADE (Tanabe & Fukunaga, 2013) — JADE with success-history based parameter adaptation
+.WithShade(pBestRate: 0.1, archiveSizeRate: 1.0, memorySize: 100)
+
+// L-SHADE (Tanabe & Fukunaga, 2014) — SHADE with linear population size reduction
+//   (the CEC-2014 competition winner). The population size set above is the *initial*
+//   size and shrinks toward 4 as the evaluation budget is consumed.
+.WithLShade(maxEvaluationNumber: 300_000)
+```
+
+A complete L-SHADE example:
+
+```csharp
+const long maxEvaluations = 300_000;
+
+var de = DifferentialEvolutionBuilder
+    .ForFunction(fitnessFunctionEvaluator)
+    .WithBounds(lowerBound, upperBound)
+    .WithPopulationSize(18 * dimensions) // recommended initial size for L-SHADE
+    .WithUniformPopulationSampling()
+    .WithLShade(maxEvaluationNumber: maxEvaluations)
+    .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(maxEvaluations))
+    .UseAllProcessors()
+    .Build();
+
+var result = await de.RunAsync();
+```
+
+Recommended starting point: for most problems, **L-SHADE** gives the strongest results out
+of the box; **jDE** is a simpler, robust self-adaptive baseline. You can compare all
+variants on the Rastrigin and Ackley functions by running
+`dotnet run -c Release --project Benchmarks/DotNetDifferentialEvolution.Benchmark -- convergence`.
 
 ## Contributing
 

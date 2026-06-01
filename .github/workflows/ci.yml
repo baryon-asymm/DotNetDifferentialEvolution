@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore DotNetDifferentialEvolution.sln
+
+      - name: Build
+        run: dotnet build DotNetDifferentialEvolution.sln --configuration Release --no-restore
+
+      # Fast gate: the deterministic unit suite must pass quickly on every push/PR.
+      - name: Unit tests
+        run: >-
+          dotnet test DotNetDifferentialEvolution.sln
+          --configuration Release --no-build
+          --filter "Category=Unit"
+          --collect:"XPlat Code Coverage"
+
+      # Broader gate: unit + integration, excluding the long-running (Slow) tests.
+      - name: Integration tests (excluding slow)
+        run: >-
+          dotnet test DotNetDifferentialEvolution.sln
+          --configuration Release --no-build
+          --filter "Category!=Slow"

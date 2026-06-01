@@ -1,6 +1,8 @@
 using DotNetDifferentialEvolution.AlgorithmExecutors.Interfaces;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
+using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.AlgorithmExecutors;
@@ -10,13 +12,14 @@ namespace DotNetDifferentialEvolution.AlgorithmExecutors;
 /// </summary>
 public class AlgorithmExecutor : IAlgorithmExecutor
 {
-    private readonly int _populationSize;
     private readonly int _individualHandlerStepSize;
 
     private readonly IMutationStrategy _mutationStrategy;
     private readonly ISelectionStrategy _selectionStrategy;
 
     private readonly ProblemContext _context;
+
+    private readonly BaseRandomProvider _randomProvider = new RandomProvider();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AlgorithmExecutor"/> class.
@@ -29,7 +32,8 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         ISelectionStrategy selectionStrategy,
         ProblemContext context)
     {
-        _populationSize = context.PopulationSize;
+        ArgumentNullException.ThrowIfNull(context);
+
         _individualHandlerStepSize = context.WorkersCount;
 
         _mutationStrategy = mutationStrategy;
@@ -47,26 +51,68 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         int workerId,
         out int bestHandledIndividualIndex)
     {
-        Span<double> trialIndividual = stackalloc double[_context.GenomeSize];
+        var genomeSize = _context.GenomeSize;
+        Span<double> trialIndividual = stackalloc double[genomeSize];
 
         var population = _context.Population.Span;
         var populationFfValues = _context.PopulationFfValues.Span;
         var nextPopulation = _context.TrialPopulation.Span;
         var nextPopulationFfValues = _context.TrialPopulationFfValues.Span;
+        var trialRecords = _context.TrialRecords.Span;
 
         var fitnessFunctionEvaluator = _context.FitnessFunctionEvaluator;
+        var controlParameterProvider = _context.ControlParameterProvider;
 
-        bestHandledIndividualIndex = workerId;
-        for (var i = workerId; i < _populationSize; i += _individualHandlerStepSize)
+        var populationSize = _context.CurrentPopulationSize;
+        var bestIndividualIndex = _context.BestIndividualIndex;
+        var lowerBound = _context.GenesLowerBound.Span;
+        var upperBound = _context.GenesUpperBound.Span;
+
+        var archive = _context.Archive.Span;
+        var archiveSize = _context.ArchiveSize;
+        var fitnessSortedIndices = _context.FitnessSortedIndices.Span.Slice(0, populationSize);
+
+        bestHandledIndividualIndex = workerId < populationSize ? workerId : 0;
+        for (var i = workerId; i < populationSize; i += _individualHandlerStepSize)
         {
-            _mutationStrategy.Mutate(
-                individualIndex: i,
-                population: population,
-                trialIndividual: trialIndividual);
+            double mutationForce, crossoverProbability;
+            if (controlParameterProvider is null)
+            {
+                mutationForce = double.NaN;
+                crossoverProbability = double.NaN;
+            }
+            else
+            {
+                controlParameterProvider.GetControlParameters(
+                    i, _randomProvider, out mutationForce, out crossoverProbability);
+            }
+
+            var mutationContext = new MutationContext
+            {
+                IndividualIndex = i,
+                BestIndividualIndex = bestIndividualIndex,
+                PopulationSize = populationSize,
+                GenomeSize = genomeSize,
+                MutationForce = mutationForce,
+                CrossoverProbability = crossoverProbability,
+                Population = population,
+                PopulationFfValues = populationFfValues,
+                TrialIndividual = trialIndividual,
+                LowerBound = lowerBound,
+                UpperBound = upperBound,
+                RandomProvider = _randomProvider,
+                Archive = archive,
+                ArchiveSize = archiveSize,
+                FitnessSortedIndices = fitnessSortedIndices
+            };
+
+            _mutationStrategy.Mutate(in mutationContext);
 
             var trialIndividualFfValue = fitnessFunctionEvaluator.Evaluate(
                 workerIndex: workerId,
                 genes: trialIndividual);
+
+            var parentFfValue = populationFfValues[i];
 
             _selectionStrategy.Select(
                 individualIndex: i,
@@ -76,6 +122,15 @@ public class AlgorithmExecutor : IAlgorithmExecutor
                 population: population,
                 nextPopulationFfValues: nextPopulationFfValues,
                 nextPopulation: nextPopulation);
+
+            trialRecords[i] = new TrialRecord
+            {
+                Succeeded = trialIndividualFfValue < parentFfValue,
+                UsedF = mutationForce,
+                UsedCr = crossoverProbability,
+                ParentFfValue = parentFfValue,
+                TrialFfValue = trialIndividualFfValue
+            };
 
             if (nextPopulationFfValues[i] < nextPopulationFfValues[bestHandledIndividualIndex])
                 bestHandledIndividualIndex = i;

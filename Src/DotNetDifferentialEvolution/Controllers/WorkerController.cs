@@ -8,7 +8,7 @@ namespace DotNetDifferentialEvolution.Controllers;
 /// </summary>
 public class WorkerController : IDisposable
 {
-    private static volatile int _globalWorkerCounter = 0;
+    private static volatile int _globalWorkerCounter;
     
     private readonly object _lock = new();
     
@@ -150,7 +150,11 @@ public class WorkerController : IDisposable
         {
             while (_workerShouldStop == false)
             {
+                // CA1508 false positive: _workerShouldStop is volatile and may be flipped by
+                // Stop() on another thread, so this spin-wait condition is not statically constant.
+#pragma warning disable CA1508
                 while (_passLoopPermitted == false && _workerShouldStop == false) ;
+#pragma warning restore CA1508
                 _passLoopPermitted = false;
 
                 if (_workerShouldStop)
@@ -168,11 +172,16 @@ public class WorkerController : IDisposable
                     break;
             }
         }
+        // CA1031: a worker thread is a failure boundary. Any exception from the user-supplied
+        // fitness function must be captured and marshaled to the orchestrator (surfaced as an
+        // AggregateException), never left to crash the thread, so catching all types is intended.
+#pragma warning disable CA1031
         catch (Exception ex)
         {
             _exception = ex;
             _workerPassLoopDoneHandler?.Handle(this, out _);
         }
+#pragma warning restore CA1031
         finally
         {
             _isRunning = false;

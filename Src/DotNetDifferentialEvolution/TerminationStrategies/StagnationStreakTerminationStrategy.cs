@@ -48,6 +48,8 @@ public class StagnationStreakTerminationStrategy : ITerminationStrategy
     /// <returns><c>true</c> if the evolution process should terminate; otherwise, <c>false</c>.</returns>
     public bool ShouldTerminate(Population population)
     {
+        ArgumentNullException.ThrowIfNull(population);
+
         population.MoveCursorToBestIndividual();
         
         var difference = Math.Abs(population.IndividualCursor.FitnessFunctionValue - LastBestFitnessFunctionValue);

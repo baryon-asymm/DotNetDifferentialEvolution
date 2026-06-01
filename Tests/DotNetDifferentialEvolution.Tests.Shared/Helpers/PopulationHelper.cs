@@ -39,9 +39,10 @@ public class PopulationHelper
 
     public void InitializePopulationWithRandomValues(
         ReadOnlySpan<double> lowerBounds,
-        ReadOnlySpan<double> upperBounds)
+        ReadOnlySpan<double> upperBounds,
+        Random? random = null)
     {
-        var random = Random.Shared;
+        random ??= Random.Shared;
         for (var i = 0; i < _populationSize * _genomeSize; i++)
         {
             var j = i % _genomeSize;
@@ -51,6 +52,8 @@ public class PopulationHelper
     
     public void EvaluatePopulationFfValues(IFitnessFunctionEvaluator evaluator)
     {
+        ArgumentNullException.ThrowIfNull(evaluator);
+
         var populationFfValues = PopulationFfValues.Span;
         var population = Population.Span;
         
