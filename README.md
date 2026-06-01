@@ -1,5 +1,11 @@
 # DotNetDifferentialEvolution
 
+[![NuGet](https://img.shields.io/nuget/v/DotNetDifferentialEvolution.svg)](https://www.nuget.org/packages/DotNetDifferentialEvolution/)
+[![Downloads](https://img.shields.io/nuget/dt/DotNetDifferentialEvolution.svg)](https://www.nuget.org/packages/DotNetDifferentialEvolution/)
+[![CI](https://github.com/baryon-asymm/DotNetDifferentialEvolution/actions/workflows/ci.yml/badge.svg)](https://github.com/baryon-asymm/DotNetDifferentialEvolution/actions/workflows/ci.yml)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)](https://dotnet.microsoft.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/LICENSE)
+
 ## Introduction
 
 Differential Evolution (DE) is a stochastic optimization algorithm used for finding global minima or maxima of functions in multi-dimensional spaces.
