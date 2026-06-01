@@ -42,6 +42,8 @@ public class IndividualCursor : IIndividualCursor
         int individualIndex,
         IIndividualCursorUpdater updater)
     {
+        ArgumentNullException.ThrowIfNull(updater);
+
         updater.Update(
             individualIndex,
             ref _fitnessFunctionValue,

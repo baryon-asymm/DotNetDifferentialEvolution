@@ -6,13 +6,10 @@ namespace DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 public interface IMutationStrategy
 {
     /// <summary>
-    /// Mutates an individual in the population.
+    /// Builds a trial individual (mutation + crossover) into
+    /// <see cref="MutationContext.TrialIndividual"/>.
     /// </summary>
-    /// <param name="individualIndex">The index of the individual to mutate.</param>
-    /// <param name="population">The population of individuals.</param>
-    /// <param name="trialIndividual">The trial individual to be mutated.</param>
+    /// <param name="context">The data required to build the trial vector.</param>
     public void Mutate(
-        int individualIndex,
-        Span<double> population,
-        Span<double> trialIndividual);
+        in MutationContext context);
 }

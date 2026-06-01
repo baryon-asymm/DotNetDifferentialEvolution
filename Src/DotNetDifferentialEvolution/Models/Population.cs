@@ -34,6 +34,11 @@ public class Population : IIndividualCursorUpdater
     /// Gets or sets the index of the best individual in the population.
     /// </summary>
     public int BestIndividualIndex { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of fitness-function evaluations performed so far.
+    /// </summary>
+    public long EvaluationCount { get; set; }
     
     /// <summary>
     /// Initializes a new instance of the <see cref="Population"/> class.

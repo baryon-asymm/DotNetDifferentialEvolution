@@ -44,6 +44,8 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         WorkerController masterWorker,
         out bool shouldTerminate)
     {
+        ArgumentNullException.ThrowIfNull(masterWorker);
+
         _nextHandler?.Handle(masterWorker, out _);
         
         WaitAllWorkersOrThemExceptions(
@@ -62,8 +64,18 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         else
         {
             _context.SwapPopulations();
-        
-            var bestIndividualIndex = GetBestIndividualIndex(masterWorker, _context.PopulationFfValues.Span);
+
+            // Count the evaluations performed during the generation that just finished.
+            _context.EvaluationCount += _context.CurrentPopulationSize;
+
+            var generationStrategy = _context.GenerationStrategy;
+            generationStrategy?.AfterGeneration(_context, _context.TrialRecords.Span);
+
+            var bestIndividualIndex = generationStrategy is null
+                ? GetBestIndividualIndex(masterWorker, _context.PopulationFfValues.Span)
+                : FindBestIndividualIndex(_context.PopulationFfValues.Span, _context.CurrentPopulationSize);
+            _context.BestIndividualIndex = bestIndividualIndex;
+
             var population = _context.GetRepresentativePopulation(++_passLoopCounter, bestIndividualIndex);
         
             _context.PopulationUpdatedHandler?.Handle(population);
@@ -156,6 +168,27 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         return bestIndividualIndex;
     }
     
+    /// <summary>
+    /// Finds the index of the best (lowest fitness) individual by scanning the active
+    /// population. Used when a generation strategy may have reordered or resized the population.
+    /// </summary>
+    /// <param name="populationFfValues">The fitness function values of the population.</param>
+    /// <param name="currentPopulationSize">The number of active individuals.</param>
+    /// <returns>The index of the best individual.</returns>
+    private static int FindBestIndividualIndex(
+        ReadOnlySpan<double> populationFfValues,
+        int currentPopulationSize)
+    {
+        var bestIndividualIndex = 0;
+        for (int i = 1; i < currentPopulationSize; i++)
+        {
+            if (populationFfValues[i] < populationFfValues[bestIndividualIndex])
+                bestIndividualIndex = i;
+        }
+
+        return bestIndividualIndex;
+    }
+
     /// <summary>
     /// Permits all workers to start their pass loops.
     /// </summary>
