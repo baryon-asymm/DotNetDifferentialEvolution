@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <!-- Common settings (TFM, nullable, RollForward, …) come from Tests/Directory.Build.props. -->
+    <!-- Common settings (TFM, nullable, RollForward, …) come from tests/Directory.Build.props. -->
     <PropertyGroup>
         <IsTestProject>true</IsTestProject>
     </PropertyGroup>
@@ -17,7 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj"/>
+        <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj"/>
         <ProjectReference Include="..\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj"/>
     </ItemGroup>
 

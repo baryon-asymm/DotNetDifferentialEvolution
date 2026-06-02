@@ -2,7 +2,7 @@
 
     <!--
       Repo-wide build strictness: enable the full set of .NET analyzers and code-style checks,
-      and fail the build on ANY warning. Applies to every project (Src, Benchmarks, Tests);
+      and fail the build on ANY warning. Applies to every project (src, benchmarks, tests);
       the Tests props import this file so the test projects inherit the same rules.
     -->
     <PropertyGroup>

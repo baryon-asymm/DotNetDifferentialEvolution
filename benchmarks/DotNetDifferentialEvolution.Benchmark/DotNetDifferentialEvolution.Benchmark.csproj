@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj" />
-      <ProjectReference Include="..\..\Tests\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj" />
-      <ProjectReference Include="..\..\Src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj" />
+      <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj" />
+      <ProjectReference Include="..\..\tests\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj" />
+      <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj" />
     </ItemGroup>
 
     <ItemGroup>

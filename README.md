@@ -210,7 +210,7 @@ var result = await de.RunAsync();
 Recommended starting point: for most problems, **L-SHADE** gives the strongest results out
 of the box; **jDE** is a simpler, robust self-adaptive baseline. You can compare all
 variants on the Rastrigin and Ackley functions by running
-`dotnet run -c Release --project Benchmarks/DotNetDifferentialEvolution.Benchmark -- convergence`.
+`dotnet run -c Release --project benchmarks/DotNetDifferentialEvolution.Benchmark -- convergence`.
 
 ## Contributing
 

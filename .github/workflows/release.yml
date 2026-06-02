@@ -41,7 +41,7 @@ jobs:
 
       - name: Pack
         run: >-
-          dotnet pack Src/DotNetDifferentialEvolution/DotNetDifferentialEvolution.csproj
+          dotnet pack src/DotNetDifferentialEvolution/DotNetDifferentialEvolution.csproj
           --configuration Release --no-build
           --output ${{ github.workspace }}/artifacts
 
