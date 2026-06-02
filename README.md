@@ -175,13 +175,19 @@ remove the need to hand-tune F and CR:
 .WithJade(pBestRate: 0.1, archiveSizeRate: 1.0)
 
 // SHADE (Tanabe & Fukunaga, 2013) — JADE with success-history based parameter adaptation
-.WithShade(pBestRate: 0.1, archiveSizeRate: 1.0, memorySize: 100)
+.WithShade(pBestRate: 0.2, archiveSizeRate: 1.0, memorySize: 100)
 
 // L-SHADE (Tanabe & Fukunaga, 2014) — SHADE with linear population size reduction
 //   (the CEC-2014 competition winner). The population size set above is the *initial*
 //   size and shrinks toward 4 as the evaluation budget is consumed.
 .WithLShade(maxEvaluationNumber: 300_000)
 ```
+
+> **The adaptive variants follow their source papers (since 3.0).** Bound violations are
+> reflected halfway back toward the parent (`(bound + x_i)/2`); SHADE samples its p-best rate per
+> individual from `[2/N, pBestRate]`; and L-SHADE applies the terminal-`M_CR` rule. When using
+> `WithLShade`, the `maxEvaluationNumber` must match the evaluation budget of
+> `LimitEvaluationNumberTerminationStrategy` — the builder enforces this.
 
 A complete L-SHADE example:
 

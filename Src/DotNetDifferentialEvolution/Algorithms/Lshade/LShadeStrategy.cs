@@ -21,6 +21,11 @@ public class LShadeStrategy : ShadeStrategy
     private readonly double _archiveSizeRate;
 
     /// <summary>
+    /// L-SHADE (2014) applies the terminal <c>M_CR</c> rule from its paper.
+    /// </summary>
+    protected override bool UseTerminalCr => true;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="LShadeStrategy"/> class.
     /// </summary>
     /// <param name="initialPopulationSize">The initial (maximum) population size.</param>

@@ -13,6 +13,7 @@ using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.PopulationSamplingMaker;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
+using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution;
@@ -47,7 +48,9 @@ public class DifferentialEvolutionBuilder
     private IGenerationStrategy? _generationStrategy;
 
     private int _archiveCapacity;
-    
+
+    private long? _lShadeMaxEvaluationNumber;
+
     private int _workersCount;
     
     private IPopulationUpdatedHandler? _populationUpdatedHandler;
@@ -305,12 +308,13 @@ public class DifferentialEvolutionBuilder
     /// <c>DE/current-to-pbest/1</c> with archive, plus success-history based adaptation of
     /// F and CR. This bundles the mutation, control-parameter, generation, and selection strategies.
     /// </summary>
-    /// <param name="pBestRate">The fraction (0, 1] of top individuals forming the p-best pool.</param>
+    /// <param name="pBestRate">The upper bound (0, 1] of the per-individual p-best pool fraction
+    /// (the SHADE paper uses 0.2). Each trial samples its rate uniformly from <c>[2/N, pBestRate]</c>.</param>
     /// <param name="archiveSizeRate">The archive capacity as a multiple of the population size (0 disables the archive).</param>
     /// <param name="memorySize">The size of the success-history memory (H).</param>
     /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
     public ITerminationConditionRequired WithShade(
-        double pBestRate = 0.1,
+        double pBestRate = 0.2,
         double archiveSizeRate = 1.0,
         int memorySize = ShadeStrategy.DefaultMemorySize)
     {
@@ -321,7 +325,10 @@ public class DifferentialEvolutionBuilder
             populationSize: _populationSize,
             memorySize: memorySize);
 
-        _mutationStrategy = new CurrentToPBestMutationStrategy(pBestRate);
+        // SHADE samples p per individual from [2/N, pBestRate]; cap the lower bound at pBestRate
+        // so very small populations degenerate to a fixed rate instead of an invalid range.
+        var pBestRateMin = Math.Min(2.0 / _populationSize, pBestRate);
+        _mutationStrategy = new CurrentToPBestMutationStrategy(pBestRateMin, pBestRate);
         _controlParameterProvider = shadeStrategy;
         _generationStrategy = shadeStrategy;
         _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
@@ -365,6 +372,7 @@ public class DifferentialEvolutionBuilder
         _generationStrategy = lShadeStrategy;
         _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
         _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize);
+        _lShadeMaxEvaluationNumber = maxEvaluationNumber;
 
         return this;
     }
@@ -523,13 +531,28 @@ public class DifferentialEvolutionBuilder
         
         if (_mutationStrategy == null)
             throw new InvalidOperationException("Mutation strategy must be set.");
-        
+
+        if (_populationSize < _mutationStrategy.MinimumPopulationSize)
+            throw new InvalidOperationException(
+                $"Population size {_populationSize} is too small for the chosen mutation strategy, " +
+                $"which needs at least {_mutationStrategy.MinimumPopulationSize} individuals to draw " +
+                "the distinct vectors it requires.");
+
         if (_selectionStrategy == null)
             throw new InvalidOperationException("Selection strategy must be set.");
-        
+
         if (_terminationStrategy == null)
             throw new InvalidOperationException("Termination strategy must be set.");
-        
+
+        if (_lShadeMaxEvaluationNumber is { } lShadeBudget
+            && _terminationStrategy is LimitEvaluationNumberTerminationStrategy evaluationTermination
+            && evaluationTermination.MaxEvaluationNumber != lShadeBudget)
+            throw new InvalidOperationException(
+                $"L-SHADE was configured with an evaluation budget of {lShadeBudget}, but the " +
+                $"termination strategy limits evaluations to {evaluationTermination.MaxEvaluationNumber}. " +
+                "They must match so the linear population-size reduction reaches its minimum exactly " +
+                "as the run terminates.");
+
         if (_workersCount == 0)
             throw new InvalidOperationException("Workers count must be set.");
     }
@@ -693,7 +716,7 @@ public interface IMutationStrategyRequired
     /// Configures the SHADE algorithm (current-to-pbest/1 with archive and success-history adaptation).
     /// </summary>
     public ITerminationConditionRequired WithShade(
-        double pBestRate = 0.1,
+        double pBestRate = 0.2,
         double archiveSizeRate = 1.0,
         int memorySize = ShadeStrategy.DefaultMemorySize);
 

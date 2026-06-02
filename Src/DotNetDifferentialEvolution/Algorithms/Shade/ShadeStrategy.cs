@@ -25,11 +25,25 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
     private const double CrStandardDeviation = 0.1;
     private const double FScale = 0.1;
 
+    /// <summary>
+    /// Sentinel stored in an <c>M_CR</c> slot once it becomes terminal (<c>⊥</c>): any negative
+    /// value is outside the valid CR range [0, 1] and forces sampled CR to 0 (L-SHADE, 2014).
+    /// </summary>
+    private const double TerminalCrValue = -1.0;
+
     private readonly int _memorySize;
     private readonly double[] _memoryCr;
     private readonly double[] _memoryF;
 
     private int _memoryIndex;
+
+    /// <summary>
+    /// Gets a value indicating whether the L-SHADE terminal <c>M_CR</c> rule is applied: when a
+    /// memory slot's successful CR values are all 0 it is fixed at a terminal value, after which
+    /// it always samples CR = 0. SHADE (2013) does not use it (<see langword="false"/>); L-SHADE
+    /// (2014) overrides this to <see langword="true"/>.
+    /// </summary>
+    protected virtual bool UseTerminalCr => false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShadeStrategy"/> class.
@@ -64,8 +78,11 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
 
         var slot = randomProvider.Next(_memorySize);
 
-        crossoverProbability = Math.Clamp(
-            RandomDistributionHelper.NextGaussian(randomProvider, _memoryCr[slot], CrStandardDeviation), 0.0, 1.0);
+        // A terminal M_CR slot deterministically yields CR = 0 (no Gaussian draw).
+        crossoverProbability = _memoryCr[slot] < 0.0
+            ? 0.0
+            : Math.Clamp(
+                RandomDistributionHelper.NextGaussian(randomProvider, _memoryCr[slot], CrStandardDeviation), 0.0, 1.0);
 
         do
         {
@@ -102,6 +119,7 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
         var weightedCrSum = 0.0;
         var weightedFSum = 0.0;
         var weightedFSquaredSum = 0.0;
+        var maxSuccessfulCr = 0.0;
 
         for (int i = 0; i < currentPopulationSize; i++)
         {
@@ -117,12 +135,20 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
             weightedCrSum += weight * cr;
             weightedFSum += weight * f;
             weightedFSquaredSum += weight * f * f;
+            if (cr > maxSuccessfulCr)
+                maxSuccessfulCr = cr;
         }
 
         if (weightSum <= 0.0)
             return;
 
-        _memoryCr[_memoryIndex] = weightedCrSum / weightSum;
+        // L-SHADE terminal rule: once a slot's successful CR values are all 0 (or it is already
+        // terminal), it stays terminal and forever samples CR = 0.
+        if (UseTerminalCr && (_memoryCr[_memoryIndex] < 0.0 || maxSuccessfulCr <= 0.0))
+            _memoryCr[_memoryIndex] = TerminalCrValue;
+        else
+            _memoryCr[_memoryIndex] = weightedCrSum / weightSum;
+
         if (weightedFSum > 0.0)
             _memoryF[_memoryIndex] = weightedFSquaredSum / weightedFSum;
 

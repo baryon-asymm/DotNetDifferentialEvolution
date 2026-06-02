@@ -76,6 +76,51 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
+    public void WithLShade_ThrowsWhenTerminationEvaluationBudgetDoesNotMatch()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            DifferentialEvolutionBuilder.ForFunction(Evaluator)
+                .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
+                .WithPopulationSize(10)
+                .WithUniformPopulationSampling()
+                .WithLShade(maxEvaluationNumber: 1000)
+                .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(2000))
+                .UseProcessors(1)
+                .Build());
+    }
+
+    [Fact]
+    public void WithLShade_BuildsWhenTerminationEvaluationBudgetMatches()
+    {
+        using var de = DifferentialEvolutionBuilder.ForFunction(Evaluator)
+            .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
+            .WithPopulationSize(10)
+            .WithUniformPopulationSampling()
+            .WithLShade(maxEvaluationNumber: 1000)
+            .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(1000))
+            .UseProcessors(1)
+            .Build();
+
+        Assert.NotNull(de);
+    }
+
+    [Fact]
+    public void Build_ThrowsWhenPopulationIsTooSmallForTheMutationStrategy()
+    {
+        // DE/rand/2 draws five distinct individuals plus the target, so it needs at least six.
+        Assert.Throws<InvalidOperationException>(() =>
+            DifferentialEvolutionBuilder.ForFunction(Evaluator)
+                .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
+                .WithPopulationSize(5)
+                .WithUniformPopulationSampling()
+                .WithRandTwoMutationStrategy(0.5, 0.9)
+                .WithDefaultSelectionStrategy()
+                .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(1))
+                .UseProcessors(1)
+                .Build());
+    }
+
+    [Fact]
     public void Build_WithCompleteConfiguration_ProducesAUsableInstance()
     {
         using var de = DifferentialEvolutionBuilder.ForFunction(Evaluator)

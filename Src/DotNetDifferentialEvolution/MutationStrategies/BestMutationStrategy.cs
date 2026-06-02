@@ -13,6 +13,9 @@ public class BestMutationStrategy : IMutationStrategy
     private const int NumberOfDifferenceIndividuals = 2;
 
     /// <inheritdoc />
+    public int MinimumPopulationSize => NumberOfDifferenceIndividuals + 1;
+
+    /// <inheritdoc />
     public void Mutate(
         in MutationContext context)
     {

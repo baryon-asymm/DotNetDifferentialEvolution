@@ -20,6 +20,9 @@ public class MutationStrategy : IMutationStrategy
     /// </summary>
     public const int NumberOfIndividualsToChoose = 3;
 
+    /// <inheritdoc />
+    public int MinimumPopulationSize => NumberOfIndividualsToChoose + 1;
+
     private readonly double _mutationForce;
     private readonly double _crossoverProbability;
 

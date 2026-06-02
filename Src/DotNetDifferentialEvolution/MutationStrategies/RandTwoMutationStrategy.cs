@@ -14,6 +14,9 @@ public class RandTwoMutationStrategy : IMutationStrategy
     private const int NumberOfIndividualsToChoose = 5;
 
     /// <inheritdoc />
+    public int MinimumPopulationSize => NumberOfIndividualsToChoose + 1;
+
+    /// <inheritdoc />
     public void Mutate(
         in MutationContext context)
     {

@@ -13,6 +13,9 @@ public class RandMutationStrategy : IMutationStrategy
     private const int NumberOfIndividualsToChoose = 3;
 
     /// <inheritdoc />
+    public int MinimumPopulationSize => NumberOfIndividualsToChoose + 1;
+
+    /// <inheritdoc />
     public void Mutate(
         in MutationContext context)
     {

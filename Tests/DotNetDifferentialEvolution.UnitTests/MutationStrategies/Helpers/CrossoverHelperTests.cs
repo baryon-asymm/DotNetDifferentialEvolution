@@ -26,11 +26,11 @@ public class CrossoverHelperTests
 
         // jrand = gene 2 (guaranteed from mutant, no CR draw for it).
         // CR draws (in gene order, skipping jrand): i0=0.4 (<=0.5 → keep mutant 5),
-        // i1=0.9 (>0.5 → copy parent 200), i3=0.1 (<=0.5 → crossover; 999 OOB → repair),
-        // repair draw 0.5 → 0.5*(10-0)+0 = 5.0.
+        // i1=0.9 (>0.5 → copy parent 200, so the OOB -1 is never repaired),
+        // i3=0.1 (<=0.5 → crossover; 999 > upper → midpoint (10 + parent 400)/2 = 205).
         var random = new ScriptedRandomProvider(
             ints: [2],
-            doubles: [0.4, 0.9, 0.1, 0.5]);
+            doubles: [0.4, 0.9, 0.1]);
 
         CrossoverHelper.BinomialCrossoverAndRepair(
             individualIndex: 0,
@@ -41,7 +41,7 @@ public class CrossoverHelperTests
             upperBound: upper,
             randomProvider: random);
 
-        Assert.Equal(new[] { 5.0, 200.0, 7.0, 5.0 }, trial, new DoubleComparer(Precision));
+        Assert.Equal(new[] { 5.0, 200.0, 7.0, 205.0 }, trial, new DoubleComparer(Precision));
     }
 
     [Fact]
@@ -96,6 +96,38 @@ public class CrossoverHelperTests
             randomProvider: random);
 
         Assert.Equal(new[] { 1.0, 2.0, 3.0 }, trial, new DoubleComparer(Precision));
+    }
+
+    [Fact]
+    public void RepairReflectsOutOfBoundGenesHalfwayTowardTheParent()
+    {
+        // Parent (individual 0).
+        double[] population = [100.0, 200.0, 300.0, 400.0];
+        double[] lower = [0.0, 0.0, 0.0, 0.0];
+        double[] upper = [10.0, 10.0, 10.0, 10.0];
+
+        // Mutant: gene0 below lower, gene1 in-bounds, gene2 in-bounds, gene3 above upper.
+        double[] trial = [-1.0, 5.0, 7.0, 999.0];
+
+        // jrand = gene 0 (guaranteed from mutant; -1 < lower → midpoint (0 + 100)/2 = 50, no draw).
+        // CR draws for genes 1..3: i1=0.0 (keep mutant 5), i2=0.9 (copy parent 300),
+        // i3=0.0 (crossover; 999 > upper → midpoint (10 + 400)/2 = 205, no draw).
+        var random = new ScriptedRandomProvider(
+            ints: [0],
+            doubles: [0.0, 0.9, 0.0]);
+
+        CrossoverHelper.BinomialCrossoverAndRepair(
+            individualIndex: 0,
+            crossoverProbability: 0.5,
+            population: population,
+            trialIndividual: trial,
+            lowerBound: lower,
+            upperBound: upper,
+            randomProvider: random);
+
+        Assert.Equal(new[] { 50.0, 5.0, 300.0, 205.0 }, trial, new DoubleComparer(Precision));
+        // Midpoint repair is deterministic: it consumes no random draws beyond the CR tests.
+        Assert.Equal(3, random.DoubleDrawCount);
     }
 
     private sealed class DoubleComparer(double tolerance) : IEqualityComparer<double>
