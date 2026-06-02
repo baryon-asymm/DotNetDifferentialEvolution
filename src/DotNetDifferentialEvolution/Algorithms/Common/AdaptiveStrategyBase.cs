@@ -1,6 +1,5 @@
 using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
-using DotNetDifferentialEvolution.RandomProviders;
 
 namespace DotNetDifferentialEvolution.Algorithms.Common;
 

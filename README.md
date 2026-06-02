@@ -31,6 +31,15 @@ To install the library via NuGet, you can use the following command:
 dotnet add package DotNetDifferentialEvolution
 ```
 
+> **Version 4.0 (breaking change).** The objective contract `IFitnessFunctionEvaluator` (and the
+> `BaseRandomProvider`/`RandomProvider` and the new `ISolution` types) now live in the shared
+> [`DotNetOptimization.Abstractions`](https://www.nuget.org/packages/DotNetOptimization.Abstractions/)
+> package, which this library depends on (and pulls in automatically). The only source change for
+> consumers is the namespace: replace `using DotNetDifferentialEvolution.Interfaces;` with
+> `using DotNetOptimization.Abstractions;` where you implement `IFitnessFunctionEvaluator`. The
+> shared package lets one objective implementation drive other optimizers in the family (e.g.
+> DotNetNelderMead) with no adapters.
+
 ## Usage
 
 Here is a basic example of how to use the library to optimize the `MyFitnessFunctionEvaluator` function:
@@ -69,7 +78,7 @@ MyFitnessFunctionEvaluator calculates the value of the fitness function. Below i
 Wikipedia has more information on the [Rosenbrock function](https://en.wikipedia.org/wiki/Rosenbrock_function).
 
 ```csharp
-using DotNetDifferentialEvolution.Interfaces;
+using DotNetOptimization.Abstractions;
 
 public class RosenbrockEvaluator : IFitnessFunctionEvaluator
 {
@@ -211,6 +220,23 @@ Recommended starting point: for most problems, **L-SHADE** gives the strongest r
 of the box; **jDE** is a simpler, robust self-adaptive baseline. You can compare all
 variants on the Rastrigin and Ackley functions by running
 `dotnet run -c Release --project benchmarks/DotNetDifferentialEvolution.Benchmark -- convergence`.
+
+### Hybrid / memetic local search
+
+You can interleave a local-search refinement into the evolutionary loop: supply an
+`ILocalSearchRefiner` and it runs single-threaded between generations — every *N* generations,
+after the best individual is identified — with read/write access to the population. This is the
+seam a local optimizer (e.g. Nelder–Mead) plugs into to polish the best solution in place and feed
+the improvement straight back into the search, while the adaptive algorithm's own state (SHADE /
+L-SHADE memory and archive) is preserved.
+
+```csharp
+.WithLocalSearch(refiner, everyNGenerations: 10)
+```
+
+A refiner must add any fitness evaluations it performs to `ProblemContext.EvaluationCount` so an
+evaluation-budget termination stays accurate. Because the result's `IndividualCursor` implements
+`DotNetOptimization.Abstractions.ISolution`, it can seed another optimizer's run directly.
 
 ## Contributing
 

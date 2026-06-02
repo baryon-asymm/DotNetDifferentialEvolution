@@ -15,8 +15,16 @@
         <PackageTags>differential-evolution de optimization .net</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <Version>3.0.0</Version>
+        <Version>4.0.0</Version>
     </PropertyGroup>
+
+    <!-- Shared contracts for the DotNetOptimization family. The objective evaluator, the random
+         provider base/default, and ISolution now live here so a single objective drives every
+         optimizer in the family with no adapters. Imported project-wide via the global using below. -->
+    <ItemGroup>
+        <PackageReference Include="DotNetOptimization.Abstractions" Version="1.0.0" />
+        <Using Include="DotNetOptimization.Abstractions" />
+    </ItemGroup>
 
     <!--
       Consumer experience: ship the XML doc (IntelliSense) and wire up SourceLink so debuggers

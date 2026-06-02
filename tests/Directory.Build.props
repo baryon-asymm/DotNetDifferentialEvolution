@@ -18,4 +18,11 @@
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
+    <!-- The shared optimization contracts (IFitnessFunctionEvaluator, BaseRandomProvider,
+         RandomProvider, ISolution) flow in transitively from the library; import them project-wide
+         so test code references them without per-file usings. -->
+    <ItemGroup>
+        <Using Include="DotNetOptimization.Abstractions" />
+    </ItemGroup>
+
 </Project>

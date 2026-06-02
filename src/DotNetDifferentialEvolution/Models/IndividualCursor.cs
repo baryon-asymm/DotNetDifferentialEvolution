@@ -5,7 +5,7 @@ namespace DotNetDifferentialEvolution.Models;
 /// <summary>
 /// Represents an individual cursor with fitness function value and genes.
 /// </summary>
-public class IndividualCursor : IIndividualCursor
+public class IndividualCursor : IIndividualCursor, ISolution
 {
     private double _fitnessFunctionValue;
     private ReadOnlyMemory<double> _genes;
