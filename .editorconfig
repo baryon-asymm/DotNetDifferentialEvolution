@@ -19,7 +19,7 @@ dotnet_diagnostic.CA1716.severity = none
 # Non-shipping code (tests + benchmarks): the full analyzer set + warnings-as-errors still
 # applies, but a handful of rules target shipping-library concerns and fight standard test /
 # BenchmarkDotNet conventions. Relaxing them here (and ONLY here) keeps idiomatic test code.
-[{Tests,Benchmarks}/**/*.cs]
+[{tests,benchmarks}/**/*.cs]
 
 # Test method names use the conventional Method_State_Expected / Given_When_Then style.
 dotnet_diagnostic.CA1707.severity = none

@@ -1,20 +1,20 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{066712A4-810C-4911-80BE-0A1A0D281441}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{066712A4-810C-4911-80BE-0A1A0D281441}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution", "Src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj", "{84AF65A6-F500-4F4D-8933-6C111FEC2784}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution", "src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj", "{84AF65A6-F500-4F4D-8933-6C111FEC2784}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{D8728652-9329-428C-B679-B2CCF1BB4C7D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D8728652-9329-428C-B679-B2CCF1BB4C7D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", "{4CC84260-E27D-44CE-BC91-C1E7D4283C85}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", "{4CC84260-E27D-44CE-BC91-C1E7D4283C85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution.Benchmark", "Benchmarks\DotNetDifferentialEvolution.Benchmark\DotNetDifferentialEvolution.Benchmark.csproj", "{0B6A44A4-F84E-40DD-9F4D-F65F6BBF5654}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution.Benchmark", "benchmarks\DotNetDifferentialEvolution.Benchmark\DotNetDifferentialEvolution.Benchmark.csproj", "{0B6A44A4-F84E-40DD-9F4D-F65F6BBF5654}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution.Tests.Shared", "Tests\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj", "{6754CA93-5C06-4A73-8A3D-029101635B34}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution.Tests.Shared", "tests\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj", "{6754CA93-5C06-4A73-8A3D-029101635B34}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution.UnitTests", "Tests\DotNetDifferentialEvolution.UnitTests\DotNetDifferentialEvolution.UnitTests.csproj", "{F9C10B2A-05AE-4D5D-B604-B53C5CB31AD6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution.UnitTests", "tests\DotNetDifferentialEvolution.UnitTests\DotNetDifferentialEvolution.UnitTests.csproj", "{F9C10B2A-05AE-4D5D-B604-B53C5CB31AD6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution.IntegrationTests", "Tests\DotNetDifferentialEvolution.IntegrationTests\DotNetDifferentialEvolution.IntegrationTests.csproj", "{17793EF3-861A-43AF-A3EA-9CFD25E9A2D0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetDifferentialEvolution.IntegrationTests", "tests\DotNetDifferentialEvolution.IntegrationTests\DotNetDifferentialEvolution.IntegrationTests.csproj", "{17793EF3-861A-43AF-A3EA-9CFD25E9A2D0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
