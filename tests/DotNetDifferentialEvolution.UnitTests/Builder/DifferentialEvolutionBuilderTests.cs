@@ -1,4 +1,6 @@
 using DotNetDifferentialEvolution;
+using DotNetDifferentialEvolution.LocalSearch;
+using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
 
@@ -134,5 +136,43 @@ public class DifferentialEvolutionBuilderTests
             .Build();
 
         Assert.NotNull(de);
+    }
+
+    [Fact]
+    public void WithLocalSearch_ThrowsWhenRefinerIsNull()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            DifferentialEvolutionBuilder.ForFunction(Evaluator)
+                .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
+                .WithPopulationSize(10)
+                .WithUniformPopulationSampling()
+                .WithDefaultMutationStrategy(0.5, 0.9)
+                .WithDefaultSelectionStrategy()
+                .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(1))
+                .UseProcessors(1)
+                .WithLocalSearch(null!));
+    }
+
+    [Fact]
+    public void WithLocalSearch_ThrowsWhenIntervalIsNotPositive()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            DifferentialEvolutionBuilder.ForFunction(Evaluator)
+                .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
+                .WithPopulationSize(10)
+                .WithUniformPopulationSampling()
+                .WithDefaultMutationStrategy(0.5, 0.9)
+                .WithDefaultSelectionStrategy()
+                .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(1))
+                .UseProcessors(1)
+                .WithLocalSearch(new NoOpRefiner(), everyNGenerations: 0));
+    }
+
+    private sealed class NoOpRefiner : ILocalSearchRefiner
+    {
+        public void Refine(ProblemContext context, int generationNumber)
+        {
+            // Intentionally does nothing; used only to satisfy the non-null refiner argument.
+        }
     }
 }

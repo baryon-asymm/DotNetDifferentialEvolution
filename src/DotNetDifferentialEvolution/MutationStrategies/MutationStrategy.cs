@@ -1,6 +1,5 @@
 using DotNetDifferentialEvolution.MutationStrategies.Helpers;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
-using DotNetDifferentialEvolution.RandomProviders;
 
 namespace DotNetDifferentialEvolution.MutationStrategies;
 

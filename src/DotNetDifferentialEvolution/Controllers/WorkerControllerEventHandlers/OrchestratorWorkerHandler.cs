@@ -76,7 +76,17 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
                 : FindBestIndividualIndex(_context.PopulationFfValues.Span, _context.CurrentPopulationSize);
             _context.BestIndividualIndex = bestIndividualIndex;
 
-            var population = _context.GetRepresentativePopulation(++_passLoopCounter, bestIndividualIndex);
+            var generationNumber = ++_passLoopCounter;
+
+            // Memetic hook: refine the population in place every N generations. Improving the best
+            // keeps it the best, so bestIndividualIndex stays valid; the refiner's own evaluations
+            // are folded into EvaluationCount before the representative population is built, so the
+            // observer and evaluation-budget termination both see the refined state.
+            var localSearchRefiner = _context.LocalSearchRefiner;
+            if (localSearchRefiner is not null && generationNumber % _context.LocalSearchInterval == 0)
+                localSearchRefiner.Refine(_context, generationNumber);
+
+            var population = _context.GetRepresentativePopulation(generationNumber, bestIndividualIndex);
         
             _context.PopulationUpdatedHandler?.Handle(population);
             

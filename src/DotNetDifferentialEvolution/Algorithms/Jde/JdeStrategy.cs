@@ -1,7 +1,6 @@
 using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
-using DotNetDifferentialEvolution.RandomProviders;
 
 namespace DotNetDifferentialEvolution.Algorithms.Jde;
 

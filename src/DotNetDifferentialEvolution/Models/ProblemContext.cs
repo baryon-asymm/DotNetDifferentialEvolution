@@ -1,6 +1,7 @@
 using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Interfaces;
+using DotNetDifferentialEvolution.LocalSearch;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.Models;
@@ -63,6 +64,17 @@ public class ProblemContext
     /// Gets the per-generation adaptation hook. When <see langword="null"/>, no adaptation is performed.
     /// </summary>
     public IGenerationStrategy? GenerationStrategy { get; init; }
+
+    /// <summary>
+    /// Gets the optional local-search refiner invoked every <see cref="LocalSearchInterval"/>
+    /// generations to polish the population in place. When <see langword="null"/>, no local search runs.
+    /// </summary>
+    public ILocalSearchRefiner? LocalSearchRefiner { get; init; }
+
+    /// <summary>
+    /// Gets the generation interval at which <see cref="LocalSearchRefiner"/> runs (1 = every generation).
+    /// </summary>
+    public int LocalSearchInterval { get; init; } = 1;
 
     /// <summary>
     /// Gets the per-individual trial outcomes for the current generation. Workers write

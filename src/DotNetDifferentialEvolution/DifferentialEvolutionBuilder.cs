@@ -7,6 +7,7 @@ using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Interfaces;
+using DotNetDifferentialEvolution.LocalSearch;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
@@ -52,8 +53,11 @@ public class DifferentialEvolutionBuilder
     private long? _lShadeMaxEvaluationNumber;
 
     private int _workersCount;
-    
+
     private IPopulationUpdatedHandler? _populationUpdatedHandler;
+
+    private ILocalSearchRefiner? _localSearchRefiner;
+    private int _localSearchInterval = 1;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="DifferentialEvolutionBuilder"/> class.
@@ -454,7 +458,31 @@ public class DifferentialEvolutionBuilder
         IPopulationUpdatedHandler populationUpdatedHandler)
     {
         _populationUpdatedHandler = populationUpdatedHandler;
-        
+
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a local-search refiner that polishes the population in place every
+    /// <paramref name="everyNGenerations"/> generations (memetic / hybrid optimization). The
+    /// refiner runs single-threaded between generations, after the best individual is identified.
+    /// </summary>
+    /// <param name="refiner">The local-search refiner.</param>
+    /// <param name="everyNGenerations">The generation interval at which the refiner runs (1 = every generation).</param>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
+    public IDifferentialEvolutionBuilder WithLocalSearch(
+        ILocalSearchRefiner refiner,
+        int everyNGenerations = 1)
+    {
+        ArgumentNullException.ThrowIfNull(refiner);
+
+        if (everyNGenerations < 1)
+            throw new ArgumentOutOfRangeException(
+                nameof(everyNGenerations), "Local-search interval must be at least 1 generation.");
+
+        _localSearchRefiner = refiner;
+        _localSearchInterval = everyNGenerations;
+
         return this;
     }
 
@@ -495,6 +523,8 @@ public class DifferentialEvolutionBuilder
             PopulationUpdatedHandler = _populationUpdatedHandler,
             ControlParameterProvider = _controlParameterProvider,
             GenerationStrategy = _generationStrategy,
+            LocalSearchRefiner = _localSearchRefiner,
+            LocalSearchInterval = _localSearchInterval,
             BestIndividualIndex = FindBestIndividualIndex(populationFfValues),
             Archive = _archiveCapacity > 0 ? new double[_archiveCapacity * genomeSize] : Memory<double>.Empty,
             ArchiveCapacity = _archiveCapacity,
@@ -796,7 +826,18 @@ public interface IDifferentialEvolutionBuilder
     /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
     public IDifferentialEvolutionBuilder WithPopulationUpdateHandler(
         IPopulationUpdatedHandler populationUpdatedHandler);
-    
+
+    /// <summary>
+    /// Registers a local-search refiner that polishes the population in place every
+    /// <paramref name="everyNGenerations"/> generations (memetic / hybrid optimization).
+    /// </summary>
+    /// <param name="refiner">The local-search refiner.</param>
+    /// <param name="everyNGenerations">The generation interval at which the refiner runs (1 = every generation).</param>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
+    public IDifferentialEvolutionBuilder WithLocalSearch(
+        ILocalSearchRefiner refiner,
+        int everyNGenerations = 1);
+
     /// <summary>
     /// Builds the Differential Evolution instance.
     /// </summary>
