@@ -108,7 +108,8 @@ public class LShadeStrategy : ShadeStrategy
             sortedIndices[k] = k;
 
         // Scale the archive capacity down and drop any overflow entries.
-        var newArchiveCapacity = (int)Math.Round(_archiveSizeRate * newPopulationSize);
+        var newArchiveCapacity = (int)Math.Round(
+            _archiveSizeRate * newPopulationSize, MidpointRounding.AwayFromZero);
         context.ArchiveCapacity = newArchiveCapacity;
         if (context.ArchiveSize > newArchiveCapacity)
             context.ArchiveSize = newArchiveCapacity;
@@ -116,13 +117,15 @@ public class LShadeStrategy : ShadeStrategy
 
     /// <summary>
     /// Computes the planned population size for the consumed evaluation budget using the
-    /// linear schedule <c>N = round((N_min - N_init) / maxEvals * evals + N_init)</c>.
+    /// linear schedule <c>N = round((N_min - N_init) / maxEvals * evals + N_init)</c>, with the
+    /// round-half-up rule the paper uses.
     /// </summary>
     private int ComputePlannedPopulationSize(
         long evaluationCount)
     {
         var progress = Math.Min(1.0, (double)evaluationCount / _maxEvaluationNumber);
         return (int)Math.Round(
-            (_minPopulationSize - _initialPopulationSize) * progress + _initialPopulationSize);
+            (_minPopulationSize - _initialPopulationSize) * progress + _initialPopulationSize,
+            MidpointRounding.AwayFromZero);
     }
 }

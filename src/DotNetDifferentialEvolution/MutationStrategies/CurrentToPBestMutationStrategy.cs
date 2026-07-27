@@ -72,7 +72,14 @@ public class CurrentToPBestMutationStrategy : IMutationStrategy
 
         // Choose x_pbest from the top p% of the population.
         var sortedIndices = context.FitnessSortedIndices;
-        var topCount = Math.Clamp((int)Math.Round(pBestRate * populationSize), 1, populationSize);
+        // The pool is floored at two, as in Tanabe's reference implementation ("choose at least
+        // two best solutions"): a pool of one would degrade DE/current-to-pbest/1 into the
+        // greedier DE/current-to-best/1. Math.Min keeps the floor valid for a degenerate
+        // population. The papers round half up, not to even.
+        var topCount = Math.Clamp(
+            (int)Math.Round(pBestRate * populationSize, MidpointRounding.AwayFromZero),
+            Math.Min(2, populationSize),
+            populationSize);
         var pBestIndex = sortedIndices.Length >= populationSize
             ? sortedIndices[random.Next(topCount)]
             : random.Next(populationSize);

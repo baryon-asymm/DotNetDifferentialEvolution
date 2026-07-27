@@ -302,7 +302,7 @@ public class DifferentialEvolutionBuilder
         _controlParameterProvider = jadeStrategy;
         _generationStrategy = jadeStrategy;
         _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
-        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize);
+        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize, MidpointRounding.AwayFromZero);
 
         return this;
     }
@@ -336,7 +336,7 @@ public class DifferentialEvolutionBuilder
         _controlParameterProvider = shadeStrategy;
         _generationStrategy = shadeStrategy;
         _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
-        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize);
+        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize, MidpointRounding.AwayFromZero);
 
         return this;
     }
@@ -375,7 +375,7 @@ public class DifferentialEvolutionBuilder
         _controlParameterProvider = lShadeStrategy;
         _generationStrategy = lShadeStrategy;
         _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
-        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize);
+        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize, MidpointRounding.AwayFromZero);
         _lShadeMaxEvaluationNumber = maxEvaluationNumber;
 
         return this;
