@@ -1,3 +1,4 @@
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
@@ -6,12 +7,18 @@ namespace DotNetDifferentialEvolution.Tests.Shared.Helpers;
 
 public static class ProblemContextHelper
 {
+    /// <remarks>
+    /// <paramref name="generationStrategy"/> is init-only on the context, so it has to be passed
+    /// here; supplying one also routes the orchestrator's best-individual lookup through the
+    /// population scan instead of the per-worker indices.
+    /// </remarks>
     public static ProblemContext CreateContext(
         int populationSize,
         ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator,
         ITerminationStrategy terminationStrategy,
         int workersCount = 1,
-        int? seed = null)
+        int? seed = null,
+        IGenerationStrategy? generationStrategy = null)
     {
         ArgumentNullException.ThrowIfNull(testFitnessFunctionEvaluator);
 
@@ -40,7 +47,10 @@ public static class ProblemContextHelper
             population: populationHelper.Population,
             populationFfValues: populationHelper.PopulationFfValues,
             trialPopulation: populationHelper.TrialPopulation,
-            trialPopulationFfValues: populationHelper.TrialPopulationFfValues);
+            trialPopulationFfValues: populationHelper.TrialPopulationFfValues)
+        {
+            GenerationStrategy = generationStrategy
+        };
 
         return context;
     }

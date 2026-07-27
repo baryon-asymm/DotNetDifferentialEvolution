@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers.Interfaces;
+using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
 
 namespace DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers;
@@ -168,7 +169,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         {
             var slaveBestHandledIndividualIndex = slaveWorkers[i].BestHandledIndividualIndex;
             var slaveBestHandledIndividualFfValue = populationFfValues[slaveBestHandledIndividualIndex];
-            if (slaveBestHandledIndividualFfValue < bestIndividualFfValue)
+            if (FitnessComparisonHelper.IsBetter(slaveBestHandledIndividualFfValue, bestIndividualFfValue))
             {
                 bestIndividualIndex = slaveBestHandledIndividualIndex;
                 bestIndividualFfValue = slaveBestHandledIndividualFfValue;
@@ -181,6 +182,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// <summary>
     /// Finds the index of the best (lowest fitness) individual by scanning the active
     /// population. Used when a generation strategy may have reordered or resized the population.
+    /// A NaN individual never wins the scan; an all-NaN population still yields a valid index.
     /// </summary>
     /// <param name="populationFfValues">The fitness function values of the population.</param>
     /// <param name="currentPopulationSize">The number of active individuals.</param>
@@ -192,7 +194,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         var bestIndividualIndex = 0;
         for (int i = 1; i < currentPopulationSize; i++)
         {
-            if (populationFfValues[i] < populationFfValues[bestIndividualIndex])
+            if (FitnessComparisonHelper.IsBetter(populationFfValues[i], populationFfValues[bestIndividualIndex]))
                 bestIndividualIndex = i;
         }
 

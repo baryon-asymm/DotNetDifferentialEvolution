@@ -589,6 +589,8 @@ public class DifferentialEvolutionBuilder
     
     /// <summary>
     /// Finds the index of the best (lowest fitness) individual in the initial population.
+    /// An individual the objective scored NaN never wins; an all-NaN population still yields
+    /// a valid index.
     /// </summary>
     /// <param name="populationFfValues">The fitness function values of the population.</param>
     /// <returns>The index of the best individual.</returns>
@@ -598,7 +600,7 @@ public class DifferentialEvolutionBuilder
         var bestIndividualIndex = 0;
         for (int i = 1; i < populationFfValues.Length; i++)
         {
-            if (populationFfValues[i] < populationFfValues[bestIndividualIndex])
+            if (FitnessComparisonHelper.IsBetter(populationFfValues[i], populationFfValues[bestIndividualIndex]))
                 bestIndividualIndex = i;
         }
 

@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.AlgorithmExecutors.Interfaces;
+using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
@@ -131,7 +132,8 @@ public class AlgorithmExecutor : IAlgorithmExecutor
                 TrialFfValue = trialIndividualFfValue
             };
 
-            if (nextPopulationFfValues[i] < nextPopulationFfValues[bestHandledIndividualIndex])
+            if (FitnessComparisonHelper.IsBetter(
+                    nextPopulationFfValues[i], nextPopulationFfValues[bestHandledIndividualIndex]))
                 bestHandledIndividualIndex = i;
         }
     }

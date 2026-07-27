@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.AlgorithmExecutors;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.RandomProviders;
@@ -33,12 +34,14 @@ internal static class ExecutorFactory
         double crossoverProbability,
         int populationSize,
         int workersCount,
-        int? seed)
+        int? seed,
+        IGenerationStrategy? generationStrategy = null)
     {
         var useSeed = seed.HasValue && workersCount == 1;
 
         var context = ProblemContextHelper.CreateContext(
-            populationSize, evaluator, terminationStrategy, workersCount, seed: useSeed ? seed : null);
+            populationSize, evaluator, terminationStrategy, workersCount, seed: useSeed ? seed : null,
+            generationStrategy: generationStrategy);
 
         BaseRandomProvider randomProvider = useSeed
             ? new DeterministicRandomProvider(seed!.Value)

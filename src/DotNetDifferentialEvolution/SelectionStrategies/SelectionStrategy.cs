@@ -1,3 +1,4 @@
+using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.SelectionStrategies;
@@ -38,7 +39,7 @@ public class SelectionStrategy : ISelectionStrategy
         Span<double> nextPopulationFfValues,
         Span<double> nextPopulation)
     {
-        if (trialIndividualFfValue < populationFfValues[individualIndex])
+        if (FitnessComparisonHelper.IsBetter(trialIndividualFfValue, populationFfValues[individualIndex]))
         {
             trialIndividual.CopyTo(
                 nextPopulation.Slice(individualIndex * _genomeSize, _genomeSize));
