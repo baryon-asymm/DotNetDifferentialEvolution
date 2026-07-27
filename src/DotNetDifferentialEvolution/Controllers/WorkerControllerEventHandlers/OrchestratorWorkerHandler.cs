@@ -124,8 +124,17 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         hasException = masterWorker.HasException;
         foreach (var slaveWorker in _slaveWorkers.Span)
         {
+            // The master is itself a worker: it reaches this barrier after finishing its own
+            // stripe and then waits on each slave in turn. A fresh SpinWait per slave so the
+            // backoff starts from zero for every wait; SpinOnce(-1) keeps SpinWait's spin/yield
+            // progression but never escalates to Thread.Sleep(1), which would add up to a
+            // millisecond per generation. The condition order is unchanged: the volatile
+            // IsPassLoopCompleted read is what makes the following HasException read fresh, and
+            // HasException still breaks the wait promptly when a worker throws.
+            var spinWait = new SpinWait();
             while (slaveWorker.IsPassLoopCompleted == false
-                   && slaveWorker.HasException == false) ;
+                   && slaveWorker.HasException == false)
+                spinWait.SpinOnce(sleep1Threshold: -1);
             hasException |= slaveWorker.HasException;
         }
     }

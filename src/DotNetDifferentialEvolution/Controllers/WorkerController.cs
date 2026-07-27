@@ -150,10 +150,18 @@ public class WorkerController : IDisposable
         {
             while (_workerShouldStop == false)
             {
+                // Cooperative wait for the next generation. A fresh SpinWait per generation so the
+                // backoff always starts from zero; SpinOnce(-1) keeps SpinWait's spin/yield
+                // progression but never escalates to Thread.Sleep(1), which would add up to a
+                // millisecond to a barrier that is crossed once per generation. Yielding instead of
+                // burning the core is what keeps an oversubscribed worker count (more workers than
+                // available cores, e.g. UseAllProcessors) from collapsing into livelock.
+                var passLoopSpinWait = new SpinWait();
                 // CA1508 false positive: _workerShouldStop is volatile and may be flipped by
                 // Stop() on another thread, so this spin-wait condition is not statically constant.
 #pragma warning disable CA1508
-                while (_passLoopPermitted == false && _workerShouldStop == false) ;
+                while (_passLoopPermitted == false && _workerShouldStop == false)
+                    passLoopSpinWait.SpinOnce(sleep1Threshold: -1);
 #pragma warning restore CA1508
                 _passLoopPermitted = false;
 

@@ -15,6 +15,11 @@ namespace DotNetDifferentialEvolution.IntegrationTests.Concurrency;
 public class ParallelDeterminismTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
+
+    // Deliberately generous: the oversubscribed run is a correctness assertion (it must finish
+    // and be right), not a stopwatch. A tight bound would be a flaky timing test on shared CI.
+    private static readonly TimeSpan OversubscribedTimeout = TimeSpan.FromSeconds(120);
+
     private const double ValueTolerance = 1e-3;
 
     [Fact]
@@ -42,9 +47,33 @@ public class ParallelDeterminismTests
         }
     }
 
+    /// <summary>
+    /// Oversubscription: more worker threads than the machine has cores, so at every generation
+    /// barrier some worker is waiting while another still needs a core to finish its stripe.
+    /// The barrier wait must therefore yield rather than occupy its core; a non-cooperative wait
+    /// makes waiters starve the workers doing the useful work, and a run that should take
+    /// milliseconds can take orders of magnitude longer. This asserts only correctness -- the run
+    /// completes and reaches the optimum inside a generous timeout -- deliberately not a
+    /// wall-clock bound, which would be a flaky assertion on shared hardware.
+    /// </summary>
+    [Fact]
+    public async Task OversubscribedWorkerCount_CompletesAndConverges()
+    {
+        var evaluator = new SphereEvaluator(dimension: 6);
+
+        // Twice the core count guarantees oversubscription on any machine; the floor keeps the
+        // test meaningful on a single-core agent.
+        var workers = Math.Max(4, Environment.ProcessorCount * 2);
+
+        var result = await RunAsync(evaluator, workers, OversubscribedTimeout);
+
+        ConvergenceAssert.ReachedOptimum(evaluator, result, ValueTolerance);
+    }
+
     private static async Task<DotNetDifferentialEvolution.Models.Population> RunAsync(
         SphereEvaluator evaluator,
-        int workers)
+        int workers,
+        TimeSpan? timeout = null)
     {
         using var de = DifferentialEvolutionBuilder.ForFunction(evaluator)
             .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds())
@@ -56,7 +85,7 @@ public class ParallelDeterminismTests
             .UseProcessors(workers)
             .Build();
 
-        var result = await de.RunAsync().WaitAsync(Timeout);
+        var result = await de.RunAsync().WaitAsync(timeout ?? Timeout);
         result.MoveCursorToBestIndividual();
         return result;
     }
