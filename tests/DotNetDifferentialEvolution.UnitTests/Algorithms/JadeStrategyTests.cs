@@ -1,6 +1,7 @@
 using DotNetDifferentialEvolution.Algorithms.Jade;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.Fakes;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
@@ -34,8 +35,8 @@ public class JadeStrategyTests
         // CR = {0.4, 0.8} → arithmetic mean 0.6; F = {0.2, 0.8} → Lehmer mean 0.68.
         var records = new[]
         {
-            new TrialRecord { Succeeded = true, UsedCr = 0.4, UsedF = 0.2, ParentFfValue = 2, TrialFfValue = 1 },
-            new TrialRecord { Succeeded = true, UsedCr = 0.8, UsedF = 0.8, ParentFfValue = 2, TrialFfValue = 1 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, UsedCr = 0.4, UsedF = 0.2, ParentFfValue = 2, TrialFfValue = 1 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, UsedCr = 0.8, UsedF = 0.8, ParentFfValue = 2, TrialFfValue = 1 },
         };
 
         jade.AfterGeneration(new GenerationContext(context), records);
@@ -54,8 +55,8 @@ public class JadeStrategyTests
 
         var records = new[]
         {
-            new TrialRecord { Succeeded = false, UsedCr = 0.9, UsedF = 0.9 },
-            new TrialRecord { Succeeded = false, UsedCr = 0.1, UsedF = 0.1 },
+            new TrialRecord { Outcome = SelectionOutcome.ParentKept, UsedCr = 0.9, UsedF = 0.9 },
+            new TrialRecord { Outcome = SelectionOutcome.ParentKept, UsedCr = 0.1, UsedF = 0.1 },
         };
 
         jade.AfterGeneration(new GenerationContext(context), records);
@@ -64,6 +65,41 @@ public class JadeStrategyTests
 
         Assert.Equal(0.5, cr, 1e-9);
         Assert.Equal(0.5, f, 1e-9);
+    }
+
+    [Fact]
+    public void AfterGeneration_IgnoresATrialAcceptedOnATie()
+    {
+        // The mirror of the jDE case: a tie survives selection but is not a success. S_CR and S_F
+        // take improving trials only (both papers, Algorithm 2 line 16), so a tie must move
+        // neither mean — and must not put its parent in the archive, which exists to hold parents
+        // that were actually beaten.
+        var jade = new JadeStrategy(PopulationSize, adaptationRate: 0.1, initialMean: 0.5);
+        var context = CreateContext();
+        context.ArchiveCapacity = PopulationSize;
+        context.Archive = new double[PopulationSize * context.GenomeSize];
+
+        var records = new[]
+        {
+            new TrialRecord
+            {
+                Outcome = SelectionOutcome.TrialAccepted, UsedCr = 0.9, UsedF = 0.9,
+                ParentFfValue = 2, TrialFfValue = 2
+            },
+            new TrialRecord
+            {
+                Outcome = SelectionOutcome.TrialAccepted, UsedCr = 0.1, UsedF = 0.1,
+                ParentFfValue = 2, TrialFfValue = 2
+            },
+        };
+
+        jade.AfterGeneration(new GenerationContext(context), records);
+
+        jade.GetControlParameters(0, new ScriptedRandomProvider(doubles: MeanRevealingDraws), out var f, out var cr);
+
+        Assert.Equal(0.5, cr, 1e-9);
+        Assert.Equal(0.5, f, 1e-9);
+        Assert.Equal(0, context.ArchiveSize);
     }
 
     [Fact]
@@ -79,8 +115,8 @@ public class JadeStrategyTests
 
         var records = new[]
         {
-            new TrialRecord { Succeeded = true, UsedCr = 0.4, UsedF = 0.2, ParentFfValue = 2, TrialFfValue = 1 },
-            new TrialRecord { Succeeded = true, UsedCr = 0.8, UsedF = 0.8, ParentFfValue = 2, TrialFfValue = 1 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, UsedCr = 0.4, UsedF = 0.2, ParentFfValue = 2, TrialFfValue = 1 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, UsedCr = 0.8, UsedF = 0.8, ParentFfValue = 2, TrialFfValue = 1 },
         };
 
         jade.AfterGeneration(new GenerationContext(context), records);

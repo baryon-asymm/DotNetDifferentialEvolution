@@ -4,8 +4,17 @@ using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 namespace DotNetDifferentialEvolution.SelectionStrategies;
 
 /// <summary>
-/// Represents a selection strategy for Differential Evolution.
+/// The selection operator of the DE papers: the trial survives when it is at least as good as its
+/// parent, and counts as a success only when it is strictly better.
 /// </summary>
+/// <remarks>
+/// The two thresholds are not the same, and the difference is the point. SHADE (2013) Eq. (6) and
+/// L-SHADE (2014) Algorithm 2 line 12 take the trial on <c>f(u) &lt;= f(x)</c>; line 16 records
+/// the success on <c>f(u) &lt; f(x)</c>. Accepting a tie lets a population cross a plateau instead
+/// of standing still on it, and reporting it as <see cref="SelectionOutcome.TrialAccepted"/>
+/// rather than an improvement keeps a run of zero-gain ties out of the archive and out of the
+/// parameter-adaptation memory.
+/// </remarks>
 public class SelectionStrategy : ISelectionStrategy
 {
     private readonly int _genomeSize;
@@ -21,8 +30,8 @@ public class SelectionStrategy : ISelectionStrategy
     }
 
     /// <summary>
-    /// Selects individuals for the next generation based on their fitness function values, and
-    /// reports whether the trial replaced its parent.
+    /// Selects the individual for the next generation based on the two fitness function values,
+    /// and reports both whether the trial replaced its parent and whether it improved on it.
     /// </summary>
     /// <param name="individualIndex">The index of the individual to select.</param>
     /// <param name="trialIndividualFfValue">The fitness function value of the trial individual.</param>
@@ -31,13 +40,14 @@ public class SelectionStrategy : ISelectionStrategy
     /// <param name="population">The current population of individuals.</param>
     /// <param name="nextPopulationFfValues">The fitness function values of the next population.</param>
     /// <param name="nextPopulation">The next population of individuals.</param>
-    /// <returns><see langword="true"/> when the trial replaced its parent.</returns>
+    /// <returns>Which of the two was written, and whether it was an improvement.</returns>
     /// <remarks>
-    /// This reports the acceptance rule it actually applied, which is <em>not</em> the plain
-    /// <c>trial &lt; parent</c>: a parent the objective scored NaN is replaced by any real-valued
-    /// trial, and that replacement is a success.
+    /// Neither threshold is the plain arithmetic comparison: a parent the objective scored NaN is
+    /// worse than every real value, so any real-valued trial both replaces it and is credited with
+    /// the improvement, while a NaN trial replaces nothing — including a NaN parent, since
+    /// swapping one unusable value for another buys nothing.
     /// </remarks>
-    public bool Select(
+    public SelectionOutcome Select(
         int individualIndex,
         double trialIndividualFfValue,
         Span<double> trialIndividual,
@@ -46,10 +56,17 @@ public class SelectionStrategy : ISelectionStrategy
         Span<double> nextPopulationFfValues,
         Span<double> nextPopulation)
     {
-        var accepted = FitnessComparisonHelper.IsBetter(
-            trialIndividualFfValue, populationFfValues[individualIndex]);
+        var parentFfValue = populationFfValues[individualIndex];
 
-        if (accepted)
+        SelectionOutcome outcome;
+        if (FitnessComparisonHelper.IsBetter(trialIndividualFfValue, parentFfValue))
+            outcome = SelectionOutcome.TrialImproved;
+        else if (FitnessComparisonHelper.IsBetterOrEqual(trialIndividualFfValue, parentFfValue))
+            outcome = SelectionOutcome.TrialAccepted;
+        else
+            outcome = SelectionOutcome.ParentKept;
+
+        if (outcome != SelectionOutcome.ParentKept)
         {
             trialIndividual.CopyTo(
                 nextPopulation.Slice(individualIndex * _genomeSize, _genomeSize));
@@ -61,9 +78,9 @@ public class SelectionStrategy : ISelectionStrategy
             population.Slice(individualIndex * _genomeSize, _genomeSize).CopyTo(
                 nextPopulation.Slice(individualIndex * _genomeSize, _genomeSize));
 
-            nextPopulationFfValues[individualIndex] = populationFfValues[individualIndex];
+            nextPopulationFfValues[individualIndex] = parentFfValue;
         }
 
-        return accepted;
+        return outcome;
     }
 }

@@ -151,7 +151,10 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
 
         for (int i = 0; i < currentPopulationSize; i++)
         {
-            if (trialRecords[i].Succeeded == false)
+            // S_CR and S_F take improving trials only (both papers, Algorithm 2 line 16). A trial
+            // accepted on a tie has an improvement of exactly zero, so it would enter the weighted
+            // means with weight zero and contribute nothing but the risk of an empty weight sum.
+            if (trialRecords[i].Improved == false)
                 continue;
 
             // Weight by the fitness improvement. A success does not always come with a finite,

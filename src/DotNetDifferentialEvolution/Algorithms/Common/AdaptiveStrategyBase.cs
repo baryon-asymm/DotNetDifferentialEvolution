@@ -64,7 +64,10 @@ public abstract class AdaptiveStrategyBase
 
         for (int i = 0; i < currentPopulationSize; i++)
         {
-            if (trialRecords[i].Succeeded == false)
+            // Improvement, not survival: both papers insert into the archive on the strict
+            // comparison (their Algorithm 2, line 16), so a parent displaced by a tie is not
+            // archived. It was not beaten, and the archive exists to keep beaten parents around.
+            if (trialRecords[i].Improved == false)
                 continue;
 
             int slot;

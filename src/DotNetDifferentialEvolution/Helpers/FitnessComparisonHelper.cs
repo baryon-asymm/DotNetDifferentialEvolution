@@ -24,4 +24,26 @@ internal static class FitnessComparisonHelper
         return candidateFfValue < incumbentFfValue
                || (double.IsNaN(incumbentFfValue) && double.IsNaN(candidateFfValue) == false);
     }
+
+    /// <summary>
+    /// Determines whether <paramref name="candidateFfValue"/> is at least as good as
+    /// <paramref name="incumbentFfValue"/> — the acceptance rule of the DE papers, which take the
+    /// trial on <c>f(u) &lt;= f(x)</c> so that a population can drift across a plateau instead of
+    /// freezing on it.
+    /// </summary>
+    /// <param name="candidateFfValue">The fitness function value of the candidate.</param>
+    /// <param name="incumbentFfValue">The fitness function value of the incumbent.</param>
+    /// <returns><c>true</c> if the candidate is better than or equal to the incumbent.</returns>
+    /// <remarks>
+    /// Two NaNs are <em>not</em> equal for this purpose. Swapping one unusable value for another
+    /// buys nothing, and treating it as an acceptance would make every NaN individual churn its
+    /// genes every generation for no reason.
+    /// </remarks>
+    public static bool IsBetterOrEqual(
+        double candidateFfValue,
+        double incumbentFfValue)
+    {
+        return candidateFfValue <= incumbentFfValue
+               || (double.IsNaN(incumbentFfValue) && double.IsNaN(candidateFfValue) == false);
+    }
 }

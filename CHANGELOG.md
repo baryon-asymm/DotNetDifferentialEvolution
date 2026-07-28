@@ -56,9 +56,15 @@ been corrected.
 
 ### Breaking
 
-- **`ISelectionStrategy` is one method again.** `Select` returns `bool`; the separate `SelectTrial`
-  added in 4.1.0 is gone. There is no longer a way to report an outcome other than the one
-  performed.
+- **`ISelectionStrategy` is one method again, and it now reports a `SelectionOutcome`.** The
+  separate `SelectTrial` added in 4.1.0 is gone, so there is no longer a way to report an outcome
+  other than the one performed. `Select` returns `SelectionOutcome` — `ParentKept`,
+  `TrialAccepted` or `TrialImproved` — instead of `bool`, because survival and improvement are two
+  different questions with two different consumers (see *Selection now follows the papers* below).
+- **`TrialRecord.Succeeded` is replaced by `TrialRecord.Outcome`**, with `Replaced` and `Improved`
+  as derived predicates. A custom generation strategy reading `Succeeded` should read `Improved`
+  if it credits parameters or archives parents, and `Replaced` if it tracks what is in the
+  population.
 - **`IGenerationStrategy.AfterGeneration` receives a `GenerationContext`** — a narrowed view — in
   place of the whole `ProblemContext`.
 - **`ProblemContext`'s raw `Memory<double>` members are replaced by `PopulationView`**, which
@@ -69,7 +75,31 @@ been corrected.
   overrides on the jDE, JADE and SHADE strategies follow the context change.
 - **`OrchestratorWorkerHandler`'s constructor** no longer takes the vestigial handler chain.
 
-17 differences in total; the full list is in `src/DotNetDifferentialEvolution/CompatibilitySuppressions.xml`.
+19 differences in total; the full list is in `src/DotNetDifferentialEvolution/CompatibilitySuppressions.xml`.
+
+### Selection now follows the papers
+
+A trial survives when it is **at least as good** as its parent, and counts as a **success** only
+when it is strictly better. Previously both used the strict comparison, so a tie kept the parent.
+
+This is the rule the papers specify, and they specify the two thresholds separately for a reason:
+SHADE (2013) Eq. (6) and L-SHADE (2014) Algorithm 2 line 12 accept the trial on `f(u) ≤ f(x)`,
+while line 16 records the success on `f(u) < f(x)`. Accepting ties is what lets a population drift
+sideways across a plateau instead of standing still on it; keeping the success record strict is
+what stops a run of zero-gain ties from dragging the parameter adaptation with them.
+
+What consumes which:
+
+| | rule | consumers |
+|---|---|---|
+| survived | `f(u) ≤ f(x)` | the next generation; jDE's parameter inheritance |
+| improved | `f(u) < f(x)` | the external archive; JADE/SHADE/L-SHADE adaptation (`S_CR`, `S_F`) |
+
+Two NaNs are not a tie: swapping one unusable value for another is not an acceptance. A NaN parent
+is still worse than any real value, and is still replaced by one.
+
+This affects every variant, classic DE included, and only on objectives that actually produce
+ties — which is why it is called out here rather than left to the API-break list.
 
 ### Performance
 

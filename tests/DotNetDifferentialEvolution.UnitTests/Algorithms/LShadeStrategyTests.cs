@@ -1,6 +1,7 @@
 using DotNetDifferentialEvolution.Algorithms.Lshade;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.Fakes;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
@@ -117,11 +118,11 @@ public class LShadeStrategyTests
         var records = new TrialRecord[InitialPopulationSize];
         records[0] = new TrialRecord
         {
-            Succeeded = true, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.4, UsedF = 0.2
+            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.4, UsedF = 0.2
         };
         records[1] = new TrialRecord
         {
-            Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5
         };
 
         lshade.AfterGeneration(new GenerationContext(context), records);
@@ -148,11 +149,11 @@ public class LShadeStrategyTests
         var records = new TrialRecord[InitialPopulationSize];
         records[0] = new TrialRecord
         {
-            Succeeded = true, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.0, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.0, UsedF = 0.5
         };
         records[1] = new TrialRecord
         {
-            Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5
         };
 
         lshade.AfterGeneration(new GenerationContext(context), records);

@@ -2,6 +2,7 @@ using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
+using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
@@ -10,49 +11,56 @@ using DotNetDifferentialEvolution.Variants;
 namespace DotNetDifferentialEvolution.IntegrationTests;
 
 /// <summary>
-/// Whether a trial replaced its parent is the selection strategy's decision, and everything
-/// downstream of <see cref="TrialRecord.Succeeded"/> — the external archive, JADE/SHADE parameter
-/// adaptation, SHADE's improvement weights — depends on being told what actually happened. The
-/// executor used to decide for itself with a hardcoded <c>trial &lt; parent</c>, which is only the
-/// built-in greedy rule; a selection strategy with any other semantics silently desynchronized
-/// the record from the population.
+/// What happened to a trial is the selection strategy's decision, and everything downstream of
+/// <see cref="TrialRecord.Outcome"/> — the external archive, jDE's parameter inheritance,
+/// JADE/SHADE parameter adaptation, SHADE's improvement weights — depends on being told what
+/// actually happened. The executor used to decide for itself with a hardcoded
+/// <c>trial &lt; parent</c>, which is only the built-in greedy rule; a selection strategy with any
+/// other semantics silently desynchronized the record from the population.
 /// </summary>
+/// <remarks>
+/// Every trial in these runs is an exact copy of its parent, so every trial ties. A tie is the one
+/// case where "did it survive?" and "was it an improvement?" disagree, which is exactly why
+/// <see cref="SelectionOutcome"/> reports them separately.
+/// </remarks>
 [Trait("Category", "Integration")]
 public class TrialOutcomeReportingTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
     [Fact]
-    public async Task ATieAcceptingSelectionStrategyIsReportedAsSucceeding()
+    public async Task TheBuiltInStrategyTakesATieWithoutCreditingItAsAnImprovement()
     {
-        // Every trial is an exact copy of its parent, so every trial ties. The greedy rule calls
-        // that a failure; this strategy calls it a success and takes the trial — and the record
-        // has to say what the population now holds.
-        var recorder = await RunOneGenerationAsync(new TieAcceptingSelectionStrategy());
-
-        Assert.NotEmpty(recorder.Outcomes);
-        Assert.All(recorder.Outcomes, succeeded => Assert.True(succeeded));
-    }
-
-    [Fact]
-    public async Task ARejectEverythingSelectionStrategyIsReportedAsFailing()
-    {
-        // The mirror image: the trials are exactly as good as their parents, and a strategy that
-        // keeps the parent must not be credited with a success.
-        var recorder = await RunOneGenerationAsync(new RejectEverythingSelectionStrategy());
-
-        Assert.NotEmpty(recorder.Outcomes);
-        Assert.All(recorder.Outcomes, succeeded => Assert.False(succeeded));
-    }
-
-    [Fact]
-    public async Task TheBuiltInGreedyStrategyStillReportsTiesAsFailures()
-    {
-        // The built-in rule is unchanged: a trial has to be strictly better to replace its parent.
+        // The papers' rule, and the reason the two thresholds are separate: SHADE (2013) Eq. (6)
+        // and L-SHADE (2014) Algorithm 2 line 12 take the trial on f(u) <= f(x), so the tie
+        // survives; line 16 records the success on the strict f(u) < f(x), so it is not a success.
         var recorder = await RunOneGenerationAsync(selectionStrategy: null);
 
         Assert.NotEmpty(recorder.Outcomes);
-        Assert.All(recorder.Outcomes, succeeded => Assert.False(succeeded));
+        Assert.All(recorder.Outcomes, outcome => Assert.Equal(SelectionOutcome.TrialAccepted, outcome));
+    }
+
+    [Fact]
+    public async Task ARejectEverythingSelectionStrategyIsReportedAsKeepingTheParent()
+    {
+        // A strategy stricter than the built-in must not be credited with anything.
+        var recorder = await RunOneGenerationAsync(new RejectEverythingSelectionStrategy());
+
+        Assert.NotEmpty(recorder.Outcomes);
+        Assert.All(recorder.Outcomes, outcome => Assert.Equal(SelectionOutcome.ParentKept, outcome));
+    }
+
+    [Fact]
+    public async Task AStrategyThatCallsATieAnImprovementIsReportedAsItClaims()
+    {
+        // The point of the whole mechanism: the executor relays the strategy's own verdict rather
+        // than recomputing one. This strategy is deliberately wrong about its ties — it calls them
+        // improvements — and the record must say what it said, because a record that disagreed
+        // with the population is the defect this test exists to prevent.
+        var recorder = await RunOneGenerationAsync(new OverstatingSelectionStrategy());
+
+        Assert.NotEmpty(recorder.Outcomes);
+        Assert.All(recorder.Outcomes, outcome => Assert.Equal(SelectionOutcome.TrialImproved, outcome));
     }
 
     private static async Task<OutcomeRecorder> RunOneGenerationAsync(
@@ -110,10 +118,10 @@ public class TrialOutcomeReportingTests
                 .CopyTo(context.TrialIndividual);
     }
 
-    /// <summary>Accepts a trial that merely matches its parent, to keep drifting along plateaus.</summary>
-    private sealed class TieAcceptingSelectionStrategy : ISelectionStrategy
+    /// <summary>Takes every trial and calls every acceptance an improvement, ties included.</summary>
+    private sealed class OverstatingSelectionStrategy : ISelectionStrategy
     {
-        public bool Select(
+        public SelectionOutcome Select(
             int individualIndex,
             double trialIndividualFfValue,
             Span<double> trialIndividual,
@@ -123,26 +131,17 @@ public class TrialOutcomeReportingTests
             Span<double> nextPopulation)
         {
             var genomeSize = trialIndividual.Length;
-            var accepted = trialIndividualFfValue <= populationFfValues[individualIndex];
+            trialIndividual.CopyTo(nextPopulation.Slice(individualIndex * genomeSize, genomeSize));
+            nextPopulationFfValues[individualIndex] = trialIndividualFfValue;
 
-            if (accepted)
-                trialIndividual.CopyTo(nextPopulation.Slice(individualIndex * genomeSize, genomeSize));
-            else
-                population.Slice(individualIndex * genomeSize, genomeSize)
-                    .CopyTo(nextPopulation.Slice(individualIndex * genomeSize, genomeSize));
-
-            nextPopulationFfValues[individualIndex] = accepted
-                ? trialIndividualFfValue
-                : populationFfValues[individualIndex];
-
-            return accepted;
+            return SelectionOutcome.TrialImproved;
         }
     }
 
     /// <summary>Never replaces a parent, whatever the trial scored.</summary>
     private sealed class RejectEverythingSelectionStrategy : ISelectionStrategy
     {
-        public bool Select(
+        public SelectionOutcome Select(
             int individualIndex,
             double trialIndividualFfValue,
             Span<double> trialIndividual,
@@ -156,13 +155,13 @@ public class TrialOutcomeReportingTests
                 .CopyTo(nextPopulation.Slice(individualIndex * genomeSize, genomeSize));
             nextPopulationFfValues[individualIndex] = populationFfValues[individualIndex];
 
-            return false;
+            return SelectionOutcome.ParentKept;
         }
     }
 
     private sealed class OutcomeRecorder : IGenerationStrategy
     {
-        public List<bool> Outcomes { get; } = [];
+        public List<SelectionOutcome> Outcomes { get; } = [];
 
         public void AfterGeneration(
             GenerationContext context,
@@ -171,7 +170,7 @@ public class TrialOutcomeReportingTests
             ArgumentNullException.ThrowIfNull(context);
 
             for (int i = 0; i < context.ActivePopulationSize; i++)
-                Outcomes.Add(trialRecords[i].Succeeded);
+                Outcomes.Add(trialRecords[i].Outcome);
         }
     }
 }

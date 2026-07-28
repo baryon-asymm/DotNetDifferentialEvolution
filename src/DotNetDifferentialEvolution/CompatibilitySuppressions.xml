@@ -80,6 +80,20 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:DotNetDifferentialEvolution.Models.TrialRecord.get_Succeeded</Target>
+    <Left>lib/net8.0/DotNetDifferentialEvolution.dll</Left>
+    <Right>lib/net8.0/DotNetDifferentialEvolution.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:DotNetDifferentialEvolution.Models.TrialRecord.set_Succeeded(System.Boolean)</Target>
+    <Left>lib/net8.0/DotNetDifferentialEvolution.dll</Left>
+    <Right>lib/net8.0/DotNetDifferentialEvolution.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:DotNetDifferentialEvolution.SelectionStrategies.Interfaces.ISelectionStrategy.Select(System.Int32,System.Double,System.Span{System.Double},System.Span{System.Double},System.Span{System.Double},System.Span{System.Double},System.Span{System.Double})</Target>
     <Left>lib/net8.0/DotNetDifferentialEvolution.dll</Left>
     <Right>lib/net8.0/DotNetDifferentialEvolution.dll</Right>

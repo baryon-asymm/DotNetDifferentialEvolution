@@ -1,6 +1,7 @@
 using DotNetDifferentialEvolution.Algorithms.Shade;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.Fakes;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
@@ -37,8 +38,8 @@ public class ShadeStrategyTests
         // Weights are the fitness improvements: rec0 w=2, rec1 w=4.
         var records = new[]
         {
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.4, UsedF = 0.2 },
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.4, UsedF = 0.2 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
         };
 
         shade.AfterGeneration(new GenerationContext(context), records);
@@ -59,8 +60,8 @@ public class ShadeStrategyTests
 
         var records = new[]
         {
-            new TrialRecord { Succeeded = false, UsedCr = 0.1, UsedF = 0.1 },
-            new TrialRecord { Succeeded = false, UsedCr = 0.9, UsedF = 0.9 },
+            new TrialRecord { Outcome = SelectionOutcome.ParentKept, UsedCr = 0.1, UsedF = 0.1 },
+            new TrialRecord { Outcome = SelectionOutcome.ParentKept, UsedCr = 0.9, UsedF = 0.9 },
         };
 
         shade.AfterGeneration(new GenerationContext(context), records);
@@ -80,8 +81,8 @@ public class ShadeStrategyTests
         // Every successful trial used CR = 0, so the L-SHADE terminal rule fixes the slot.
         var records = new[]
         {
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.0, UsedF = 0.5 },
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.0, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5 },
         };
 
         shade.AfterGeneration(new GenerationContext(context), records);
@@ -104,15 +105,15 @@ public class ShadeStrategyTests
         // Generation 1: all-zero successful CR makes slot 0 terminal.
         shade.AfterGeneration(new GenerationContext(context), new[]
         {
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 9, UsedCr = 0.0, UsedF = 0.5 },
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 9, UsedCr = 0.0, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 9, UsedCr = 0.0, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 9, UsedCr = 0.0, UsedF = 0.5 },
         });
 
         // Generation 2: a non-zero successful CR must NOT revive the terminal slot.
         shade.AfterGeneration(new GenerationContext(context), new[]
         {
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 5, UsedCr = 0.9, UsedF = 0.5 },
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 5, UsedCr = 0.9, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 5, UsedCr = 0.9, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 5, UsedCr = 0.9, UsedF = 0.5 },
         });
 
         var draws = new ScriptedRandomProvider(ints: [0], doubles: [0.5]);
@@ -130,8 +131,8 @@ public class ShadeStrategyTests
 
         var records = new[]
         {
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.0, UsedF = 0.5 },
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.0, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5 },
         };
 
         shade.AfterGeneration(new GenerationContext(context), records);
@@ -157,8 +158,8 @@ public class ShadeStrategyTests
 
         var records = new[]
         {
-            new TrialRecord { Succeeded = true, ParentFfValue = double.NaN, TrialFfValue = 3, UsedCr = 0.1, UsedF = 0.9 },
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = double.NaN, TrialFfValue = 3, UsedCr = 0.1, UsedF = 0.9 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
         };
 
         shade.AfterGeneration(new GenerationContext(context), records);
@@ -184,10 +185,10 @@ public class ShadeStrategyTests
         {
             new TrialRecord
             {
-                Succeeded = true, ParentFfValue = double.PositiveInfinity, TrialFfValue = 3,
+                Outcome = SelectionOutcome.TrialImproved, ParentFfValue = double.PositiveInfinity, TrialFfValue = 3,
                 UsedCr = 0.1, UsedF = 0.9
             },
-            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
         };
 
         shade.AfterGeneration(new GenerationContext(context), records);
