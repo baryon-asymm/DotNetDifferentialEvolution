@@ -48,6 +48,19 @@ public class DifferentialEvolution : IDisposable
     /// <summary>
     /// Runs the Differential Evolution algorithm asynchronously.
     /// </summary>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the final population.</returns>
+    /// <remarks>
+    /// Kept as a distinct overload rather than folded into the optional-parameter form below.
+    /// Adding the parameter alone would have removed <c>RunAsync()</c> from the compiled surface —
+    /// source-compatible, but any assembly built against 4.0.0 would fail with
+    /// <see cref="MissingMethodException"/> at run time without a rebuild. Package validation
+    /// against the published 4.0.0 package is what caught it.
+    /// </remarks>
+    public Task<Population> RunAsync() => RunAsync(CancellationToken.None);
+
+    /// <summary>
+    /// Runs the Differential Evolution algorithm asynchronously, observing a cancellation token.
+    /// </summary>
     /// <param name="cancellationToken">
     /// A token that abandons the run. Cancellation is observed at the next generation barrier —
     /// the one point at which every worker has finished its stripe and none has started the next —
