@@ -25,8 +25,14 @@ public class AlgorithmExecutor : IAlgorithmExecutor
     /// no draw is contended and — when the run is seeded — no draw depends on how the workers
     /// interleave. The striping is fixed (worker <c>k</c> handles <c>{k, k+W, …}</c>) and each
     /// individual is built, evaluated and selected end-to-end by one worker, so a seeded run is
-    /// bit-reproducible at any worker count.
+    /// bit-reproducible <em>for a given worker count</em>.
     /// </summary>
+    /// <remarks>
+    /// Reproducibility does not survive a change of worker count, and cannot: individual <c>i</c>
+    /// draws from worker <c>i mod W</c>'s stream, so changing <c>W</c> changes which numbers each
+    /// individual sees. That is the price of per-worker streams, and per-worker streams are what
+    /// make a parallel run reproducible at all.
+    /// </remarks>
     private readonly SeededRandomProvider[] _randomProviders;
 
     /// <summary>

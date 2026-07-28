@@ -20,8 +20,9 @@ internal static class ExecutorFactory
     /// </summary>
     /// <remarks>
     /// The seed goes onto the <see cref="ProblemContext"/>; the executor derives one generator per
-    /// worker from it, so a seeded run reproduces at any worker count. The existing callers only
-    /// seed single-worker runs, which is preserved here.
+    /// worker from it, so a seeded run reproduces for a given worker count — not across worker
+    /// counts, since individual <c>i</c> draws from worker <c>i mod W</c>'s stream. The existing
+    /// callers only seed single-worker runs, which is preserved here.
     /// </remarks>
     public static (ProblemContext Context, AlgorithmExecutor Executor) Create(
         ITestFitnessFunctionEvaluator evaluator,
