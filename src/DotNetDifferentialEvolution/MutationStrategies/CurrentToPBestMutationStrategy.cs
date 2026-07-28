@@ -112,8 +112,6 @@ public class CurrentToPBestMutationStrategy : IMutationStrategy
         // v += F * (x_r1 - x_r2)
         MutationMath.AddScaledDifference(context.TrialIndividual, firstDifference, secondDifference, mutationForce);
 
-        CrossoverHelper.BinomialCrossoverAndRepair(
-            individualIndex, context.CrossoverProbability, population,
-            context.TrialIndividual, context.LowerBound, context.UpperBound, random);
+        CrossoverHelper.BinomialCrossoverAndRepair(in context, context.CrossoverProbability);
     }
 }

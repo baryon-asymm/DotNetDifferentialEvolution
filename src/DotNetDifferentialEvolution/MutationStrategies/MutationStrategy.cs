@@ -79,11 +79,8 @@ public class MutationStrategy : IMutationStrategy
     {
         // Randomness comes from the context — the calling worker's own generator — even though
         // F and CR do not. Holding a generator here would put every worker on one shared stream.
-        var random = context.RandomProvider;
-
         Span<int> indexes = stackalloc int[NumberOfIndividualsToChoose];
-        RandomIndexSelector.FillDistinctIndices(
-            indexes, context.PopulationSize, context.IndividualIndex, random);
+        RandomIndexSelector.FillDistinctIndices(indexes, in context);
 
         var genomeSize = context.GenomeSize;
         var population = context.Population;
@@ -94,13 +91,6 @@ public class MutationStrategy : IMutationStrategy
         MutationMath.AssignBasePlusScaledDifference(
             context.TrialIndividual, firstIndividual, secondIndividual, thirdIndividual, _mutationForce);
 
-        CrossoverHelper.BinomialCrossoverAndRepair(
-            context.IndividualIndex,
-            _crossoverProbability,
-            population,
-            context.TrialIndividual,
-            context.LowerBound,
-            context.UpperBound,
-            random);
+        CrossoverHelper.BinomialCrossoverAndRepair(in context, _crossoverProbability);
     }
 }

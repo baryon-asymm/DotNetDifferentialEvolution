@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.MutationStrategies.Helpers;
+using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.Tests.Shared.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.MutationStrategies.Helpers;
@@ -18,7 +19,7 @@ public class RandomIndexSelectorTests
         var random = new ScriptedRandomProvider(ints: [0, 3, 1]);
         Span<int> indices = stackalloc int[3];
 
-        RandomIndexSelector.FillDistinctIndices(indices, populationSize: 5, excludeIndex: 2, random);
+        RandomIndexSelector.FillDistinctIndices(indices, populationSize: 5, excludeIndex: 2, new ProviderRandomSource(random));
 
         Assert.Equal(new[] { 0, 4, 1 }, indices.ToArray());
     }
@@ -31,7 +32,7 @@ public class RandomIndexSelectorTests
         var random = new ScriptedRandomProvider(ints: [0, 0, 1]);
         Span<int> indices = stackalloc int[2];
 
-        RandomIndexSelector.FillDistinctIndices(indices, populationSize: 4, excludeIndex: 0, random);
+        RandomIndexSelector.FillDistinctIndices(indices, populationSize: 4, excludeIndex: 0, new ProviderRandomSource(random));
 
         Assert.Equal(new[] { 1, 2 }, indices.ToArray());
     }
@@ -51,7 +52,7 @@ public class RandomIndexSelectorTests
 
         for (int trial = 0; trial < 200; trial++)
         {
-            RandomIndexSelector.FillDistinctIndices(indices, populationSize, excludeIndex, random);
+            RandomIndexSelector.FillDistinctIndices(indices, populationSize, excludeIndex, new ProviderRandomSource(random));
 
             var seen = new HashSet<int>();
             foreach (var index in indices)

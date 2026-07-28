@@ -27,7 +27,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
     /// individual is built, evaluated and selected end-to-end by one worker, so a seeded run is
     /// bit-reproducible at any worker count.
     /// </summary>
-    private readonly BaseRandomProvider[] _randomProviders;
+    private readonly SeededRandomProvider[] _randomProviders;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AlgorithmExecutor"/> class.
@@ -60,13 +60,15 @@ public class AlgorithmExecutor : IAlgorithmExecutor
 
         _context = context;
 
-        _randomProviders = new BaseRandomProvider[context.WorkersCount];
+        // An unseeded run still gets a seed — drawn once here — rather than sharing
+        // Random.Shared. The point is per-worker state: Random.Shared is thread-safe, but every
+        // call walks a thread-static indirection, and the workers would be drawing from one
+        // generator whose interleaving nothing controls.
+        var rootSeed = context.RandomSeed ?? Random.Shared.Next();
+
+        _randomProviders = new SeededRandomProvider[context.WorkersCount];
         for (int workerId = 0; workerId < _randomProviders.Length; workerId++)
-        {
-            _randomProviders[workerId] = context.RandomSeed is { } seed
-                ? new SeededRandomProvider(seed + workerId)
-                : new RandomProvider();
-        }
+            _randomProviders[workerId] = new SeededRandomProvider(rootSeed + workerId);
     }
 
     /// <summary>
@@ -133,6 +135,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
                 LowerBound = lowerBound,
                 UpperBound = upperBound,
                 RandomProvider = randomProvider,
+                WorkerRandomProvider = randomProvider,
                 Archive = archive,
                 ArchiveSize = archiveSize,
                 FitnessSortedIndices = fitnessSortedIndices

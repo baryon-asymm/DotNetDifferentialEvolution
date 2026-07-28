@@ -23,14 +23,12 @@ public class BestTwoMutationStrategy : IMutationStrategy
     public void Mutate(
         in MutationContext context)
     {
-        var random = context.RandomProvider;
         var genomeSize = context.GenomeSize;
         var population = context.Population;
         var mutationForce = context.MutationForce;
 
         Span<int> indexes = stackalloc int[NumberOfDifferenceIndividuals];
-        RandomIndexSelector.FillDistinctIndices(
-            indexes, context.PopulationSize, context.IndividualIndex, random);
+        RandomIndexSelector.FillDistinctIndices(indexes, in context);
 
         var bestIndividual = population.Slice(context.BestIndividualIndex * genomeSize, genomeSize);
         var first = population.Slice(indexes[0] * genomeSize, genomeSize);
@@ -42,8 +40,6 @@ public class BestTwoMutationStrategy : IMutationStrategy
             context.TrialIndividual, bestIndividual, first, second, mutationForce);
         MutationMath.AddScaledDifference(context.TrialIndividual, third, fourth, mutationForce);
 
-        CrossoverHelper.BinomialCrossoverAndRepair(
-            context.IndividualIndex, context.CrossoverProbability, population,
-            context.TrialIndividual, context.LowerBound, context.UpperBound, random);
+        CrossoverHelper.BinomialCrossoverAndRepair(in context, context.CrossoverProbability);
     }
 }
