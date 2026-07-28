@@ -80,6 +80,73 @@ public class SelectionStrategyTests
     }
 
     [Fact]
+    public void WithTiesRejectedKeepsTheParentOnEqualFitness()
+    {
+        var (population, populationFf, trial, next, nextFf) = Build();
+        var strategy = new SelectionStrategy(GenomeSize, acceptsTies: false);
+
+        // JADE Table I line 20 keeps the parent when f(x) <= f(u). The threshold is the variant's,
+        // not the engine's: SHADE and L-SHADE take the tie, JADE does not, and both are pinned so
+        // neither can drift into the other's rule.
+        var outcome = strategy.Select(
+            individualIndex: 1,
+            trialIndividualFfValue: 9.0,
+            trialIndividual: trial,
+            populationFfValues: populationFf,
+            population: population,
+            nextPopulationFfValues: nextFf,
+            nextPopulation: next);
+
+        Assert.Equal(SelectionOutcome.ParentKept, outcome);
+        Assert.Equal(new[] { 30.0, 40.0 }, next[2..4]); // the parent's genes survived
+        Assert.Equal(9.0, nextFf[1]);
+    }
+
+    [Fact]
+    public void WithTiesRejectedStillTakesAStrictlyBetterTrial()
+    {
+        var (population, populationFf, trial, next, nextFf) = Build();
+        var strategy = new SelectionStrategy(GenomeSize, acceptsTies: false);
+
+        // Only the tie changes. Improvement is still improvement, and it is still reported as one,
+        // so the archive and the parameter adaptation see exactly what they saw before.
+        var outcome = strategy.Select(
+            individualIndex: 1,
+            trialIndividualFfValue: 1.0,
+            trialIndividual: trial,
+            populationFfValues: populationFf,
+            population: population,
+            nextPopulationFfValues: nextFf,
+            nextPopulation: next);
+
+        Assert.Equal(SelectionOutcome.TrialImproved, outcome);
+        Assert.Equal(new[] { 70.0, 80.0 }, next[2..4]);
+        Assert.Equal(1.0, nextFf[1]);
+    }
+
+    [Fact]
+    public void WithTiesRejectedAParentScoredNaNIsStillReplaced()
+    {
+        var (population, populationFf, trial, next, nextFf) = Build();
+        populationFf[1] = double.NaN;
+        var strategy = new SelectionStrategy(GenomeSize, acceptsTies: false);
+
+        // Two NaNs were never a tie, so rejecting ties must not resurrect the absorbing-NaN defect:
+        // NaN is worse than every real value, which makes this an improvement on either setting.
+        var outcome = strategy.Select(
+            individualIndex: 1,
+            trialIndividualFfValue: 9.0,
+            trialIndividual: trial,
+            populationFfValues: populationFf,
+            population: population,
+            nextPopulationFfValues: nextFf,
+            nextPopulation: next);
+
+        Assert.Equal(SelectionOutcome.TrialImproved, outcome);
+        Assert.Equal(9.0, nextFf[1]);
+    }
+
+    [Fact]
     public void AcceptsTrialWhenParentFitnessIsNaN()
     {
         var (population, populationFf, trial, next, nextFf) = Build();

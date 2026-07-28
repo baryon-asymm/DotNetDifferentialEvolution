@@ -59,6 +59,44 @@ public class DeVariantTests
         Assert.Equal(PopulationSize, context.ArchiveCapacity);
     }
 
+    [Theory]
+    [InlineData("jade", SelectionOutcome.ParentKept)]
+    [InlineData("shade", SelectionOutcome.TrialAccepted)]
+    [InlineData("lshade", SelectionOutcome.TrialAccepted)]
+    public void EachPresetInstallsItsOwnPapersRuleForATie(
+        string preset,
+        SelectionOutcome expected)
+    {
+        // The survival threshold belongs to the variant, not to the engine. JADE Table I line 20
+        // keeps the parent when f(x) <= f(u); SHADE Eq. (6) and L-SHADE Algorithm 2 line 12 take
+        // the trial, as does Tanabe's reference implementation in its `==` branch. Checked through
+        // the assembled preset rather than on SelectionStrategy directly, because the defect this
+        // guards against is a variant being wired to the wrong rule.
+        using var de = BuildPreset(builder => preset switch
+        {
+            "jade" => builder.WithJade(),
+            "shade" => builder.WithShade(),
+            _ => builder.WithLShade(EvaluationBudget)
+        });
+
+        var population = new[] { 1.0, 2.0 };
+        var populationFf = new[] { 5.0 };
+        var trial = new[] { 7.0, 8.0 };
+        var next = new double[2];
+        var nextFf = new double[1];
+
+        var outcome = SelectionStrategyOf(de).Select(
+            individualIndex: 0,
+            trialIndividualFfValue: 5.0,
+            trialIndividual: trial,
+            populationFfValues: populationFf,
+            population: population,
+            nextPopulationFfValues: nextFf,
+            nextPopulation: next);
+
+        Assert.Equal(expected, outcome);
+    }
+
     [Fact]
     public void ShadeInstallsCurrentToPBestBackedByTheSuccessHistoryMemory()
     {

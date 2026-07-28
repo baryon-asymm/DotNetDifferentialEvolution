@@ -98,6 +98,17 @@ What consumes which:
 Two NaNs are not a tie: swapping one unusable value for another is not an acceptance. A NaN parent
 is still worse than any real value, and is still replaced by one.
 
+**Except under JADE, whose paper specifies the opposite.** JADE's Table I keeps the parent when
+`f(x) ≤ f(u)`, and it does not need SHADE's split because its parameter means are unweighted, so a
+tie cannot enter one with weight zero. The survival threshold is therefore a property of the
+variant: `WithJade` installs the strict rule, `WithShade` and `WithLShade` accept ties. `WithJde`
+and classic DE accept ties too — Brest (2006) could not be obtained to check, so its rule was left
+on the engine default rather than changed on a guess.
+
+`SelectionStrategy` gained a second constructor, `SelectionStrategy(int genomeSize, bool
+acceptsTies)`, for anyone assembling a variant by hand. The one-argument constructor is unchanged
+and accepts ties.
+
 This affects every variant, classic DE included, and only on objectives that actually produce
 ties — which is why it is called out here rather than left to the API-break list.
 
@@ -138,6 +149,14 @@ size the test would detect a shift of 7.3% of the mean.
   count — which is the section to read before comparing results against a reference implementation.
 
   CI checks that the file paths it references still exist, so a rename cannot silently orphan them.
+
+- **Every formula was then checked against the authors' own code**, not only against the papers,
+  because papers contain typos — L-SHADE's Algorithm 2 has one, printing `<` where reduction
+  requires `>`. Tanabe's L-SHADE 1.0.1 and SHADE 1.1.1 confirmed eleven points including all four
+  of the fixes above; two divergences were found and are recorded in the document's *Deliberate
+  deviations*: the terminal `M_CR` value latches here and does not in the reference (measured over
+  25 runs at the paper's settings, the rule never fires at all), and the archive capacity is
+  rounded on every resize where the reference truncates.
 
 ### Build and tooling
 

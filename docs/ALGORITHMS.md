@@ -26,7 +26,8 @@ papers is listed there, with its reason.
 7. [L-SHADE](#7-l-shade--tanabe--fukunaga-2014)
 8. [Randomness and reproducibility](#8-randomness-and-reproducibility)
 9. [Deliberate deviations from the papers](#9-deliberate-deviations-from-the-papers)
-10. [Bibliography](#10-bibliography)
+10. [Verification against the reference implementations](#10-verification-against-the-reference-implementations)
+11. [Bibliography](#11-bibliography)
 
 ---
 
@@ -52,7 +53,7 @@ The library minimises. Everywhere below, "better" means "smaller".
 | $W$ | worker (thread) count | `ProblemContext.WorkersCount` |
 
 **Citation convention.** `[5, Alg. 2 line 12]` means reference 5 in the
-[bibliography](#10-bibliography), Algorithm 2, line 12. Equations are cited by the number the paper
+[bibliography](#11-bibliography), Algorithm 2, line 12. Equations are cited by the number the paper
 itself prints, e.g. `[4, Eq. (17)]`.
 
 **Code references** name a file and a type or member, never a line number — line numbers rot within
@@ -122,7 +123,10 @@ $i$ lost with is exactly slice $i$ of the other buffer (`GenerationContext.Disca
 
 ### 2.3 Selection
 
-Both thresholds of the papers are implemented, and they are not the same threshold:
+Both thresholds of the papers are implemented, and they are not the same threshold. **Which one
+governs survival belongs to the variant**, not to the engine: SHADE and L-SHADE take a tied trial,
+JADE keeps the parent ([§5.5](#55-selection)). What follows is the SHADE/L-SHADE rule, which is
+also the library's default:
 
 ```math
 x_{i,G+1} = \begin{cases} u_{i,G} & \text{if } f(u_{i,G}) \le f(x_{i,G}) \\ x_{i,G} & \text{otherwise} \end{cases}
@@ -278,9 +282,8 @@ would leave an individual holding the parameters of a vector no longer in the po
 
 Reference `[3]`. Two adaptive means, $\mu_{CR}$ and $\mu_F$, plus an optional external archive.
 
-> The JADE paper is not openly available, so the formulas below are cited to the paper as a whole
-> rather than to numbered equations, unlike §§6–7. They are the scheme as restated in `[4, §IV]`,
-> which is open.
+> Citations here are to the paper's own equation numbers and to its Table I pseudocode, checked
+> against the text rather than restated from `[4, §IV]`.
 
 ### 5.1 Mutation
 
@@ -316,18 +319,22 @@ disables the differential term outright.
 
 ### 5.3 Adaptation
 
-At the end of a generation, over the successful trials only:
+At the end of a generation, over the successful trials only, `[3, Eq. (9), (11)]`:
 
 ```math
 \mu_{CR} = (1-c)\,\mu_{CR} + c \cdot \text{mean}_A(S_{CR}), \qquad
 \mu_F = (1-c)\,\mu_F + c \cdot \text{mean}_L(S_F)
 ```
 
-where $\text{mean}_A$ is the arithmetic mean and $\text{mean}_L$ the Lehmer mean
+where $\text{mean}_A$ is the arithmetic mean and $\text{mean}_L$ the Lehmer mean, `[3, Eq. (12)]`:
 
 ```math
 \text{mean}_L(S_F) = \frac{\sum_{k} S_{F,k}^2}{\sum_{k} S_{F,k}}
 ```
+
+Both means are **unweighted** — no $\Delta f$ enters them. That is what makes JADE's single strict
+threshold ([§5.5](#55-selection)) sufficient, and what SHADE had to change when it introduced
+improvement weights.
 
 The Lehmer mean is deliberately biased upward relative to the arithmetic mean — the identity
 $\text{mean}_L - \text{mean}_A = \operatorname{Var}(S)/\operatorname{E}(S) \ge 0$ — which counteracts
@@ -338,6 +345,24 @@ DE's tendency to let $F$ decay.
 Parents that were *beaten* are appended to the archive; when it is full, an existing entry is
 overwritten at random. Capacity is $\text{round}(r_{arc} \cdot N)$; the library's default
 $r_{arc} = 1$ gives $\lvert A \rvert = N$, and $r_{arc} = 0$ disables the archive.
+
+### 5.5 Selection
+
+JADE has **one** threshold, and it is strict. Table I lines 20–24:
+
+```text
+20   If f(x_i,g) <= f(u_i,g)
+21      x_i,g+1 = x_i,g
+22   Else
+23      x_i,g+1 = u_i,g ;  x_i,g -> A ;  CR_i -> S_CR,  F_i -> S_F
+```
+
+so a tie keeps the parent, and survival, archiving and the success sets share the one condition.
+JADE does not need SHADE's split because its means are **unweighted**: a tie cannot enter them with
+weight zero, which is precisely the problem SHADE cites when introducing the strict success rule.
+
+`WithJade` therefore installs `new SelectionStrategy(genomeSize, acceptsTies: false)`, while SHADE
+and L-SHADE take the default. The two rules differ only on an exact tie.
 
 Implemented in [JadeStrategy.cs](../src/DotNetDifferentialEvolution/Algorithms/Jade/JadeStrategy.cs)
 and the shared
@@ -431,9 +456,15 @@ and a slot holding $\perp$ deterministically yields $CR_i = 0$ instead of a Gaus
 `[5, Alg. 2 line 8]`. The effect is a "change one parameter at a time" search, which the paper
 reports as effective on multimodal problems.
 
-Stored as the sentinel $-1$ — any value outside $[0,1]$ is unambiguous — behind the virtual
-`UseTerminalCr`, `true` here and `false` on `ShadeStrategy`. A terminal slot consumes no random
-draws.
+Stored as the sentinel $-1$ — the same sentinel Tanabe's reference implementation uses — behind the
+virtual `UseTerminalCr`, `true` here and `false` on `ShadeStrategy`. A terminal slot consumes no
+random draws.
+
+> **The paper and the author's own code disagree about stickiness**, and this library follows the
+> paper. `lshade.cc` zeroes the slot at the top of the memory update and only then tests it for the
+> sentinel, so its "already terminal" branch is unreachable and a slot leaves $\perp$ as soon as one
+> later generation produces a non-zero successful `CR`. See
+> [§9.11](#911-the-terminal-value-is-sticky-here-and-not-in-the-reference-code).
 
 ### 7.2 The Lehmer mean for the CR memory
 
@@ -653,9 +684,87 @@ grows a population.
 See [§8.5](#85-what-reproducibility-guarantees). The papers describe sequential algorithms and say
 nothing about this; it is a property of the parallel execution model, not of the algorithms.
 
+### 9.11 The terminal value is sticky here, and not in the reference code
+
+`[5, Alg. 1 lines 2–3]` and the prose around it are unambiguous: "if $M_{CR}$ is assigned the
+terminal value $\perp$, then $M_{CR}$ will remain fixed at $\perp$ until the end of the search."
+This library implements that.
+
+`lshade.cc` intends to as well — the test `memory_cr[memory_pos] == -1` is right there in its memory
+update — but it assigns `memory_cr[memory_pos] = 0` at the top of the same block and then
+accumulates $\sum w_k CR_k^2 \ge 0$ into it, so by the time the test runs the sentinel is gone and
+the branch cannot be taken. In the reference, $\perp$ is recomputed per update rather than latched.
+
+Measured before choosing: over 25 runs of L-SHADE at the paper's own settings ($D = 30$,
+$N^{init} = 18D$, budget $10^4 D$) on Sphere, Rastrigin, Ackley, Schwefel and Griewank, **no memory
+slot ever became terminal**. The rule does not fire on these problems at all, so the divergence is
+unobservable there and the concern it raises — that latching could ratchet every slot to $CR = 0$
+and freeze a run — did not materialise.
+
+### 9.12 Archive capacity is rounded on every resize
+
+L-SHADE's reference sizes the archive with `round` initially but with an implicit `double`-to-`int`
+truncation when LPSR resizes it. This library rounds in both places, so its archive can be one slot
+larger than the reference's after a reduction.
+
+### 9.13 JADE's archive is trimmed on insertion, not at end of generation
+
+`[3, Table I line 26]` inserts every displaced parent and then randomly removes solutions until
+$\lvert A \rvert \le N$, so the archive may transiently exceed its capacity within a generation.
+This library overwrites a uniformly chosen slot as soon as the archive is full — SHADE's rule,
+applied to all three variants — so capacity is never exceeded. Both keep a random subset of recent
+displaced parents; the induced distributions are close but not identical.
+
+### 9.14 The crossover test uses `<=` where the papers use `<`
+
+`[3, Table I line 14]` and Tanabe's reference both test `rand < CR`; this library tests
+`rand <= CR`, on integers ([§8.4](#84-the-per-gene-crossover-test)). The two disagree with
+probability $2^{-64}$ per gene.
+
+### 9.15 `WithShade` is SHADE 1.0, not the SHADE that is distributed as code
+
+The `ShadeStrategy` of [§6](#6-shade--tanabe--fukunaga-2013) implements the CEC-2013 paper. The
+C++/Java/Matlab package Tanabe distributes under the name SHADE is **SHADE 1.1**, the base of
+L-SHADE, which differs in three ways: the Lehmer mean for $M_{CR}$, the terminal $\perp$ rule, and a
+fixed $p$ instead of the per-individual $p_i = \text{rand}[2/N, 0.2]$ of `[4, Eq. (20)]`. Anyone
+diffing `WithShade` against that download will see all three. SHADE 1.1 without LPSR is not
+currently offered as a preset; `LShadeStrategy` is SHADE 1.1 plus LPSR.
+
 ---
 
-## 10. Bibliography
+## 10. Verification against the reference implementations
+
+Papers contain typos — `[5, Alg. 2 line 22]` has one — so the formulas above were also checked
+against the authors' own code, which is what produced the published results.
+
+| Source | Version | Used to verify |
+|---|---|---|
+| [`lshade.cc`](https://ryojitanabe.github.io/code/LSHADE1.0.1_CEC2014.zip) | L-SHADE 1.0.1 | §7 in full, §6.2's weights, §3.3, §5.1 |
+| [`shade.cc`](https://ryojitanabe.github.io/code/SHADE1.1.1_CEC2014_c++.zip) | SHADE 1.1.1 | that SHADE 1.1's memory update is L-SHADE's |
+| `[3, Table I]` | — | §5 in full |
+
+Confirmed identical: the weighted Lehmer mean for **both** memories; the $-1$ sentinel and
+$CR = 0$ on a terminal slot; survival on a tie without recording a success; that the **displaced
+parent** enters the archive; midpoint repair applied to the child after crossover; the $r_1 \ne i$,
+$r_2 \ne i, r_1$ draws over $P \cup A$; the LPSR schedule with round-half-away-from-zero, reducing
+only when the schedule calls for a smaller population; the p-best floor of 2; that $\text{nfe}$
+counts the initial population; the $F$ and $CR$ repair rules; memory initialised to 0.5 and its
+index advancing only after a generation with successes.
+
+Two divergences were found and are recorded above: [§9.11](#911-the-terminal-value-is-sticky-here-and-not-in-the-reference-code)
+and [§9.12](#912-archive-capacity-is-rounded-on-every-resize). In three places this library is
+deliberately stricter than the reference, which has no NaN handling, can evaluate $\log(0)$ in its
+Box–Muller transform, and applies its p-best floor only after the first population reduction.
+
+Two corrections to the papers were confirmed by the code rather than assumed. `[5, Alg. 2 line 22]`
+prints `if N_G < N_{G+1}` where reduction requires `>`; the reference uses `>`. And L-SHADE 1.0.0
+had a defect its author documents — it copied the trial into the population *before* archiving, so
+the archive stored the trial rather than the parent it displaced — fixed in 1.0.1, and this library
+archives the parent.
+
+---
+
+## 11. Bibliography
 
 1. R. Storn and K. Price. "Differential Evolution – A Simple and Efficient Heuristic for Global
    Optimization over Continuous Spaces." *Journal of Global Optimization* 11(4):341–359, 1997.
@@ -691,3 +800,18 @@ nothing about this; it is a property of the parallel execution model, not of the
     Optimization." *IEEE CEC 2009*, pp. 1889–1895. — the source of the weighted arithmetic mean
     SHADE uses for $M_{CR}$, `[4, Eq. (13)]`.
     [doi:10.1109/CEC.2009.4983171](https://doi.org/10.1109/CEC.2009.4983171)
+
+### Reference implementations
+
+The authors' own code, used as the arbiter wherever a paper is ambiguous or mistyped
+([§10](#10-verification-against-the-reference-implementations)):
+
+- R. Tanabe. **L-SHADE 1.0.1** (C++), CEC-2014 submission, corrected 9 Jun 2014 —
+  [LSHADE1.0.1_CEC2014.zip](https://ryojitanabe.github.io/code/LSHADE1.0.1_CEC2014.zip). Version
+  1.0.0 archived the trial instead of the parent it displaced; use 1.0.1.
+- R. Tanabe. **SHADE 1.1.1** (C++) —
+  [SHADE1.1.1_CEC2014_c++.zip](https://ryojitanabe.github.io/code/SHADE1.1.1_CEC2014_c++.zip).
+  Note this is SHADE **1.1**, not the CEC-2013 SHADE of §6 — see
+  [§9.15](#915-withshade-is-shade-10-not-the-shade-that-is-distributed-as-code).
+- Both are listed on [Tanabe's publication page](https://ryojitanabe.github.io/publication),
+  alongside Matlab/Octave and Java ports.

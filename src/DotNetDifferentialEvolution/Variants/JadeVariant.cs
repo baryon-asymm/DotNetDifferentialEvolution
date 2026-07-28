@@ -47,7 +47,11 @@ public sealed class JadeVariant : IDeVariant
             MutationStrategy = new CurrentToPBestMutationStrategy(_pBestRate),
             ControlParameterProvider = jadeStrategy,
             GenerationStrategy = jadeStrategy,
-            SelectionStrategy = new SelectionStrategy(configuration.GenomeSize),
+            // JADE Table I lines 20-21 keep the parent when f(x) <= f(u), so a tie does not
+            // displace it — the opposite of SHADE/L-SHADE. JADE does not need their split, because
+            // its parameter means are unweighted and a tie therefore cannot enter one with weight
+            // zero; the strict rule is simply what the paper specifies.
+            SelectionStrategy = new SelectionStrategy(configuration.GenomeSize, acceptsTies: false),
             ArchiveCapacity = ArchiveCapacityHelper.Size(_archiveSizeRate, configuration.PopulationSize)
         };
     }
