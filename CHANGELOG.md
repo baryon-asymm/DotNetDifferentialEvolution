@@ -22,7 +22,37 @@ causes, none of which can be avoided while keeping the speedup:
 - the per-gene crossover test changed shape, comparing 64-bit integers instead of doubles;
 - the Gaussian draw now consumes two uniforms per *pair* of normals rather than per normal.
 
-Seeds remain reproducible within 5.1.x, and across workers and thread schedules, exactly as before.
+A fourth cause applies to **L-SHADE only**: its `M_CR` update was corrected (see *Fixed* below).
+Every parameter drawn after the first memory update differs, so an L-SHADE run diverges from its
+4.x counterpart even setting the three causes above aside.
+
+Seeds remain reproducible within 5.1.x exactly as before: for a given worker count, and regardless
+of how the workers' threads interleave. They were never reproducible *across* worker counts —
+individual `i` draws from worker `i mod W`'s stream — and two comments that claimed otherwise have
+been corrected.
+
+### Fixed
+
+- **L-SHADE updated `M_CR` with the wrong mean.** It inherited SHADE (2013)'s weighted *arithmetic*
+  mean, but L-SHADE is built on SHADE 1.1, whose memory update specifies the weighted *Lehmer* mean
+  — the same one already used for `M_F`. Only half of that rule had been implemented: the terminal
+  `M_CR` value comes from the same algorithm and was already there.
+
+  The error had a fixed sign. `mean_WL − mean_WA = Var_w/E_w ≥ 0`, so the arithmetic mean always
+  reported the lower value — precisely the downward bias on `M_CR` that the Lehmer mean exists to
+  remove — and it compounded with the terminal rule, since a lower `M_CR` makes the CR = 0 lock
+  more likely. Plain SHADE is unaffected: the 2013 paper does specify the arithmetic mean, so
+  `ShadeStrategy` was correct and is unchanged.
+
+  This is the one the 4.1.0 audit missed; that section's "JADE/SHADE/L-SHADE adaptation verified
+  correct" should be read as covering JADE and SHADE.
+- **`LShadeStrategy` accepted arguments that produced a wrong run rather than an error.** An
+  evaluation budget of `0` divided to a non-finite reduction schedule and collapsed the population
+  to its floor in the first generation, silently; a negative archive rate produced a negative
+  archive capacity that slipped past the "archive disabled" guard and threw from inside a
+  generation. Both are now rejected by the constructor, and the archive guard treats any
+  non-positive capacity as a disabled archive. Reachable only by constructing the strategy
+  directly — `WithLShade` already validated both.
 
 ### Breaking
 
