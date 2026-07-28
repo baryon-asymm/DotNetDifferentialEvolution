@@ -16,6 +16,9 @@ public class RandMutationStrategy : IMutationStrategy
     public int MinimumPopulationSize => NumberOfIndividualsToChoose + 1;
 
     /// <inheritdoc />
+    public MutationRequirements Requirements => MutationRequirements.ControlParameters;
+
+    /// <inheritdoc />
     public void Mutate(
         in MutationContext context)
     {

@@ -1,5 +1,6 @@
 using DotNetDifferentialEvolution.Algorithms.Shade;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.Algorithms.Lshade;
 
@@ -59,8 +60,7 @@ public class LShadeStrategy : ShadeStrategy
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        // SHADE bookkeeping: archive, success-history memory, and the fitness ranking that
-        // LPSR relies on to identify the survivors.
+        // SHADE bookkeeping: archive and success-history memory.
         base.AfterGeneration(context, trialRecords);
 
         ReducePopulationSize(context);
@@ -74,6 +74,15 @@ public class LShadeStrategy : ShadeStrategy
         ProblemContext context)
     {
         var currentPopulationSize = context.CurrentPopulationSize;
+
+        // LPSR identifies the survivors through the fitness ranking. The engine rebuilds that
+        // every generation whenever the mutation strategy declared FitnessRanking, which every
+        // current-to-pbest strategy does and which is what WithLShade configures. Pairing this
+        // strategy by hand with one that declares no ranking is still legal, and then nobody has
+        // ranked the population and L-SHADE has to do it itself.
+        if (context.MutationRequirements.HasFlag(MutationRequirements.FitnessRanking) == false)
+            RebuildSortedIndices(context, currentPopulationSize);
+
         var newPopulationSize = Math.Clamp(
             ComputePlannedPopulationSize(context.EvaluationCount), _minPopulationSize, currentPopulationSize);
 

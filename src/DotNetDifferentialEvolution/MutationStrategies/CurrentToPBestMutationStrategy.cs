@@ -23,6 +23,12 @@ public class CurrentToPBestMutationStrategy : IMutationStrategy
     /// <inheritdoc />
     public int MinimumPopulationSize => 4;
 
+    /// <inheritdoc />
+    public MutationRequirements Requirements =>
+        MutationRequirements.ControlParameters
+        | MutationRequirements.FitnessRanking
+        | MutationRequirements.Archive;
+
     /// <summary>
     /// Initializes a new instance using a single fixed p-best rate (JADE / L-SHADE).
     /// </summary>

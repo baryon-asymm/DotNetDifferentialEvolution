@@ -104,7 +104,6 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
 
         UpdateArchive(context, trialRecords, currentPopulationSize);
         UpdateMemory(trialRecords, currentPopulationSize);
-        RebuildSortedIndices(context, currentPopulationSize);
     }
 
     /// <summary>

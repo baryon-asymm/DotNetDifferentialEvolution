@@ -66,6 +66,14 @@ public abstract class AdaptiveStrategyBase
     /// <summary>
     /// Re-ranks the active population by fitness into <see cref="ProblemContext.FitnessSortedIndices"/>.
     /// </summary>
+    /// <remarks>
+    /// The engine owns the ranking: it rebuilds it at the end of every generation whenever the
+    /// configured mutation strategy declares
+    /// <see cref="MutationStrategies.Interfaces.MutationRequirements.FitnessRanking"/>. This
+    /// remains available for a strategy that needs a ranking of its own — L-SHADE calls it when it
+    /// is paired with a mutation strategy that asked for none — but adaptation code should not
+    /// maintain the shared ranking as a side effect of its own bookkeeping.
+    /// </remarks>
     protected void RebuildSortedIndices(
         ProblemContext context,
         int currentPopulationSize)

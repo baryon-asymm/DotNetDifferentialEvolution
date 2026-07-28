@@ -1,6 +1,7 @@
 using DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers.Interfaces;
 using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers;
 
@@ -16,7 +17,13 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     private readonly ProblemContext _context;
     
     private readonly IWorkerPassLoopDoneHandler? _nextHandler;
-    
+
+    /// <summary>
+    /// Scratch keys for the per-generation fitness ranking, or <see langword="null"/> when the
+    /// configured mutation strategy never reads one.
+    /// </summary>
+    private readonly double[]? _fitnessSortKeys;
+
     private readonly TaskCompletionSource<Population> _resultPopulationTcs = new(
         TaskCreationOptions.RunContinuationsAsynchronously);
     
@@ -31,9 +38,15 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         ProblemContext context,
         IWorkerPassLoopDoneHandler? nextHandler = null)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         _slaveWorkers = slaveWorkers;
         _context = context;
         _nextHandler = nextHandler;
+
+        _fitnessSortKeys = context.MutationRequirements.HasFlag(MutationRequirements.FitnessRanking)
+            ? new double[context.PopulationSize]
+            : null;
     }
     
     /// <summary>
@@ -68,6 +81,14 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
 
             // Count the evaluations performed during the generation that just finished.
             _context.EvaluationCount += _context.CurrentPopulationSize;
+
+            // The fitness ranking is engine state, not adaptation state. A p-best strategy that
+            // declared FitnessRanking gets a ranking of the population it is about to mutate no
+            // matter which generation strategy is — or is not — installed; leaving it to the
+            // adaptive strategies is what used to freeze it at generation 0 on hand-wired setups.
+            // Ranking before AfterGeneration is also what gives L-SHADE's population reduction the
+            // fresh ordering it picks survivors from.
+            RebuildFitnessRanking();
 
             var generationStrategy = _context.GenerationStrategy;
             generationStrategy?.AfterGeneration(_context, _context.TrialRecords.Span);
@@ -106,6 +127,22 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         }
     }
     
+    /// <summary>
+    /// Re-ranks the active population into <see cref="ProblemContext.FitnessSortedIndices"/>, or
+    /// does nothing when no configured strategy reads a ranking.
+    /// </summary>
+    private void RebuildFitnessRanking()
+    {
+        if (_fitnessSortKeys is null)
+            return;
+
+        PopulationSortHelper.SortIndicesByFitness(
+            _context.FitnessSortedIndices.Span,
+            _context.PopulationFfValues.Span,
+            _context.CurrentPopulationSize,
+            _fitnessSortKeys);
+    }
+
     /// <summary>
     /// Gets the task that represents the result population.
     /// </summary>

@@ -17,6 +17,20 @@ public interface IMutationStrategy
     public int MinimumPopulationSize => 2;
 
     /// <summary>
+    /// Gets what the engine must provision for this strategy before it can build a trial vector.
+    /// The builder validates the declaration and refuses to build a configuration that cannot
+    /// satisfy it; the engine maintains the state a declared requirement implies.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="MutationRequirements.ControlParameters"/>, because reading F and CR
+    /// from the <see cref="MutationContext"/> is the normal shape of a strategy and getting no
+    /// provider is the failure that is worth catching at build time rather than discovering as a
+    /// run that quietly optimizes nothing. A strategy that carries its own control parameters —
+    /// like <see cref="MutationStrategy"/> — declares <see cref="MutationRequirements.None"/>.
+    /// </remarks>
+    public MutationRequirements Requirements => MutationRequirements.ControlParameters;
+
+    /// <summary>
     /// Builds a trial individual (mutation + crossover) into
     /// <see cref="MutationContext.TrialIndividual"/>.
     /// </summary>

@@ -16,6 +16,10 @@ public class BestTwoMutationStrategy : IMutationStrategy
     public int MinimumPopulationSize => NumberOfDifferenceIndividuals + 1;
 
     /// <inheritdoc />
+    public MutationRequirements Requirements =>
+        MutationRequirements.ControlParameters | MutationRequirements.BestIndividual;
+
+    /// <inheritdoc />
     public void Mutate(
         in MutationContext context)
     {

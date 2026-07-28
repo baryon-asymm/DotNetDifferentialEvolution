@@ -76,7 +76,6 @@ public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGe
 
         UpdateArchive(context, trialRecords, currentPopulationSize);
         AdaptParameterMeans(trialRecords, currentPopulationSize);
-        RebuildSortedIndices(context, currentPopulationSize);
     }
 
     /// <summary>

@@ -523,6 +523,7 @@ public class DifferentialEvolutionBuilder
             PopulationUpdatedHandler = _populationUpdatedHandler,
             ControlParameterProvider = _controlParameterProvider,
             GenerationStrategy = _generationStrategy,
+            MutationRequirements = _mutationStrategy!.Requirements,
             LocalSearchRefiner = _localSearchRefiner,
             LocalSearchInterval = _localSearchInterval,
             BestIndividualIndex = FindBestIndividualIndex(populationFfValues),
@@ -567,6 +568,20 @@ public class DifferentialEvolutionBuilder
                 $"Population size {_populationSize} is too small for the chosen mutation strategy, " +
                 $"which needs at least {_mutationStrategy.MinimumPopulationSize} individuals to draw " +
                 "the distinct vectors it requires.");
+
+        // An unmet ControlParameters requirement is not recoverable at run time: the strategy would
+        // read NaN for F and CR, every mutant vector would be NaN, every trial would lose selection,
+        // and the run would complete normally having optimized nothing.
+        if (_mutationStrategy.Requirements.HasFlag(MutationRequirements.ControlParameters)
+            && _controlParameterProvider is null)
+            throw new InvalidOperationException(
+                $"The mutation strategy {_mutationStrategy.GetType().Name} takes its per-individual " +
+                "control parameters (F and CR) from the mutation context, but no control-parameter " +
+                "provider was configured. Pass one to WithMutationStrategy(strategy, provider) — " +
+                $"{nameof(ConstantControlParameterProvider)} and {nameof(DitheredControlParameterProvider)} " +
+                "are built in — or use one of the WithJde/WithJade/WithShade/WithLShade presets. A " +
+                "strategy that carries its own F and CR should declare " +
+                $"{nameof(MutationRequirements)}.{nameof(MutationRequirements.None)}.");
 
         if (_selectionStrategy == null)
             throw new InvalidOperationException("Selection strategy must be set.");

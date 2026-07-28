@@ -222,6 +222,10 @@ public class NaNFitnessTests
     /// </summary>
     private sealed class BestIndexCapturingMutationStrategy : IMutationStrategy
     {
+        // It reads the best index but supplies nothing of its own, so it needs no control-parameter
+        // provider — which is what lets the builder accept it on its own.
+        public MutationRequirements Requirements => MutationRequirements.BestIndividual;
+
         public int? FirstSeenBestIndividualIndex { get; private set; }
 
         public void Mutate(

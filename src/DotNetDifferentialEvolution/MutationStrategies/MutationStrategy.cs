@@ -22,6 +22,12 @@ public class MutationStrategy : IMutationStrategy
     /// <inheritdoc />
     public int MinimumPopulationSize => NumberOfIndividualsToChoose + 1;
 
+    /// <summary>
+    /// This strategy carries the F and CR it was constructed with, so it needs nothing
+    /// provisioned: it builds a trial from the population and the bounds alone.
+    /// </summary>
+    public MutationRequirements Requirements => MutationRequirements.None;
+
     private readonly double _mutationForce;
     private readonly double _crossoverProbability;
 

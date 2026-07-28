@@ -33,6 +33,17 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         ProblemContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(mutationStrategy);
+
+        // The builder rejects this pairing before it gets here; a hand-assembled ProblemContext
+        // does not go through the builder, and the failure it produces — NaN control parameters,
+        // NaN trial vectors, every trial rejected, a run that reports the initial sample as its
+        // optimum — is silent enough to be worth a second guard.
+        if (mutationStrategy.Requirements.HasFlag(MutationRequirements.ControlParameters)
+            && context.ControlParameterProvider is null)
+            throw new InvalidOperationException(
+                $"The mutation strategy {mutationStrategy.GetType().Name} requires per-individual " +
+                "control parameters, but the problem context has no control-parameter provider.");
 
         _individualHandlerStepSize = context.WorkersCount;
 

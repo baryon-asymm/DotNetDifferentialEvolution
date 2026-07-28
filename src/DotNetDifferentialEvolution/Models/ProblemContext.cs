@@ -2,6 +2,7 @@ using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Interfaces;
 using DotNetDifferentialEvolution.LocalSearch;
+using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.Models;
@@ -64,6 +65,15 @@ public class ProblemContext
     /// Gets the per-generation adaptation hook. When <see langword="null"/>, no adaptation is performed.
     /// </summary>
     public IGenerationStrategy? GenerationStrategy { get; init; }
+
+    /// <summary>
+    /// Gets what the configured mutation strategy needs the engine to provision (see
+    /// <see cref="IMutationStrategy.Requirements"/>). The engine acts on this: a declared
+    /// <see cref="MutationRequirements.FitnessRanking"/> makes it re-rank the active population
+    /// every generation, and a declared <see cref="MutationRequirements.ControlParameters"/> is
+    /// what the builder validates <see cref="ControlParameterProvider"/> against.
+    /// </summary>
+    public MutationRequirements MutationRequirements { get; init; }
 
     /// <summary>
     /// Gets the optional local-search refiner invoked every <see cref="LocalSearchInterval"/>
