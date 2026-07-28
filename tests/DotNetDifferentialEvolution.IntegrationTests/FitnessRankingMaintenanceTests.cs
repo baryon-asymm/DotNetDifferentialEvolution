@@ -1,9 +1,11 @@
 using DotNetDifferentialEvolution.ControlParameterProviders;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.LocalSearch;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Variants;
 
 namespace DotNetDifferentialEvolution.IntegrationTests;
 
@@ -40,6 +42,21 @@ public class FitnessRankingMaintenanceTests
         Assert.True(
             spy.RankingEverChanged,
             "the ranking never changed, so it was still the one computed at generation 0");
+    }
+
+    [Fact]
+    public async Task AThirdPartyGenerationStrategyDoesNotHaveToMaintainTheRankingItself()
+    {
+        // Being present must not make a generation strategy responsible for the shared ranking:
+        // this one only counts generations, and the p-best strategy still gets a current ranking.
+        var generationStrategy = new CountingGenerationStrategy();
+
+        var spy = await RunAsync(builder => builder.WithVariant(
+            new ObservedPBestVariant(generationStrategy)));
+
+        AssertRankingWasCorrectEveryGeneration(spy);
+        Assert.True(spy.RankingEverChanged);
+        Assert.Equal(spy.Snapshots.Count, generationStrategy.Generations);
     }
 
     [Theory]
@@ -156,5 +173,38 @@ public class FitnessRankingMaintenanceTests
 
             Snapshots.Add((generationNumber, ranking, ffValues));
         }
+    }
+
+    /// <summary>
+    /// A third-party variant: <c>DE/current-to-pbest/1</c> with fixed control parameters and a
+    /// generation hook that adapts nothing.
+    /// </summary>
+    private sealed class ObservedPBestVariant : IDeVariant
+    {
+        private readonly IGenerationStrategy _generationStrategy;
+
+        public ObservedPBestVariant(
+            IGenerationStrategy generationStrategy)
+            => _generationStrategy = generationStrategy;
+
+        public DeVariantSetup Configure(
+            in DeVariantConfiguration configuration)
+            => new()
+            {
+                MutationStrategy = new CurrentToPBestMutationStrategy(0.1),
+                ControlParameterProvider = new ConstantControlParameterProvider(0.5, 0.9),
+                GenerationStrategy = _generationStrategy
+            };
+    }
+
+    /// <summary>An observer-only generation strategy: it adapts nothing and ranks nothing.</summary>
+    private sealed class CountingGenerationStrategy : IGenerationStrategy
+    {
+        public int Generations { get; private set; }
+
+        public void AfterGeneration(
+            ProblemContext context,
+            ReadOnlySpan<TrialRecord> trialRecords)
+            => Generations++;
     }
 }

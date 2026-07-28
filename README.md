@@ -221,6 +221,37 @@ of the box; **jDE** is a simpler, robust self-adaptive baseline. You can compare
 variants on the Rastrigin and Ackley functions by running
 `dotnet run -c Release --project benchmarks/DotNetDifferentialEvolution.Benchmark -- convergence`.
 
+### Your own variant
+
+The four presets above are `IDeVariant` implementations, and so is anything you write. A variant
+installs its mutation operator, control-parameter source, generation hook, selection rule and
+archive size as one bundle, which is what keeps the pieces consistent — an adaptive scheme is
+meaningless without the operator that reads the parameters it adapts.
+
+```csharp
+public sealed class MyVariant : IDeVariant
+{
+    public DeVariantSetup Configure(in DeVariantConfiguration configuration) => new()
+    {
+        MutationStrategy = new CurrentToPBestMutationStrategy(pBestRate: 0.1),
+        ControlParameterProvider = new DitheredControlParameterProvider(0.3, 0.9, 0.9),
+        GenerationStrategy = new MyAdaptation(configuration.PopulationSize),
+        ArchiveCapacity = configuration.PopulationSize
+    };
+
+    // Optional: cross-check the completed configuration and throw to reject it.
+    public void Validate(in DeVariantConfiguration configuration, ITerminationStrategy termination) { }
+}
+
+// …
+.WithVariant(new MyVariant())
+```
+
+A variant configured this way is held to the same rules as a built-in one: its mutation strategy's
+declared `Requirements` are checked against what the variant installed, the population size is
+checked against the operator's minimum, and the engine maintains whatever the operator declared it
+needs — including the p-best fitness ranking, which no strategy has to maintain for itself.
+
 ### Hybrid / memetic local search
 
 You can interleave a local-search refinement into the evolutionary loop: supply an

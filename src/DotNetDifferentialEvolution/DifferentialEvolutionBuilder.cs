@@ -14,8 +14,8 @@ using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.PopulationSamplingMaker;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
-using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
+using DotNetDifferentialEvolution.Variants;
 
 namespace DotNetDifferentialEvolution;
 
@@ -50,7 +50,7 @@ public class DifferentialEvolutionBuilder
 
     private int _archiveCapacity;
 
-    private long? _lShadeMaxEvaluationNumber;
+    private IDeVariant? _variant;
 
     private int _workersCount;
 
@@ -253,6 +253,44 @@ public class DifferentialEvolutionBuilder
     }
 
     /// <summary>
+    /// Configures a Differential Evolution variant: the mutation operator, where its control
+    /// parameters come from, what happens between generations, how trials replace parents and how
+    /// large the external archive is, installed as one bundle.
+    /// </summary>
+    /// <param name="variant">The variant to install.</param>
+    /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
+    /// <remarks>
+    /// <see cref="WithJde"/>, <see cref="WithJade"/>, <see cref="WithShade"/> and
+    /// <see cref="WithLShade"/> are this method applied to <see cref="JdeVariant"/>,
+    /// <see cref="JadeVariant"/>, <see cref="ShadeVariant"/> and <see cref="LShadeVariant"/>, so a
+    /// variant written outside this library gets the same treatment as a built-in one: its
+    /// mutation strategy's requirements are checked against what it installed, the population size
+    /// is checked against the operator's minimum, and its own
+    /// <see cref="IDeVariant.Validate"/> runs against the completed configuration.
+    /// </remarks>
+    public ITerminationConditionRequired WithVariant(
+        IDeVariant variant)
+    {
+        ArgumentNullException.ThrowIfNull(variant);
+
+        var configuration = CreateVariantConfiguration();
+        var setup = variant.Configure(in configuration);
+
+        if (setup.MutationStrategy is null)
+            throw new InvalidOperationException(
+                $"The variant {variant.GetType().Name} produced no mutation strategy.");
+
+        _variant = variant;
+        _mutationStrategy = setup.MutationStrategy;
+        _controlParameterProvider = setup.ControlParameterProvider;
+        _generationStrategy = setup.GenerationStrategy;
+        _selectionStrategy = setup.SelectionStrategy ?? new SelectionStrategy(configuration.GenomeSize);
+        _archiveCapacity = setup.ArchiveCapacity;
+
+        return this;
+    }
+
+    /// <summary>
     /// Configures the self-adaptive jDE algorithm (Brest et al., 2006): <c>DE/rand/1/bin</c>
     /// with per-individual self-adapting F and CR and greedy selection. This bundles the
     /// mutation, control-parameter, generation, and selection strategies.
@@ -263,19 +301,7 @@ public class DifferentialEvolutionBuilder
     public ITerminationConditionRequired WithJde(
         double initialMutationForce = JdeStrategy.DefaultInitialMutationForce,
         double initialCrossoverProbability = JdeStrategy.DefaultInitialCrossoverProbability)
-    {
-        var jdeStrategy = new JdeStrategy(
-            populationSize: _populationSize,
-            initialMutationForce: initialMutationForce,
-            initialCrossoverProbability: initialCrossoverProbability);
-
-        _mutationStrategy = new RandMutationStrategy();
-        _controlParameterProvider = jdeStrategy;
-        _generationStrategy = jdeStrategy;
-        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
-
-        return this;
-    }
+        => WithVariant(new JdeVariant(initialMutationForce, initialCrossoverProbability));
 
     /// <summary>
     /// Configures the JADE algorithm (Zhang &amp; Sanderson, 2009): <c>DE/current-to-pbest/1</c>
@@ -290,22 +316,7 @@ public class DifferentialEvolutionBuilder
         double pBestRate = 0.1,
         double archiveSizeRate = 1.0,
         double adaptationRate = JadeStrategy.DefaultAdaptationRate)
-    {
-        if (archiveSizeRate < 0.0)
-            throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
-
-        var jadeStrategy = new JadeStrategy(
-            populationSize: _populationSize,
-            adaptationRate: adaptationRate);
-
-        _mutationStrategy = new CurrentToPBestMutationStrategy(pBestRate);
-        _controlParameterProvider = jadeStrategy;
-        _generationStrategy = jadeStrategy;
-        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
-        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize, MidpointRounding.AwayFromZero);
-
-        return this;
-    }
+        => WithVariant(new JadeVariant(pBestRate, archiveSizeRate, adaptationRate));
 
     /// <summary>
     /// Configures the SHADE algorithm (Tanabe &amp; Fukunaga, 2013): JADE's
@@ -321,25 +332,7 @@ public class DifferentialEvolutionBuilder
         double pBestRate = 0.2,
         double archiveSizeRate = 1.0,
         int memorySize = ShadeStrategy.DefaultMemorySize)
-    {
-        if (archiveSizeRate < 0.0)
-            throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
-
-        var shadeStrategy = new ShadeStrategy(
-            populationSize: _populationSize,
-            memorySize: memorySize);
-
-        // SHADE samples p per individual from [2/N, pBestRate]; cap the lower bound at pBestRate
-        // so very small populations degenerate to a fixed rate instead of an invalid range.
-        var pBestRateMin = Math.Min(2.0 / _populationSize, pBestRate);
-        _mutationStrategy = new CurrentToPBestMutationStrategy(pBestRateMin, pBestRate);
-        _controlParameterProvider = shadeStrategy;
-        _generationStrategy = shadeStrategy;
-        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
-        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize, MidpointRounding.AwayFromZero);
-
-        return this;
-    }
+        => WithVariant(new ShadeVariant(pBestRate, archiveSizeRate, memorySize));
 
     /// <summary>
     /// Configures the L-SHADE algorithm (Tanabe &amp; Fukunaga, 2014): SHADE plus Linear
@@ -359,27 +352,7 @@ public class DifferentialEvolutionBuilder
         double pBestRate = 0.11,
         double archiveSizeRate = 2.6,
         int memorySize = 6)
-    {
-        if (maxEvaluationNumber <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maxEvaluationNumber), "Evaluation budget must be greater than 0.");
-        if (archiveSizeRate < 0.0)
-            throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
-
-        var lShadeStrategy = new LShadeStrategy(
-            initialPopulationSize: _populationSize,
-            maxEvaluationNumber: maxEvaluationNumber,
-            archiveSizeRate: archiveSizeRate,
-            memorySize: memorySize);
-
-        _mutationStrategy = new CurrentToPBestMutationStrategy(pBestRate);
-        _controlParameterProvider = lShadeStrategy;
-        _generationStrategy = lShadeStrategy;
-        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
-        _archiveCapacity = (int)Math.Round(archiveSizeRate * _populationSize, MidpointRounding.AwayFromZero);
-        _lShadeMaxEvaluationNumber = maxEvaluationNumber;
-
-        return this;
-    }
+        => WithVariant(new LShadeVariant(maxEvaluationNumber, pBestRate, archiveSizeRate, memorySize));
 
     /// <summary>
     /// Sets the selection strategy.
@@ -589,18 +562,27 @@ public class DifferentialEvolutionBuilder
         if (_terminationStrategy == null)
             throw new InvalidOperationException("Termination strategy must be set.");
 
-        if (_lShadeMaxEvaluationNumber is { } lShadeBudget
-            && _terminationStrategy is LimitEvaluationNumberTerminationStrategy evaluationTermination
-            && evaluationTermination.MaxEvaluationNumber != lShadeBudget)
-            throw new InvalidOperationException(
-                $"L-SHADE was configured with an evaluation budget of {lShadeBudget}, but the " +
-                $"termination strategy limits evaluations to {evaluationTermination.MaxEvaluationNumber}. " +
-                "They must match so the linear population-size reduction reaches its minimum exactly " +
-                "as the run terminates.");
-
         if (_workersCount == 0)
             throw new InvalidOperationException("Workers count must be set.");
+
+        // Last, so a variant's own cross-checks see a configuration the builder has already
+        // agreed is coherent.
+        if (_variant is not null)
+        {
+            var configuration = CreateVariantConfiguration();
+            _variant.Validate(in configuration, _terminationStrategy);
+        }
     }
+
+    /// <summary>
+    /// Captures the problem dimensions a variant is configured and validated against.
+    /// </summary>
+    private DeVariantConfiguration CreateVariantConfiguration()
+        => new(
+            PopulationSize: _populationSize,
+            GenomeSize: _lowerBound.Length,
+            LowerBound: _lowerBound,
+            UpperBound: _upperBound);
     
     /// <summary>
     /// Finds the index of the best (lowest fitness) individual in the initial population.
@@ -742,6 +724,14 @@ public interface IMutationStrategyRequired
     public ISelectionStrategyRequired WithMutationStrategy(
         IMutationStrategy mutationStrategy,
         IControlParameterProvider controlParameterProvider);
+
+    /// <summary>
+    /// Configures a Differential Evolution variant — mutation operator, control parameters,
+    /// adaptation, selection and archive — as one bundle. The <c>With…</c> presets below are this
+    /// method applied to the built-in variants.
+    /// </summary>
+    public ITerminationConditionRequired WithVariant(
+        IDeVariant variant);
 
     /// <summary>
     /// Configures the self-adaptive jDE algorithm (mutation + control parameters + adaptation
