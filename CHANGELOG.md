@@ -7,6 +7,73 @@ against the previously released package on every build, and the differences it f
 in `src/DotNetDifferentialEvolution/CompatibilitySuppressions.xml`. Behavioural changes are a
 different matter — nothing can detect those automatically, so they are called out explicitly.
 
+## 5.1.0
+
+Everything that breaks a consumer, plus the performance work. There is no 5.0.0: the breaking
+changes and the performance changes were developed as separate branches and released together.
+
+### ⚠ A seed no longer reproduces a 4.x run
+
+This changes no signature, so no tool can warn about it. If you rely on `WithSeed` to reproduce a
+specific run recorded under 4.x, that run cannot be reproduced under 5.1.0. Three independent
+causes, none of which can be avoided while keeping the speedup:
+
+- the generator changed from `System.Random` to xoshiro256\*\*;
+- the per-gene crossover test changed shape, comparing 64-bit integers instead of doubles;
+- the Gaussian draw now consumes two uniforms per *pair* of normals rather than per normal.
+
+Seeds remain reproducible within 5.1.x, and across workers and thread schedules, exactly as before.
+
+### Breaking
+
+- **`ISelectionStrategy` is one method again.** `Select` returns `bool`; the separate `SelectTrial`
+  added in 4.1.0 is gone. There is no longer a way to report an outcome other than the one
+  performed.
+- **`IGenerationStrategy.AfterGeneration` receives a `GenerationContext`** — a narrowed view — in
+  place of the whole `ProblemContext`.
+- **`ProblemContext`'s raw `Memory<double>` members are replaced by `PopulationView`**, which
+  carries the genes, the fitness values, the active count and the genome size as one value. This
+  removes the "which length is authoritative?" question that produced the `PopulationSize` defect
+  fixed in 4.1.0.
+- **`AdaptiveStrategyBase.UpdateArchive` / `RebuildSortedIndices`** and the `AfterGeneration`
+  overrides on the jDE, JADE and SHADE strategies follow the context change.
+- **`OrchestratorWorkerHandler`'s constructor** no longer takes the vestigial handler chain.
+
+17 differences in total; the full list is in `src/DotNetDifferentialEvolution/CompatibilitySuppressions.xml`.
+
+### Performance
+
+Single-worker throughput on a cheap objective (N=300, D=20, one generation) improves **1.71×**
+against the 4.x default path — 117.7 µs to 69.0 µs. Two things are worth knowing before reading
+that number as a promise:
+
+- **End to end it is smaller.** On 30-D Rastrigin over 600k evaluations: 1.26–1.53× at one worker,
+  1.11–1.33× at two to eight.
+- **It shrinks as the objective gets more expensive**, to nothing. This work optimises the case
+  where DE is already cheapest to run. If your objective dominates, it will not help you.
+
+What changed: each worker now draws from its own xoshiro256\*\* instance instead of sharing one
+thread-static `System.Random`; the draws are made through a type the JIT can devirtualise and
+inline rather than through a virtual call per gene; the per-gene crossover test compares integers
+instead of converting to a double first; and the Box–Muller transform keeps the second normal it
+produces instead of discarding it (34–39 ns to 22–24 ns per Gaussian draw, though this is not
+measurable end to end — the adaptive variants draw twice per individual against thirty crossover
+tests).
+
+**The algorithm is unchanged**, and this was checked rather than assumed: 100 runs per side of
+DE/rand/1/bin on 10-D Rastrigin give Welch t = 0.097 and Mann–Whitney z = −0.204. At that sample
+size the test would detect a shift of 7.3% of the mean.
+
+### Build and tooling
+
+- Package validation runs against the previously released package on every build, and CI packs so
+  the public-surface diff is seen on a pull request rather than first at tag time.
+- The benchmark project no longer needs `DOTNET_ROLL_FORWARD=Major` set by hand.
+- The C# language version is pinned rather than inferred from the target framework.
+- `dotnet build` no longer produces a NuGet package as a side effect.
+- NuGet audit warnings no longer fail the build, so an advisory published against a dependency
+  cannot block a release on its own.
+
 ## 4.1.0
 
 Every fix and extension point that does not break a consumer. A mathematical audit of the library
