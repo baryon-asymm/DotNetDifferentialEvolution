@@ -144,6 +144,59 @@ public class ShadeStrategyTests
         Assert.Equal(3, draws.DoubleDrawCount);
     }
 
+    [Fact]
+    public void AfterGeneration_IgnoresASuccessWhoseImprovementIsNotMeasurable()
+    {
+        // Replacing a parent the objective scored NaN is a genuine success — the selection
+        // strategy accepts any real-valued trial over it — but the improvement is NaN. Letting it
+        // into the weighted means would poison M_F and M_CR for the rest of the run, because
+        // `weightSum <= 0.0` is false for NaN and every subsequent division yields NaN.
+        var shade = new ShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
+        var context = CreateContext();
+
+        var records = new[]
+        {
+            new TrialRecord { Succeeded = true, ParentFfValue = double.NaN, TrialFfValue = 3, UsedCr = 0.1, UsedF = 0.9 },
+            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
+        };
+
+        shade.AfterGeneration(context, records);
+
+        shade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
+
+        Assert.False(double.IsNaN(cr));
+        Assert.False(double.IsNaN(f));
+        // Only the measurable success counts, so the means are exactly its own parameters.
+        Assert.Equal(0.9, cr, 1e-9);
+        Assert.Equal(0.5, f, 1e-9);
+    }
+
+    [Fact]
+    public void AfterGeneration_IgnoresASuccessOverAnInfiniteParent()
+    {
+        // Same hazard from the other direction: an infinite improvement would swamp the weighted
+        // mean rather than poison it, which is just as wrong.
+        var shade = new ShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
+        var context = CreateContext();
+
+        var records = new[]
+        {
+            new TrialRecord
+            {
+                Succeeded = true, ParentFfValue = double.PositiveInfinity, TrialFfValue = 3,
+                UsedCr = 0.1, UsedF = 0.9
+            },
+            new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
+        };
+
+        shade.AfterGeneration(context, records);
+
+        shade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
+
+        Assert.Equal(0.9, cr, 1e-9);
+        Assert.Equal(0.5, f, 1e-9);
+    }
+
     private static ProblemContext CreateContext()
     {
         var evaluator = new SphereEvaluator(dimension: 2);

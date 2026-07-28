@@ -125,7 +125,10 @@ public class AlgorithmExecutor : IAlgorithmExecutor
 
             var parentFfValue = populationFfValues[i];
 
-            _selectionStrategy.Select(
+            // The selection strategy reports its own decision: whether the trial replaced its
+            // parent is its rule to apply, and the archive and parameter adaptation downstream
+            // need the outcome that actually happened, not the greedy rule assumed here.
+            var succeeded = _selectionStrategy.SelectTrial(
                 individualIndex: i,
                 trialIndividualFfValue: trialIndividualFfValue,
                 trialIndividual: trialIndividual,
@@ -136,7 +139,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
 
             trialRecords[i] = new TrialRecord
             {
-                Succeeded = trialIndividualFfValue < parentFfValue,
+                Succeeded = succeeded,
                 UsedF = mutationForce,
                 UsedCr = crossoverProbability,
                 ParentFfValue = parentFfValue,

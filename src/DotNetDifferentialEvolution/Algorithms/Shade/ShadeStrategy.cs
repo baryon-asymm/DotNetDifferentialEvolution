@@ -125,8 +125,16 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
             if (trialRecords[i].Succeeded == false)
                 continue;
 
-            // Weight by the fitness improvement; success implies a strictly positive delta.
+            // Weight by the fitness improvement. A success does not always come with a finite,
+            // strictly positive one: replacing a parent the objective scored NaN — or an infinite
+            // one — is a genuine success with an unmeasurable improvement. Such a record cannot be
+            // weighted, and letting it through would put NaN into weightSum, which the
+            // weightSum <= 0.0 guard below does not catch (every comparison against NaN is false),
+            // permanently poisoning M_F and M_CR for the rest of the run.
             var weight = trialRecords[i].ParentFfValue - trialRecords[i].TrialFfValue;
+            if (double.IsFinite(weight) == false)
+                continue;
+
             var cr = trialRecords[i].UsedCr;
             var f = trialRecords[i].UsedF;
 
