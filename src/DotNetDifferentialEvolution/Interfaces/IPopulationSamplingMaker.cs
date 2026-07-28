@@ -17,4 +17,19 @@ public interface IPopulationSamplingMaker
     /// segments, where each segment corresponds to the genes of a single individual.</param>
     public void SamplePopulation(
         Span<double> population);
+
+    /// <summary>
+    /// Adopts the random source the engine supplies, so that a seeded run reproduces its initial
+    /// population as well as its search.
+    /// </summary>
+    /// <param name="randomProvider">The random source to draw from.</param>
+    /// <remarks>
+    /// Called at most once, from <see cref="DifferentialEvolutionBuilder.Build"/>, and only when
+    /// <see cref="DifferentialEvolutionBuilder.WithSeed"/> was used. Defaults to ignoring the
+    /// provider, so an implementation with its own source of randomness — or none — is unaffected.
+    /// </remarks>
+    public void UseRandomProvider(
+        BaseRandomProvider randomProvider)
+    {
+    }
 }

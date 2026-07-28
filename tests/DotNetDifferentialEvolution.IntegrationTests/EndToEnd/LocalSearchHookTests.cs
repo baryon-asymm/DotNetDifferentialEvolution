@@ -96,8 +96,8 @@ public class LocalSearchHookTests
             var genomeSize = context.GenomeSize;
             var best = context.BestIndividualIndex;
 
-            context.Population.Span.Slice(best * genomeSize, genomeSize).Clear(); // origin
-            context.PopulationFfValues.Span[best] = 0.0;
+            context.CurrentPopulation.Genes.Span.Slice(best * genomeSize, genomeSize).Clear(); // origin
+            context.CurrentPopulation.FfValues.Span[best] = 0.0;
             context.EvaluationCount += _evaluationsPerCall;
 
             Generations.Add(generationNumber);

@@ -1,5 +1,8 @@
 using DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers.Interfaces;
+using DotNetDifferentialEvolution.GenerationStrategies;
+using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers;
 
@@ -13,26 +16,46 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     private readonly ReadOnlyMemory<WorkerController> _slaveWorkers;
     
     private readonly ProblemContext _context;
-    
-    private readonly IWorkerPassLoopDoneHandler? _nextHandler;
-    
+
+    /// <summary>
+    /// Scratch keys for the per-generation fitness ranking, or <see langword="null"/> when the
+    /// configured mutation strategy never reads one.
+    /// </summary>
+    private readonly double[]? _fitnessSortKeys;
+
     private readonly TaskCompletionSource<Population> _resultPopulationTcs = new(
         TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    /// The token the run was started with. Read only on the orchestrator thread, at the barrier.
+    /// </summary>
+    private CancellationToken _cancellationToken = CancellationToken.None;
+
+    /// <summary>
+    /// The narrowed view handed to the generation hook. Built once — it holds no state of its
+    /// own, only a reference to the context it projects.
+    /// </summary>
+    private readonly GenerationContext _generationContext;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="OrchestratorWorkerHandler"/> class.
     /// </summary>
     /// <param name="slaveWorkers">The slave workers to be managed by the orchestrator.</param>
     /// <param name="context">The problem context containing population and other parameters.</param>
-    /// <param name="nextHandler">The next handler in the chain of responsibility.</param>
     public OrchestratorWorkerHandler(
         ReadOnlyMemory<WorkerController> slaveWorkers,
-        ProblemContext context,
-        IWorkerPassLoopDoneHandler? nextHandler = null)
+        ProblemContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         _slaveWorkers = slaveWorkers;
         _context = context;
-        _nextHandler = nextHandler;
+
+        _generationContext = new GenerationContext(context);
+
+        _fitnessSortKeys = context.MutationRequirements.HasFlag(MutationRequirements.FitnessRanking)
+            ? new double[context.PopulationSize]
+            : null;
     }
     
     /// <summary>
@@ -46,8 +69,6 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     {
         ArgumentNullException.ThrowIfNull(masterWorker);
 
-        _nextHandler?.Handle(masterWorker, out _);
-        
         WaitAllWorkersOrThemExceptions(
             masterWorker,
             out var hasException);
@@ -68,12 +89,20 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             // Count the evaluations performed during the generation that just finished.
             _context.EvaluationCount += _context.CurrentPopulationSize;
 
+            // The fitness ranking is engine state, not adaptation state. A p-best strategy that
+            // declared FitnessRanking gets a ranking of the population it is about to mutate no
+            // matter which generation strategy is — or is not — installed; leaving it to the
+            // adaptive strategies is what used to freeze it at generation 0 on hand-wired setups.
+            // Ranking before AfterGeneration is also what gives L-SHADE's population reduction the
+            // fresh ordering it picks survivors from.
+            RebuildFitnessRanking();
+
             var generationStrategy = _context.GenerationStrategy;
-            generationStrategy?.AfterGeneration(_context, _context.TrialRecords.Span);
+            generationStrategy?.AfterGeneration(_generationContext, _context.TrialRecords.Span);
 
             var bestIndividualIndex = generationStrategy is null
-                ? GetBestIndividualIndex(masterWorker, _context.PopulationFfValues.Span)
-                : FindBestIndividualIndex(_context.PopulationFfValues.Span, _context.CurrentPopulationSize);
+                ? GetBestIndividualIndex(masterWorker, _context.CurrentPopulation.FfValues.Span)
+                : FindBestIndividualIndex(_context.CurrentPopulation.ActiveFfValues);
             _context.BestIndividualIndex = bestIndividualIndex;
 
             var generationNumber = ++_passLoopCounter;
@@ -94,9 +123,19 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             if (shouldTerminate)
             {
                 StopAllWorkers();
-                
+
                 population.MoveCursorToBestIndividual();
                 _resultPopulationTcs.SetResult(population);
+            }
+            else if (_cancellationToken.IsCancellationRequested)
+            {
+                // The barrier is the one moment the run is quiescent: every worker has finished
+                // its stripe and none has been permitted to start the next. Stopping here leaves
+                // the population in a consistent state and no thread mid-generation.
+                StopAllWorkers();
+
+                shouldTerminate = true;
+                _resultPopulationTcs.SetCanceled(_cancellationToken);
             }
             else
             {
@@ -106,10 +145,46 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     }
     
     /// <summary>
+    /// Re-ranks the active population into <see cref="ProblemContext.FitnessSortedIndices"/>, or
+    /// does nothing when no configured strategy reads a ranking.
+    /// </summary>
+    private void RebuildFitnessRanking()
+    {
+        if (_fitnessSortKeys is null)
+            return;
+
+        PopulationSortHelper.SortIndicesByFitness(
+            _context.FitnessSortedIndices.Span,
+            _context.CurrentPopulation.FfValues.Span,
+            _context.CurrentPopulation.Count,
+            _fitnessSortKeys);
+    }
+
+    /// <summary>
     /// Gets the task that represents the result population.
     /// </summary>
     /// <returns>A task that represents the result population.</returns>
     public Task<Population> GetResultPopulationTask() => _resultPopulationTcs.Task;
+
+    /// <summary>
+    /// Sets the token the run may be abandoned through. Called once, before the workers start.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    internal void UseCancellationToken(
+        CancellationToken cancellationToken)
+    {
+        _cancellationToken = cancellationToken;
+    }
+
+    /// <summary>
+    /// Completes the result task as canceled without a generation having run.
+    /// </summary>
+    /// <param name="cancellationToken">The already-canceled token.</param>
+    internal void CancelBeforeStart(
+        CancellationToken cancellationToken)
+    {
+        _resultPopulationTcs.TrySetCanceled(cancellationToken);
+    }
     
     /// <summary>
     /// Waits for all workers to complete their pass loops or encounter exceptions.
@@ -123,8 +198,17 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         hasException = masterWorker.HasException;
         foreach (var slaveWorker in _slaveWorkers.Span)
         {
+            // The master is itself a worker: it reaches this barrier after finishing its own
+            // stripe and then waits on each slave in turn. A fresh SpinWait per slave so the
+            // backoff starts from zero for every wait; SpinOnce(-1) keeps SpinWait's spin/yield
+            // progression but never escalates to Thread.Sleep(1), which would add up to a
+            // millisecond per generation. The condition order is unchanged: the volatile
+            // IsPassLoopCompleted read is what makes the following HasException read fresh, and
+            // HasException still breaks the wait promptly when a worker throws.
+            var spinWait = new SpinWait();
             while (slaveWorker.IsPassLoopCompleted == false
-                   && slaveWorker.HasException == false) ;
+                   && slaveWorker.HasException == false)
+                spinWait.SpinOnce(sleep1Threshold: -1);
             hasException |= slaveWorker.HasException;
         }
     }
@@ -168,7 +252,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         {
             var slaveBestHandledIndividualIndex = slaveWorkers[i].BestHandledIndividualIndex;
             var slaveBestHandledIndividualFfValue = populationFfValues[slaveBestHandledIndividualIndex];
-            if (slaveBestHandledIndividualFfValue < bestIndividualFfValue)
+            if (FitnessComparisonHelper.IsBetter(slaveBestHandledIndividualFfValue, bestIndividualFfValue))
             {
                 bestIndividualIndex = slaveBestHandledIndividualIndex;
                 bestIndividualFfValue = slaveBestHandledIndividualFfValue;
@@ -181,18 +265,17 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// <summary>
     /// Finds the index of the best (lowest fitness) individual by scanning the active
     /// population. Used when a generation strategy may have reordered or resized the population.
+    /// A NaN individual never wins the scan; an all-NaN population still yields a valid index.
     /// </summary>
-    /// <param name="populationFfValues">The fitness function values of the population.</param>
-    /// <param name="currentPopulationSize">The number of active individuals.</param>
+    /// <param name="populationFfValues">The fitness function values of the live individuals.</param>
     /// <returns>The index of the best individual.</returns>
     private static int FindBestIndividualIndex(
-        ReadOnlySpan<double> populationFfValues,
-        int currentPopulationSize)
+        ReadOnlySpan<double> populationFfValues)
     {
         var bestIndividualIndex = 0;
-        for (int i = 1; i < currentPopulationSize; i++)
+        for (int i = 1; i < populationFfValues.Length; i++)
         {
-            if (populationFfValues[i] < populationFfValues[bestIndividualIndex])
+            if (FitnessComparisonHelper.IsBetter(populationFfValues[i], populationFfValues[bestIndividualIndex]))
                 bestIndividualIndex = i;
         }
 

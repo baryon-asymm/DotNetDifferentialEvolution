@@ -1,10 +1,9 @@
 using DotNetDifferentialEvolution.AlgorithmExecutors;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
-using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
 using DotNetDifferentialEvolution.Tests.Shared.Helpers;
 
@@ -20,11 +19,10 @@ internal static class ExecutorFactory
     /// Creates the context and executor.
     /// </summary>
     /// <remarks>
-    /// A seeded run is only requested for single-worker tests: the seeded
-    /// <see cref="DeterministicRandomProvider"/> wraps a non-thread-safe <see cref="Random"/>,
-    /// so multi-worker runs fall back to the thread-safe <see cref="RandomProvider"/>
-    /// (<see cref="Random.Shared"/>) and are asserted on convergence tolerance instead of exact
-    /// reproduction.
+    /// The seed goes onto the <see cref="ProblemContext"/>; the executor derives one generator per
+    /// worker from it, so a seeded run reproduces for a given worker count — not across worker
+    /// counts, since individual <c>i</c> draws from worker <c>i mod W</c>'s stream. The existing
+    /// callers only seed single-worker runs, which is preserved here.
     /// </remarks>
     public static (ProblemContext Context, AlgorithmExecutor Executor) Create(
         ITestFitnessFunctionEvaluator evaluator,
@@ -33,24 +31,21 @@ internal static class ExecutorFactory
         double crossoverProbability,
         int populationSize,
         int workersCount,
-        int? seed)
+        int? seed,
+        IGenerationStrategy? generationStrategy = null)
     {
         var useSeed = seed.HasValue && workersCount == 1;
 
         var context = ProblemContextHelper.CreateContext(
-            populationSize, evaluator, terminationStrategy, workersCount, seed: useSeed ? seed : null);
-
-        BaseRandomProvider randomProvider = useSeed
-            ? new DeterministicRandomProvider(seed!.Value)
-            : new RandomProvider();
+            populationSize, evaluator, terminationStrategy, workersCount, seed: useSeed ? seed : null,
+            generationStrategy: generationStrategy);
 
         var mutationStrategy = new MutationStrategy(
             mutationForce: mutationForce,
             crossoverProbability: crossoverProbability,
             populationSize: populationSize,
             lowerBound: context.GenesLowerBound,
-            upperBound: context.GenesUpperBound,
-            randomProvider: randomProvider);
+            upperBound: context.GenesUpperBound);
         var selectionStrategy = new SelectionStrategy(context.GenomeSize);
         var executor = new AlgorithmExecutor(mutationStrategy, selectionStrategy, context);
 

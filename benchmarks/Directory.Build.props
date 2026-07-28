@@ -1,0 +1,30 @@
+<Project>
+
+    <!-- Inherit the repo-root strictness settings (analyzers + warnings-as-errors). Without this
+         explicit import MSBuild would stop at this file and the benchmarks would silently drop out
+         of the repo-wide analyzer policy — the nearest Directory.Build.props wins, not all of them. -->
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+    <!--
+      Shared settings for every project under benchmarks/, mirroring tests/Directory.Build.props.
+      RollForward=Major is the one that matters: the benchmark is a runnable executable pinned to
+      net8.0, and the default roll-forward policy does not cross a major version, so on a machine
+      that only has a newer runtime installed it fails to start with "You must install or update
+      .NET" unless DOTNET_ROLL_FORWARD=Major is exported by hand before every run.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RollForward>Major</RollForward>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <!-- The shared optimization contracts (IFitnessFunctionEvaluator, BaseRandomProvider,
+         RandomProvider, ISolution) flow in transitively from the library; import them project-wide
+         so benchmark code references them without per-file usings. -->
+    <ItemGroup>
+        <Using Include="DotNetOptimization.Abstractions" />
+    </ItemGroup>
+
+</Project>

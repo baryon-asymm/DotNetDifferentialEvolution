@@ -4,7 +4,6 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Title>DotNetDifferentialEvolution</Title>
         <Authors>Eduard Burachek</Authors>
         <Description>A .NET library for Differential Evolution optimization with multi-processing and SIMD acceleration.</Description>
@@ -15,7 +14,7 @@
         <PackageTags>differential-evolution de optimization .net</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <Version>4.0.0</Version>
+        <Version>5.1.0</Version>
     </PropertyGroup>
 
     <!-- Shared contracts for the DotNetOptimization family. The objective evaluator, the random
@@ -30,6 +29,11 @@
       Consumer experience: ship the XML doc (IntelliSense) and wire up SourceLink so debuggers
       can step into the library's sources straight from GitHub at the exact commit.
       SourceLink is built into the .NET 8+ SDK, so no package reference is needed.
+
+      Note that "the exact commit" is whatever HEAD happens to be, which is why this project does
+      NOT set GeneratePackageOnBuild: a package built from a local working branch would carry a
+      SourceLink map pointing at a commit that may never be pushed, and every source lookup
+      against it would 404 forever. The release workflow packs explicitly from a tagged commit.
     -->
     <PropertyGroup>
         <!-- Pack the XML documentation file so consumers get IntelliSense tooltips. -->
@@ -45,9 +49,47 @@
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
+    <!--
+      Package validation: diff the packed assembly's public surface against the last released
+      package and fail on any difference that would break a consumer. Deliberate breaks are
+      recorded in CompatibilitySuppressions.xml, regenerated with
+          dotnet pack src/DotNetDifferentialEvolution -c Release /p:ApiCompatGenerateSuppressionFile=true
+      which makes that file the checked, machine-produced list of everything this major version
+      breaks — the thing release notes are written from, rather than a list assembled by hand.
+
+      On a major release: bump PackageValidationBaselineVersion to the version just shipped and
+      delete the suppression file, so the next cycle starts from an empty break list.
+
+      The baseline is still 4.0.0 rather than 4.1.0 because a baseline has to be downloadable from
+      nuget.org and 4.1.0 is not published yet. Once it is, move this to 4.1.0 and regenerate: the
+      suppression list then describes the step consumers actually take, instead of folding in the
+      4.1.0 changes a second time.
+    -->
+    <PropertyGroup>
+        <EnablePackageValidation>true</EnablePackageValidation>
+        <PackageValidationBaselineVersion>4.0.0</PackageValidationBaselineVersion>
+    </PropertyGroup>
+
     <ItemGroup>
         <None Include="../../LICENSE" Pack="true" PackagePath="\" />
         <None Include="../../README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+    <!--
+      Ship the long-form documentation inside the package, not only on GitHub.
+
+      README is the only document nuget.org renders, and a consumer working from a restored package
+      — increasingly a coding agent, which has the extracted package on disk and no reason to go
+      looking for a repository — otherwise has no access to the specification at all. These land in
+      the global packages folder next to lib/, so they are readable without network access and are
+      pinned to the exact version being consumed, which a link to the default branch is not.
+
+      They are documentation, not build inputs: PackagePath is a plain folder, so nothing in the
+      consumer's build reacts to them.
+    -->
+    <ItemGroup>
+        <None Include="../../docs/ALGORITHMS.md" Pack="true" PackagePath="docs\" />
+        <None Include="../../docs/AGENT_GUIDE.md" Pack="true" PackagePath="docs\" />
     </ItemGroup>
 
     <!-- Expose internal helpers (MutationMath, CrossoverHelper, RandomIndexSelector) to the

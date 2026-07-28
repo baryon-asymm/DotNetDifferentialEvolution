@@ -93,15 +93,18 @@ public class JdeStrategy : IControlParameterProvider, IGenerationStrategy
 
     /// <inheritdoc />
     public void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var currentPopulationSize = context.CurrentPopulationSize;
+        var currentPopulationSize = context.ActivePopulationSize;
         for (int i = 0; i < currentPopulationSize; i++)
         {
-            if (trialRecords[i].Succeeded == false)
+            // Survival, not improvement. jDE attaches the parameters to the individual, and the
+            // individual carried into the next generation is the trial whenever the trial was
+            // taken — including on a tie, where the parent it replaced is simply gone.
+            if (trialRecords[i].Replaced == false)
                 continue;
 
             _mutationForces[i] = trialRecords[i].UsedF;

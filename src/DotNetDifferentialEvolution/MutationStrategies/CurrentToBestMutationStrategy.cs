@@ -16,17 +16,19 @@ public class CurrentToBestMutationStrategy : IMutationStrategy
     public int MinimumPopulationSize => NumberOfDifferenceIndividuals + 1;
 
     /// <inheritdoc />
+    public MutationRequirements Requirements =>
+        MutationRequirements.ControlParameters | MutationRequirements.BestIndividual;
+
+    /// <inheritdoc />
     public void Mutate(
         in MutationContext context)
     {
-        var random = context.RandomProvider;
         var genomeSize = context.GenomeSize;
         var population = context.Population;
         var mutationForce = context.MutationForce;
 
         Span<int> indexes = stackalloc int[NumberOfDifferenceIndividuals];
-        RandomIndexSelector.FillDistinctIndices(
-            indexes, context.PopulationSize, context.IndividualIndex, random);
+        RandomIndexSelector.FillDistinctIndices(indexes, in context);
 
         var current = population.Slice(context.IndividualIndex * genomeSize, genomeSize);
         var bestIndividual = population.Slice(context.BestIndividualIndex * genomeSize, genomeSize);
@@ -38,8 +40,6 @@ public class CurrentToBestMutationStrategy : IMutationStrategy
         // v += F * (x_r1 - x_r2)
         MutationMath.AddScaledDifference(context.TrialIndividual, first, second, mutationForce);
 
-        CrossoverHelper.BinomialCrossoverAndRepair(
-            context.IndividualIndex, context.CrossoverProbability, population,
-            context.TrialIndividual, context.LowerBound, context.UpperBound, random);
+        CrossoverHelper.BinomialCrossoverAndRepair(in context, context.CrossoverProbability);
     }
 }

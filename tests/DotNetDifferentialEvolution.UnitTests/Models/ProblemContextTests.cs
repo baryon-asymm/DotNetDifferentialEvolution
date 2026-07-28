@@ -29,17 +29,17 @@ public class ProblemContextTests
     {
         var context = CreateContext();
 
-        context.Population.Span[0] = 111.0;
-        context.TrialPopulation.Span[0] = 222.0;
-        context.PopulationFfValues.Span[0] = 11.0;
-        context.TrialPopulationFfValues.Span[0] = 22.0;
+        context.CurrentPopulation.Genes.Span[0] = 111.0;
+        context.TrialPopulation.Genes.Span[0] = 222.0;
+        context.CurrentPopulation.FfValues.Span[0] = 11.0;
+        context.TrialPopulation.FfValues.Span[0] = 22.0;
 
         context.SwapPopulations();
 
-        Assert.Equal(222.0, context.Population.Span[0]);
-        Assert.Equal(111.0, context.TrialPopulation.Span[0]);
-        Assert.Equal(22.0, context.PopulationFfValues.Span[0]);
-        Assert.Equal(11.0, context.TrialPopulationFfValues.Span[0]);
+        Assert.Equal(222.0, context.CurrentPopulation.Genes.Span[0]);
+        Assert.Equal(111.0, context.TrialPopulation.Genes.Span[0]);
+        Assert.Equal(22.0, context.CurrentPopulation.FfValues.Span[0]);
+        Assert.Equal(11.0, context.TrialPopulation.FfValues.Span[0]);
     }
 
     [Fact]

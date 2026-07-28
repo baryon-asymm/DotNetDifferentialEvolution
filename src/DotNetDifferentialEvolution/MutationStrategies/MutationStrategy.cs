@@ -22,10 +22,14 @@ public class MutationStrategy : IMutationStrategy
     /// <inheritdoc />
     public int MinimumPopulationSize => NumberOfIndividualsToChoose + 1;
 
+    /// <summary>
+    /// This strategy carries the F and CR it was constructed with, so it needs nothing
+    /// provisioned: it builds a trial from the population and the bounds alone.
+    /// </summary>
+    public MutationRequirements Requirements => MutationRequirements.None;
+
     private readonly double _mutationForce;
     private readonly double _crossoverProbability;
-
-    private readonly BaseRandomProvider _randomProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MutationStrategy"/> class.
@@ -35,7 +39,10 @@ public class MutationStrategy : IMutationStrategy
     /// <param name="populationSize">The size of the population (retained for API compatibility).</param>
     /// <param name="lowerBound">The lower bound of the genes (retained for API compatibility).</param>
     /// <param name="upperBound">The upper bound of the genes (retained for API compatibility).</param>
-    /// <param name="randomProvider">The random provider.</param>
+    /// <param name="randomProvider">The random provider (retained for API compatibility; ignored).</param>
+    [Obsolete("The engine supplies the random provider through MutationContext, one per worker, "
+              + "so that a seeded run is reproducible and no generator is shared between threads. "
+              + "Use the overload without a random provider and DifferentialEvolutionBuilder.WithSeed.")]
     public MutationStrategy(
         double mutationForce,
         double crossoverProbability,
@@ -43,14 +50,12 @@ public class MutationStrategy : IMutationStrategy
         ReadOnlyMemory<double> lowerBound,
         ReadOnlyMemory<double> upperBound,
         BaseRandomProvider randomProvider)
+        : this(mutationForce, crossoverProbability, populationSize, lowerBound, upperBound)
     {
-        _mutationForce = mutationForce;
-        _crossoverProbability = crossoverProbability;
-        _randomProvider = randomProvider;
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MutationStrategy"/> class with a default random provider.
+    /// Initializes a new instance of the <see cref="MutationStrategy"/> class.
     /// </summary>
     /// <param name="mutationForce">The mutation force.</param>
     /// <param name="crossoverProbability">The crossover probability.</param>
@@ -63,17 +68,19 @@ public class MutationStrategy : IMutationStrategy
         int populationSize,
         ReadOnlyMemory<double> lowerBound,
         ReadOnlyMemory<double> upperBound)
-        : this(mutationForce, crossoverProbability, populationSize, lowerBound, upperBound, new RandomProvider())
     {
+        _mutationForce = mutationForce;
+        _crossoverProbability = crossoverProbability;
     }
 
     /// <inheritdoc />
     public void Mutate(
         in MutationContext context)
     {
+        // Randomness comes from the context — the calling worker's own generator — even though
+        // F and CR do not. Holding a generator here would put every worker on one shared stream.
         Span<int> indexes = stackalloc int[NumberOfIndividualsToChoose];
-        RandomIndexSelector.FillDistinctIndices(
-            indexes, context.PopulationSize, context.IndividualIndex, _randomProvider);
+        RandomIndexSelector.FillDistinctIndices(indexes, in context);
 
         var genomeSize = context.GenomeSize;
         var population = context.Population;
@@ -84,13 +91,6 @@ public class MutationStrategy : IMutationStrategy
         MutationMath.AssignBasePlusScaledDifference(
             context.TrialIndividual, firstIndividual, secondIndividual, thirdIndividual, _mutationForce);
 
-        CrossoverHelper.BinomialCrossoverAndRepair(
-            context.IndividualIndex,
-            _crossoverProbability,
-            population,
-            context.TrialIndividual,
-            context.LowerBound,
-            context.UpperBound,
-            _randomProvider);
+        CrossoverHelper.BinomialCrossoverAndRepair(in context, _crossoverProbability);
     }
 }

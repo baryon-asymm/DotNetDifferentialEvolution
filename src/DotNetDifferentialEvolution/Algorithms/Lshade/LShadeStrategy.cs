@@ -1,5 +1,7 @@
 using DotNetDifferentialEvolution.Algorithms.Shade;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.Algorithms.Lshade;
 
@@ -26,6 +28,13 @@ public class LShadeStrategy : ShadeStrategy
     protected override bool UseTerminalCr => true;
 
     /// <summary>
+    /// L-SHADE is built on SHADE 1.1, which updates <c>M_CR</c> with the weighted Lehmer mean
+    /// rather than SHADE (2013)'s weighted arithmetic mean — the other half of the same memory
+    /// update rule the terminal <c>M_CR</c> value comes from.
+    /// </summary>
+    protected override bool UseLehmerCrMean => true;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="LShadeStrategy"/> class.
     /// </summary>
     /// <param name="initialPopulationSize">The initial (maximum) population size.</param>
@@ -45,6 +54,17 @@ public class LShadeStrategy : ShadeStrategy
             throw new ArgumentOutOfRangeException(nameof(minPopulationSize), "Minimum population size must be at least 4.");
         if (initialPopulationSize < minPopulationSize)
             throw new ArgumentException("Initial population size must be at least the minimum population size.");
+        // LShadeVariant validates both of these, but this class is public and constructible on its
+        // own, and neither failure announces itself: a budget of zero divides to a non-finite
+        // progress and collapses the population to its minimum in the first generation, and a
+        // negative rate produces a negative archive capacity that only surfaces later, from inside
+        // a running generation.
+        if (maxEvaluationNumber <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(maxEvaluationNumber), "Evaluation budget must be greater than 0.");
+        if (archiveSizeRate < 0.0)
+            throw new ArgumentOutOfRangeException(
+                nameof(archiveSizeRate), "Archive size rate must be non-negative.");
 
         _initialPopulationSize = initialPopulationSize;
         _minPopulationSize = minPopulationSize;
@@ -54,13 +74,12 @@ public class LShadeStrategy : ShadeStrategy
 
     /// <inheritdoc />
     public override void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        // SHADE bookkeeping: archive, success-history memory, and the fitness ranking that
-        // LPSR relies on to identify the survivors.
+        // SHADE bookkeeping: archive and success-history memory.
         base.AfterGeneration(context, trialRecords);
 
         ReducePopulationSize(context);
@@ -71,24 +90,34 @@ public class LShadeStrategy : ShadeStrategy
     /// keeping the best individuals and scaling the archive capacity to match.
     /// </summary>
     private void ReducePopulationSize(
-        ProblemContext context)
+        GenerationContext context)
     {
-        var currentPopulationSize = context.CurrentPopulationSize;
+        var currentPopulationSize = context.ActivePopulationSize;
+
+        // LPSR identifies the survivors through the fitness ranking. The engine rebuilds that
+        // every generation whenever the mutation strategy declared FitnessRanking, which every
+        // current-to-pbest strategy does and which is what WithLShade configures. Pairing this
+        // strategy by hand with one that declares no ranking is still legal, and then nobody has
+        // ranked the population and L-SHADE has to do it itself.
+        if (context.MutationRequirements.HasFlag(MutationRequirements.FitnessRanking) == false)
+            RebuildSortedIndices(context, currentPopulationSize);
+
         var newPopulationSize = Math.Clamp(
             ComputePlannedPopulationSize(context.EvaluationCount), _minPopulationSize, currentPopulationSize);
 
         if (newPopulationSize >= currentPopulationSize)
             return;
 
-        var genomeSize = context.GenomeSize;
-        var population = context.Population.Span;
-        var populationFfValues = context.PopulationFfValues.Span;
+        var current = context.CurrentPopulation;
+        var genomeSize = current.GenomeSize;
+        var population = current.Genes.Span;
+        var populationFfValues = current.FfValues.Span;
         var sortedIndices = context.FitnessSortedIndices.Span;
 
         // Use the swapped-out trial buffers as scratch to gather the best survivors (the
         // ranking is ascending, so the first newPopulationSize indices are the survivors).
-        var scratch = context.TrialPopulation.Span;
-        var scratchFfValues = context.TrialPopulationFfValues.Span;
+        var scratch = context.DiscardedParents.Genes.Span;
+        var scratchFfValues = context.DiscardedParents.FfValues.Span;
 
         for (int k = 0; k < newPopulationSize; k++)
         {
@@ -101,14 +130,15 @@ public class LShadeStrategy : ShadeStrategy
         scratch.Slice(0, newPopulationSize * genomeSize).CopyTo(population);
         scratchFfValues.Slice(0, newPopulationSize).CopyTo(populationFfValues);
 
-        context.CurrentPopulationSize = newPopulationSize;
+        context.ActivePopulationSize = newPopulationSize;
 
         // The survivors are now stored in ascending-fitness order, so the ranking is identity.
         for (int k = 0; k < newPopulationSize; k++)
             sortedIndices[k] = k;
 
         // Scale the archive capacity down and drop any overflow entries.
-        var newArchiveCapacity = (int)Math.Round(_archiveSizeRate * newPopulationSize);
+        var newArchiveCapacity = (int)Math.Round(
+            _archiveSizeRate * newPopulationSize, MidpointRounding.AwayFromZero);
         context.ArchiveCapacity = newArchiveCapacity;
         if (context.ArchiveSize > newArchiveCapacity)
             context.ArchiveSize = newArchiveCapacity;
@@ -116,13 +146,15 @@ public class LShadeStrategy : ShadeStrategy
 
     /// <summary>
     /// Computes the planned population size for the consumed evaluation budget using the
-    /// linear schedule <c>N = round((N_min - N_init) / maxEvals * evals + N_init)</c>.
+    /// linear schedule <c>N = round((N_min - N_init) / maxEvals * evals + N_init)</c>, with the
+    /// round-half-up rule the paper uses.
     /// </summary>
     private int ComputePlannedPopulationSize(
         long evaluationCount)
     {
         var progress = Math.Min(1.0, (double)evaluationCount / _maxEvaluationNumber);
         return (int)Math.Round(
-            (_minPopulationSize - _initialPopulationSize) * progress + _initialPopulationSize);
+            (_minPopulationSize - _initialPopulationSize) * progress + _initialPopulationSize,
+            MidpointRounding.AwayFromZero);
     }
 }

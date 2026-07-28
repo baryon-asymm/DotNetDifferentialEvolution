@@ -46,6 +46,32 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
     protected virtual bool UseTerminalCr => false;
 
     /// <summary>
+    /// Gets a value indicating whether <c>M_CR</c> is updated with the weighted <em>Lehmer</em>
+    /// mean rather than the weighted arithmetic mean.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The two papers genuinely differ here, and the difference is not cosmetic. SHADE (2013),
+    /// Eq. (17), specifies <c>mean_WA(S_CR)</c> — this class's default. L-SHADE (2014) is built on
+    /// SHADE 1.1, whose memory update (its Algorithm 1, line 5) specifies <c>mean_WL(S_CR)</c>,
+    /// the same weighted Lehmer mean already used for <c>M_F</c>.
+    /// </para>
+    /// <para>
+    /// The direction of the discrepancy is fixed, not incidental:
+    /// <c>mean_WL - mean_WA = Var_w(S_CR) / E_w(S_CR) &gt;= 0</c>, so the arithmetic mean always
+    /// reports the lower value. That downward pull on <c>M_CR</c> is precisely what the Lehmer
+    /// mean was introduced to remove, and under <see cref="UseTerminalCr"/> it compounds: the
+    /// lower <c>M_CR</c> drifts, the likelier a generation is to produce <c>max(S_CR) = 0</c> and
+    /// lock the slot at CR = 0 for the rest of the run.
+    /// </para>
+    /// <para>
+    /// Kept separate from <see cref="UseTerminalCr"/> even though both arrived in SHADE 1.1, so
+    /// that each rule can be turned on — and tested — on its own.
+    /// </para>
+    /// </remarks>
+    protected virtual bool UseLehmerCrMean => false;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ShadeStrategy"/> class.
     /// </summary>
     /// <param name="populationSize">The size of the population.</param>
@@ -95,21 +121,22 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
 
     /// <inheritdoc />
     public virtual void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var currentPopulationSize = context.CurrentPopulationSize;
+        var currentPopulationSize = context.ActivePopulationSize;
 
         UpdateArchive(context, trialRecords, currentPopulationSize);
         UpdateMemory(trialRecords, currentPopulationSize);
-        RebuildSortedIndices(context, currentPopulationSize);
     }
 
     /// <summary>
     /// Overwrites one memory slot with the success-weighted means of this generation's
-    /// successful parameters (weighted arithmetic mean for CR, weighted Lehmer mean for F).
+    /// successful parameters: the weighted Lehmer mean for F, and for CR either the weighted
+    /// arithmetic mean (SHADE) or the weighted Lehmer mean (L-SHADE, see
+    /// <see cref="UseLehmerCrMean"/>).
     /// </summary>
     private void UpdateMemory(
         ReadOnlySpan<TrialRecord> trialRecords,
@@ -117,22 +144,35 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
     {
         var weightSum = 0.0;
         var weightedCrSum = 0.0;
+        var weightedCrSquaredSum = 0.0;
         var weightedFSum = 0.0;
         var weightedFSquaredSum = 0.0;
         var maxSuccessfulCr = 0.0;
 
         for (int i = 0; i < currentPopulationSize; i++)
         {
-            if (trialRecords[i].Succeeded == false)
+            // S_CR and S_F take improving trials only (both papers, Algorithm 2 line 16). A trial
+            // accepted on a tie has an improvement of exactly zero, so it would enter the weighted
+            // means with weight zero and contribute nothing but the risk of an empty weight sum.
+            if (trialRecords[i].Improved == false)
                 continue;
 
-            // Weight by the fitness improvement; success implies a strictly positive delta.
+            // Weight by the fitness improvement. A success does not always come with a finite,
+            // strictly positive one: replacing a parent the objective scored NaN — or an infinite
+            // one — is a genuine success with an unmeasurable improvement. Such a record cannot be
+            // weighted, and letting it through would put NaN into weightSum, which the
+            // weightSum <= 0.0 guard below does not catch (every comparison against NaN is false),
+            // permanently poisoning M_F and M_CR for the rest of the run.
             var weight = trialRecords[i].ParentFfValue - trialRecords[i].TrialFfValue;
+            if (double.IsFinite(weight) == false)
+                continue;
+
             var cr = trialRecords[i].UsedCr;
             var f = trialRecords[i].UsedF;
 
             weightSum += weight;
             weightedCrSum += weight * cr;
+            weightedCrSquaredSum += weight * cr * cr;
             weightedFSum += weight * f;
             weightedFSquaredSum += weight * f * f;
             if (cr > maxSuccessfulCr)
@@ -146,6 +186,12 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
         // terminal), it stays terminal and forever samples CR = 0.
         if (UseTerminalCr && (_memoryCr[_memoryIndex] < 0.0 || maxSuccessfulCr <= 0.0))
             _memoryCr[_memoryIndex] = TerminalCrValue;
+        // The Lehmer branch divides by the weighted sum of CR, which is zero only when every
+        // successful CR is zero. Under L-SHADE that case is the terminal rule above, so this is
+        // unreachable there; the guard is what keeps the mean well defined for a subclass that
+        // takes SHADE 1.1's mean without its terminal rule.
+        else if (UseLehmerCrMean && weightedCrSum > 0.0)
+            _memoryCr[_memoryIndex] = weightedCrSquaredSum / weightedCrSum;
         else
             _memoryCr[_memoryIndex] = weightedCrSum / weightSum;
 

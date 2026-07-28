@@ -12,6 +12,12 @@ Differential Evolution (DE) is a stochastic optimization algorithm used for find
 It was introduced by Kenneth Price and Rainer Storn in 1997.
 DE is known for its simplicity and effectiveness, especially for complex optimization problems. For more details on the algorithm, you can refer to the [Wikipedia page](https://en.wikipedia.org/wiki/Differential_evolution).
 
+📐 **[Algorithms, formulas, and where they live in the code](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/ALGORITHMS.md)** — every variant stated in the notation of the paper it comes from, cited down to the equation or algorithm line, with the type that implements it and the deliberate deviations listed in one place.
+
+🤖 **[Using this library: a task-oriented guide](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/AGENT_GUIDE.md)** — the contracts, the constraints, and the mistakes that compile and run but produce a wrong search, as a checklist. Written for a coding agent that needs working code on the first attempt, and for anyone who prefers a checklist to prose.
+
+Both documents ship **inside the NuGet package** under `docs/`, so a restored copy sits on disk next to `lib/` — readable offline and pinned to the version actually in use, which a link to a branch is not.
+
 ## Features
 
 - **Extensible Design**: Easily extend the library with custom components.
@@ -146,6 +152,9 @@ In addition to the classic `DE/rand/1/bin` scheme, the library ships a range of
 well-established mutation strategies and self-adaptive algorithms, all selectable through
 the fluent builder.
 
+For the mathematics behind each of them — formulas, citations, and the code that implements
+them — see [docs/ALGORITHMS.md](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/ALGORITHMS.md).
+
 ### Mutation strategies (constant parameters)
 
 Replace `WithDefaultMutationStrategy(...)` (which is `DE/rand/1/bin`) with any of:
@@ -220,6 +229,72 @@ Recommended starting point: for most problems, **L-SHADE** gives the strongest r
 of the box; **jDE** is a simpler, robust self-adaptive baseline. You can compare all
 variants on the Rastrigin and Ackley functions by running
 `dotnet run -c Release --project benchmarks/DotNetDifferentialEvolution.Benchmark -- convergence`.
+
+### Your own variant
+
+The four presets above are `IDeVariant` implementations, and so is anything you write. A variant
+installs its mutation operator, control-parameter source, generation hook, selection rule and
+archive size as one bundle, which is what keeps the pieces consistent — an adaptive scheme is
+meaningless without the operator that reads the parameters it adapts.
+
+```csharp
+public sealed class MyVariant : IDeVariant
+{
+    public DeVariantSetup Configure(in DeVariantConfiguration configuration) => new()
+    {
+        MutationStrategy = new CurrentToPBestMutationStrategy(pBestRate: 0.1),
+        ControlParameterProvider = new DitheredControlParameterProvider(0.3, 0.9, 0.9),
+        GenerationStrategy = new MyAdaptation(configuration.PopulationSize),
+        ArchiveCapacity = configuration.PopulationSize
+    };
+
+    // Optional: cross-check the completed configuration and throw to reject it.
+    public void Validate(in DeVariantConfiguration configuration, ITerminationStrategy termination) { }
+}
+
+// …
+.WithVariant(new MyVariant())
+```
+
+A variant configured this way is held to the same rules as a built-in one: its mutation strategy's
+declared `Requirements` are checked against what the variant installed, the population size is
+checked against the operator's minimum, and the engine maintains whatever the operator declared it
+needs — including the p-best fitness ranking, which no strategy has to maintain for itself.
+
+### Cancellation
+
+```csharp
+var result = await de.RunAsync(cancellationToken);
+```
+
+Cancellation is observed at the next generation barrier — the one point at which every worker has
+finished its stripe and none has started the next — so the workers stop with the population in a
+consistent state. A run with an expensive objective therefore stops within roughly one generation
+of the request rather than instantly. The task completes as canceled (`OperationCanceledException`)
+and every worker thread is stopped.
+
+### Reproducible runs
+
+```csharp
+.WithSeed(20260728)
+```
+
+Every worker gets its own generator derived from the seed, which is what makes a *parallel* run
+reproducible: the striping is fixed and each individual is built, evaluated and selected
+end-to-end by one worker, so nothing depends on how the workers interleave. The seed covers the
+initial population, mutation and crossover, control-parameter sampling and archive eviction.
+
+Two caveats worth knowing before you rely on it:
+
+- **The worker count is part of the seed's meaning.** Individual *i* draws from worker *i mod W*'s
+  stream, so the same seed under a different `UseProcessors(...)` is a different run. Reproducible,
+  not portable across worker counts.
+- **A seed is reproducible within a minor version.** Changing how the engine consumes randomness
+  reshuffles every seeded run without being a defect in either version.
+
+A custom `IPopulationSamplingMaker` or `IGenerationStrategy` is offered the seeded source through
+`UseRandomProvider` and is reproducible if it uses what it is given; an `ILocalSearchRefiner` owns
+its randomness entirely and must seed itself.
 
 ### Hybrid / memetic local search
 

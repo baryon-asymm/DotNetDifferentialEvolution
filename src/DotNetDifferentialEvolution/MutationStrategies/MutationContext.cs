@@ -1,3 +1,4 @@
+using DotNetDifferentialEvolution.RandomProviders;
 
 namespace DotNetDifferentialEvolution.MutationStrategies;
 
@@ -42,6 +43,17 @@ public readonly ref struct MutationContext
 
     /// <summary>The random provider for this worker.</summary>
     public BaseRandomProvider RandomProvider { get; init; }
+
+    /// <summary>
+    /// The same generator as <see cref="RandomProvider"/>, typed concretely — or
+    /// <see langword="null"/> when the context was not built by the engine.
+    /// </summary>
+    /// <remarks>
+    /// The built-in helpers draw through this when it is present, which lets the JIT bind and
+    /// inline the generator rather than dispatch to it once per gene. It is the same object,
+    /// never a second stream, so a run's draw order does not depend on which path a strategy took.
+    /// </remarks>
+    internal SeededRandomProvider? WorkerRandomProvider { get; init; }
 
     /// <summary>
     /// Optional external archive of previously discarded individuals (flattened genes),

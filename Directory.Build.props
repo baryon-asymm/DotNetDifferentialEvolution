@@ -18,6 +18,19 @@
 
         <!-- Surface every warning rather than capping the count. -->
         <WarningLevel>9999</WarningLevel>
+
+        <!-- The NuGet vulnerability audit (NU1901-NU1904) is the one warning family that must not
+             be an error. It fires on advisories published against dependencies, so a build that
+             was green yesterday can fail today with no change in this repository — including the
+             release workflow, mid-tag. The audit still runs and still reports; it just cannot
+             block a release on something outside the tree. -->
+        <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+
+        <!-- Pin the language version instead of letting it be inferred from the target framework.
+             Inferred, it would move on its own the day the TFM moves, and it diverged between the
+             library (12.0, from net8.0) and the test projects (latest), so test code could use
+             syntax the shipping code could not compile. -->
+        <LangVersion>12.0</LangVersion>
     </PropertyGroup>
 
 </Project>

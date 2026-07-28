@@ -67,16 +67,15 @@ public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGe
 
     /// <inheritdoc />
     public void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var currentPopulationSize = context.CurrentPopulationSize;
+        var currentPopulationSize = context.ActivePopulationSize;
 
         UpdateArchive(context, trialRecords, currentPopulationSize);
         AdaptParameterMeans(trialRecords, currentPopulationSize);
-        RebuildSortedIndices(context, currentPopulationSize);
     }
 
     /// <summary>
@@ -94,7 +93,9 @@ public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGe
 
         for (int i = 0; i < currentPopulationSize; i++)
         {
-            if (trialRecords[i].Succeeded == false)
+            // S_CR and S_F take improving trials only; a trial accepted on a tie taught the search
+            // nothing and must not pull μCR or μF toward its parameters.
+            if (trialRecords[i].Improved == false)
                 continue;
 
             crSum += trialRecords[i].UsedCr;
