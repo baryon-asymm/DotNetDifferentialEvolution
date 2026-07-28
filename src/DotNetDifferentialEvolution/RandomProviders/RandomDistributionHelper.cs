@@ -9,12 +9,22 @@ public static class RandomDistributionHelper
     /// <summary>
     /// Samples a value from a normal (Gaussian) distribution using the Box-Muller transform.
     /// </summary>
+    /// <remarks>
+    /// The engine's own provider keeps the second normal each transform produces, so it is asked
+    /// for the value directly. Any other provider gets the plain transform, which discards the
+    /// second normal because there is nowhere on the caller's side to keep it: this class is
+    /// static and shared by every worker, so a cache of its own would either race or be keyed by
+    /// thread rather than by seed.
+    /// </remarks>
     public static double NextGaussian(
         BaseRandomProvider randomProvider,
         double mean,
         double standardDeviation)
     {
         ArgumentNullException.ThrowIfNull(randomProvider);
+
+        if (randomProvider is SeededRandomProvider seededRandomProvider)
+            return seededRandomProvider.NextGaussian(mean, standardDeviation);
 
         // Guard against log(0).
         var u1 = 1.0 - randomProvider.NextDouble();

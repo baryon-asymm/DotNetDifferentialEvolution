@@ -28,6 +28,9 @@ public sealed class SeededRandomProvider : BaseRandomProvider
     private ulong _state2;
     private ulong _state3;
 
+    private double _spareNormal;
+    private bool _hasSpareNormal;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SeededRandomProvider"/> class.
     /// </summary>
@@ -85,6 +88,47 @@ public sealed class SeededRandomProvider : BaseRandomProvider
         _state3 = BitOperations.RotateLeft(_state3, 45);
 
         return result;
+    }
+
+    /// <summary>
+    /// Samples a value from a normal distribution, reusing the second value the Box–Muller
+    /// transform produces instead of discarding it.
+    /// </summary>
+    /// <param name="mean">The mean of the distribution.</param>
+    /// <param name="standardDeviation">The standard deviation of the distribution.</param>
+    /// <returns>A normally distributed value.</returns>
+    /// <remarks>
+    /// <para>
+    /// Box–Muller yields two independent standard normals per pair of uniforms, and the
+    /// distribution helper threw one of them away on every call. Keeping it halves the cost of a
+    /// Gaussian draw, which JADE and SHADE make once per individual per generation.
+    /// </para>
+    /// <para>
+    /// The spare lives on the instance, which is what makes this safe. The engine gives each
+    /// worker its own provider, so the cache is neither shared between threads nor keyed by
+    /// thread identity — a <see langword="static"/> cache here would be a data race, and a
+    /// <c>[ThreadStatic]</c> one would be race-free but would silently untie the stream from the
+    /// seed, defeating reproducible runs.
+    /// </para>
+    /// </remarks>
+    public double NextGaussian(
+        double mean,
+        double standardDeviation)
+    {
+        if (_hasSpareNormal)
+        {
+            _hasSpareNormal = false;
+            return mean + standardDeviation * _spareNormal;
+        }
+
+        // 1 - NextDouble() lands in (0, 1], keeping the logarithm away from its pole.
+        var radius = Math.Sqrt(-2.0 * Math.Log(1.0 - NextDouble()));
+        var (sin, cos) = Math.SinCos(2.0 * Math.PI * (1.0 - NextDouble()));
+
+        _spareNormal = radius * sin;
+        _hasSpareNormal = true;
+
+        return mean + standardDeviation * (radius * cos);
     }
 
     private static ulong SplitMix64(
