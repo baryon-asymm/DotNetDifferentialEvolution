@@ -113,19 +113,7 @@ public class TrialOutcomeReportingTests
     /// <summary>Accepts a trial that merely matches its parent, to keep drifting along plateaus.</summary>
     private sealed class TieAcceptingSelectionStrategy : ISelectionStrategy
     {
-        public void Select(
-            int individualIndex,
-            double trialIndividualFfValue,
-            Span<double> trialIndividual,
-            Span<double> populationFfValues,
-            Span<double> population,
-            Span<double> nextPopulationFfValues,
-            Span<double> nextPopulation)
-            => SelectTrial(
-                individualIndex, trialIndividualFfValue, trialIndividual, populationFfValues,
-                population, nextPopulationFfValues, nextPopulation);
-
-        public bool SelectTrial(
+        public bool Select(
             int individualIndex,
             double trialIndividualFfValue,
             Span<double> trialIndividual,
@@ -154,19 +142,7 @@ public class TrialOutcomeReportingTests
     /// <summary>Never replaces a parent, whatever the trial scored.</summary>
     private sealed class RejectEverythingSelectionStrategy : ISelectionStrategy
     {
-        public void Select(
-            int individualIndex,
-            double trialIndividualFfValue,
-            Span<double> trialIndividual,
-            Span<double> populationFfValues,
-            Span<double> population,
-            Span<double> nextPopulationFfValues,
-            Span<double> nextPopulation)
-            => SelectTrial(
-                individualIndex, trialIndividualFfValue, trialIndividual, populationFfValues,
-                population, nextPopulationFfValues, nextPopulation);
-
-        public bool SelectTrial(
+        public bool Select(
             int individualIndex,
             double trialIndividualFfValue,
             Span<double> trialIndividual,

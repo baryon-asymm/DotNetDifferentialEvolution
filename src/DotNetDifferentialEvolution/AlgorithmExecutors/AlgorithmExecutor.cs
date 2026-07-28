@@ -149,7 +149,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
             // The selection strategy reports its own decision: whether the trial replaced its
             // parent is its rule to apply, and the archive and parameter adaptation downstream
             // need the outcome that actually happened, not the greedy rule assumed here.
-            var succeeded = _selectionStrategy.SelectTrial(
+            var succeeded = _selectionStrategy.Select(
                 individualIndex: i,
                 trialIndividualFfValue: trialIndividualFfValue,
                 trialIndividual: trialIndividual,
