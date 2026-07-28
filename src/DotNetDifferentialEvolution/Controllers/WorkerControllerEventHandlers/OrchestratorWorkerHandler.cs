@@ -15,8 +15,6 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     private readonly ReadOnlyMemory<WorkerController> _slaveWorkers;
     
     private readonly ProblemContext _context;
-    
-    private readonly IWorkerPassLoopDoneHandler? _nextHandler;
 
     /// <summary>
     /// Scratch keys for the per-generation fitness ranking, or <see langword="null"/> when the
@@ -37,17 +35,14 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// </summary>
     /// <param name="slaveWorkers">The slave workers to be managed by the orchestrator.</param>
     /// <param name="context">The problem context containing population and other parameters.</param>
-    /// <param name="nextHandler">The next handler in the chain of responsibility.</param>
     public OrchestratorWorkerHandler(
         ReadOnlyMemory<WorkerController> slaveWorkers,
-        ProblemContext context,
-        IWorkerPassLoopDoneHandler? nextHandler = null)
+        ProblemContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         _slaveWorkers = slaveWorkers;
         _context = context;
-        _nextHandler = nextHandler;
 
         _fitnessSortKeys = context.MutationRequirements.HasFlag(MutationRequirements.FitnessRanking)
             ? new double[context.PopulationSize]
@@ -65,8 +60,6 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     {
         ArgumentNullException.ThrowIfNull(masterWorker);
 
-        _nextHandler?.Handle(masterWorker, out _);
-        
         WaitAllWorkersOrThemExceptions(
             masterWorker,
             out var hasException);
