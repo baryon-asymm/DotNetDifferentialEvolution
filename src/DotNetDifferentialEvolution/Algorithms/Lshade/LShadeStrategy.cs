@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Algorithms.Shade;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 
@@ -55,7 +56,7 @@ public class LShadeStrategy : ShadeStrategy
 
     /// <inheritdoc />
     public override void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -71,9 +72,9 @@ public class LShadeStrategy : ShadeStrategy
     /// keeping the best individuals and scaling the archive capacity to match.
     /// </summary>
     private void ReducePopulationSize(
-        ProblemContext context)
+        GenerationContext context)
     {
-        var currentPopulationSize = context.CurrentPopulationSize;
+        var currentPopulationSize = context.ActivePopulationSize;
 
         // LPSR identifies the survivors through the fitness ranking. The engine rebuilds that
         // every generation whenever the mutation strategy declared FitnessRanking, which every
@@ -97,8 +98,8 @@ public class LShadeStrategy : ShadeStrategy
 
         // Use the swapped-out trial buffers as scratch to gather the best survivors (the
         // ranking is ascending, so the first newPopulationSize indices are the survivors).
-        var scratch = context.TrialPopulation.Genes.Span;
-        var scratchFfValues = context.TrialPopulation.FfValues.Span;
+        var scratch = context.DiscardedParents.Genes.Span;
+        var scratchFfValues = context.DiscardedParents.FfValues.Span;
 
         for (int k = 0; k < newPopulationSize; k++)
         {
@@ -111,7 +112,7 @@ public class LShadeStrategy : ShadeStrategy
         scratch.Slice(0, newPopulationSize * genomeSize).CopyTo(population);
         scratchFfValues.Slice(0, newPopulationSize).CopyTo(populationFfValues);
 
-        context.CurrentPopulationSize = newPopulationSize;
+        context.ActivePopulationSize = newPopulationSize;
 
         // The survivors are now stored in ascending-fitness order, so the ranking is identity.
         for (int k = 0; k < newPopulationSize; k++)

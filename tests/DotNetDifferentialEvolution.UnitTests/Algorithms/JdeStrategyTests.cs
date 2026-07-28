@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Algorithms.Jde;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.Fakes;
@@ -70,7 +71,7 @@ public class JdeStrategyTests
         records[0] = new TrialRecord { Succeeded = true, UsedF = 0.77, UsedCr = 0.33 };
         records[1] = new TrialRecord { Succeeded = false, UsedF = 0.11, UsedCr = 0.22 };
 
-        jde.AfterGeneration(context, records);
+        jde.AfterGeneration(new GenerationContext(context), records);
 
         // Individual 0 succeeded → its parameters were retained.
         jde.GetControlParameters(0, new ScriptedRandomProvider(doubles: [0.5, 0.5]), out var f0, out var cr0);

@@ -209,7 +209,7 @@ public class NaNFitnessTests
     private sealed class NoOpGenerationStrategy : IGenerationStrategy
     {
         public void AfterGeneration(
-            ProblemContext context,
+            GenerationContext context,
             ReadOnlySpan<TrialRecord> trialRecords)
         {
         }

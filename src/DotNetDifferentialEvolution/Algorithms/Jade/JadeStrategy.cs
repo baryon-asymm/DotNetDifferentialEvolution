@@ -67,12 +67,12 @@ public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGe
 
     /// <inheritdoc />
     public void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var currentPopulationSize = context.CurrentPopulationSize;
+        var currentPopulationSize = context.ActivePopulationSize;
 
         UpdateArchive(context, trialRecords, currentPopulationSize);
         AdaptParameterMeans(trialRecords, currentPopulationSize);

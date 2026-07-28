@@ -189,12 +189,12 @@ public class TrialOutcomeReportingTests
         public List<bool> Outcomes { get; } = [];
 
         public void AfterGeneration(
-            ProblemContext context,
+            GenerationContext context,
             ReadOnlySpan<TrialRecord> trialRecords)
         {
             ArgumentNullException.ThrowIfNull(context);
 
-            for (int i = 0; i < context.CurrentPopulationSize; i++)
+            for (int i = 0; i < context.ActivePopulationSize; i++)
                 Outcomes.Add(trialRecords[i].Succeeded);
         }
     }

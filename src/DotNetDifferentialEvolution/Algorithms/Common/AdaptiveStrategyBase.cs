@@ -1,3 +1,4 @@
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
 
@@ -42,7 +43,7 @@ public abstract class AdaptiveStrategyBase
     /// population buffer) to the external archive, evicting at random when the archive is full.
     /// </summary>
     protected void UpdateArchive(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords,
         int currentPopulationSize)
     {
@@ -55,7 +56,7 @@ public abstract class AdaptiveStrategyBase
         if (capacity == 0)
             return;
 
-        var discardedParents = context.TrialPopulation.Genes.Span;
+        var discardedParents = context.DiscardedParents.Genes.Span;
         var archiveSize = Math.Min(context.ArchiveSize, capacity);
 
         for (int i = 0; i < currentPopulationSize; i++)
@@ -88,7 +89,7 @@ public abstract class AdaptiveStrategyBase
     /// maintain the shared ranking as a side effect of its own bookkeeping.
     /// </remarks>
     protected void RebuildSortedIndices(
-        ProblemContext context,
+        GenerationContext context,
         int currentPopulationSize)
     {
         ArgumentNullException.ThrowIfNull(context);

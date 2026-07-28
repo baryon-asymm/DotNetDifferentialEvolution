@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Algorithms.Shade;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.Fakes;
@@ -40,7 +41,7 @@ public class ShadeStrategyTests
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
         };
 
-        shade.AfterGeneration(context, records);
+        shade.AfterGeneration(new GenerationContext(context), records);
 
         shade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
 
@@ -62,7 +63,7 @@ public class ShadeStrategyTests
             new TrialRecord { Succeeded = false, UsedCr = 0.9, UsedF = 0.9 },
         };
 
-        shade.AfterGeneration(context, records);
+        shade.AfterGeneration(new GenerationContext(context), records);
 
         shade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
 
@@ -83,7 +84,7 @@ public class ShadeStrategyTests
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5 },
         };
 
-        shade.AfterGeneration(context, records);
+        shade.AfterGeneration(new GenerationContext(context), records);
 
         // A terminal slot yields CR = 0 without drawing the Gaussian: scripting only the slot int
         // and the single Cauchy draw for F would be exhausted if the Gaussian were sampled.
@@ -101,14 +102,14 @@ public class ShadeStrategyTests
         var context = CreateContext();
 
         // Generation 1: all-zero successful CR makes slot 0 terminal.
-        shade.AfterGeneration(context, new[]
+        shade.AfterGeneration(new GenerationContext(context), new[]
         {
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 9, UsedCr = 0.0, UsedF = 0.5 },
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 9, UsedCr = 0.0, UsedF = 0.5 },
         });
 
         // Generation 2: a non-zero successful CR must NOT revive the terminal slot.
-        shade.AfterGeneration(context, new[]
+        shade.AfterGeneration(new GenerationContext(context), new[]
         {
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 5, UsedCr = 0.9, UsedF = 0.5 },
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 5, UsedCr = 0.9, UsedF = 0.5 },
@@ -133,7 +134,7 @@ public class ShadeStrategyTests
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5 },
         };
 
-        shade.AfterGeneration(context, records);
+        shade.AfterGeneration(new GenerationContext(context), records);
 
         // Without the terminal rule the slot holds an ordinary M_CR = 0, so CR is still sampled
         // from a Gaussian (2 draws) rather than being forced to 0 — 3 draws total with the Cauchy
@@ -160,7 +161,7 @@ public class ShadeStrategyTests
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
         };
 
-        shade.AfterGeneration(context, records);
+        shade.AfterGeneration(new GenerationContext(context), records);
 
         shade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
 
@@ -189,7 +190,7 @@ public class ShadeStrategyTests
             new TrialRecord { Succeeded = true, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5 },
         };
 
-        shade.AfterGeneration(context, records);
+        shade.AfterGeneration(new GenerationContext(context), records);
 
         shade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
 

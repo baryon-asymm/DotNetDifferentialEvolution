@@ -13,13 +13,16 @@ public interface IGenerationStrategy
     /// <summary>
     /// Performs end-of-generation bookkeeping and adaptation.
     /// </summary>
-    /// <param name="context">The problem context (current population is the just-produced generation).</param>
+    /// <param name="context">
+    /// A narrowed view of the run: the just-produced generation, the parents it discarded, the
+    /// archive, the fitness ranking and the active population size.
+    /// </param>
     /// <param name="trialRecords">
     /// The per-individual trial outcomes for the generation that just finished. Only the
-    /// first <see cref="ProblemContext.CurrentPopulationSize"/> entries are meaningful.
+    /// first <see cref="GenerationContext.ActivePopulationSize"/> entries are meaningful.
     /// </param>
     public void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords);
 
     /// <summary>

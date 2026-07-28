@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Algorithms.Jade;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.Fakes;
@@ -37,7 +38,7 @@ public class JadeStrategyTests
             new TrialRecord { Succeeded = true, UsedCr = 0.8, UsedF = 0.8, ParentFfValue = 2, TrialFfValue = 1 },
         };
 
-        jade.AfterGeneration(context, records);
+        jade.AfterGeneration(new GenerationContext(context), records);
 
         jade.GetControlParameters(0, new ScriptedRandomProvider(doubles: MeanRevealingDraws), out var f, out var cr);
 
@@ -57,7 +58,7 @@ public class JadeStrategyTests
             new TrialRecord { Succeeded = false, UsedCr = 0.1, UsedF = 0.1 },
         };
 
-        jade.AfterGeneration(context, records);
+        jade.AfterGeneration(new GenerationContext(context), records);
 
         jade.GetControlParameters(0, new ScriptedRandomProvider(doubles: MeanRevealingDraws), out var f, out var cr);
 

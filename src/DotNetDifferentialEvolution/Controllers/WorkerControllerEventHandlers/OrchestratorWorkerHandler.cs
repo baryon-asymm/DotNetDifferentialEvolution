@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers.Interfaces;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
@@ -29,6 +30,12 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// The token the run was started with. Read only on the orchestrator thread, at the barrier.
     /// </summary>
     private CancellationToken _cancellationToken = CancellationToken.None;
+
+    /// <summary>
+    /// The narrowed view handed to the generation hook. Built once — it holds no state of its
+    /// own, only a reference to the context it projects.
+    /// </summary>
+    private readonly GenerationContext _generationContext;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="OrchestratorWorkerHandler"/> class.
@@ -43,6 +50,8 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
 
         _slaveWorkers = slaveWorkers;
         _context = context;
+
+        _generationContext = new GenerationContext(context);
 
         _fitnessSortKeys = context.MutationRequirements.HasFlag(MutationRequirements.FitnessRanking)
             ? new double[context.PopulationSize]
@@ -89,7 +98,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             RebuildFitnessRanking();
 
             var generationStrategy = _context.GenerationStrategy;
-            generationStrategy?.AfterGeneration(_context, _context.TrialRecords.Span);
+            generationStrategy?.AfterGeneration(_generationContext, _context.TrialRecords.Span);
 
             var bestIndividualIndex = generationStrategy is null
                 ? GetBestIndividualIndex(masterWorker, _context.CurrentPopulation.FfValues.Span)

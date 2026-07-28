@@ -203,7 +203,7 @@ public class FitnessRankingMaintenanceTests
         public int Generations { get; private set; }
 
         public void AfterGeneration(
-            ProblemContext context,
+            GenerationContext context,
             ReadOnlySpan<TrialRecord> trialRecords)
             => Generations++;
     }

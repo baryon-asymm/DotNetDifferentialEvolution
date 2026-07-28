@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.Algorithms.Lshade;
+using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
@@ -31,7 +32,7 @@ public class LShadeStrategyTests
         var context = CreateContext();
         context.EvaluationCount = evaluationCount;
 
-        lshade.AfterGeneration(context, new TrialRecord[InitialPopulationSize]);
+        lshade.AfterGeneration(new GenerationContext(context), new TrialRecord[InitialPopulationSize]);
 
         Assert.Equal(expectedPopulationSize, context.CurrentPopulationSize);
     }
@@ -45,7 +46,7 @@ public class LShadeStrategyTests
 
         var originalFitness = context.CurrentPopulation.FfValues.ToArray();
 
-        lshade.AfterGeneration(context, new TrialRecord[InitialPopulationSize]);
+        lshade.AfterGeneration(new GenerationContext(context), new TrialRecord[InitialPopulationSize]);
 
         var newSize = context.CurrentPopulationSize;
         var expectedSurvivors = originalFitness.OrderBy(v => v).Take(newSize).ToArray();
@@ -75,7 +76,7 @@ public class LShadeStrategyTests
         var context = CreateContext(initialPopulationSize, maxEvaluationNumber);
         context.EvaluationCount = evaluationCount;
 
-        lshade.AfterGeneration(context, new TrialRecord[initialPopulationSize]);
+        lshade.AfterGeneration(new GenerationContext(context), new TrialRecord[initialPopulationSize]);
 
         Assert.Equal(expectedPopulationSize, context.CurrentPopulationSize);
     }
@@ -93,7 +94,7 @@ public class LShadeStrategyTests
         var context = CreateContext();
         context.EvaluationCount = 50;
 
-        lshade.AfterGeneration(context, new TrialRecord[InitialPopulationSize]);
+        lshade.AfterGeneration(new GenerationContext(context), new TrialRecord[InitialPopulationSize]);
 
         Assert.Equal(7, context.CurrentPopulationSize);
         Assert.Equal(11, context.ArchiveCapacity);

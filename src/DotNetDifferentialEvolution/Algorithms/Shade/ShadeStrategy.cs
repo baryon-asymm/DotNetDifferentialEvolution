@@ -95,12 +95,12 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
 
     /// <inheritdoc />
     public virtual void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var currentPopulationSize = context.CurrentPopulationSize;
+        var currentPopulationSize = context.ActivePopulationSize;
 
         UpdateArchive(context, trialRecords, currentPopulationSize);
         UpdateMemory(trialRecords, currentPopulationSize);

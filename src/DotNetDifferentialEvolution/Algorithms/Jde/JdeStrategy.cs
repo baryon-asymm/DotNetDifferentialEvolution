@@ -93,12 +93,12 @@ public class JdeStrategy : IControlParameterProvider, IGenerationStrategy
 
     /// <inheritdoc />
     public void AfterGeneration(
-        ProblemContext context,
+        GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var currentPopulationSize = context.CurrentPopulationSize;
+        var currentPopulationSize = context.ActivePopulationSize;
         for (int i = 0; i < currentPopulationSize; i++)
         {
             if (trialRecords[i].Succeeded == false)
