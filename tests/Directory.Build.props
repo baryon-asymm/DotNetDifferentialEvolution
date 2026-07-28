@@ -13,8 +13,13 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <LangVersion>latest</LangVersion>
         <RollForward>Major</RollForward>
+
+        <!-- Deliberately ahead of the shipping library's C# 12. Several integration tests are
+             async and touch a ref struct in the method body (a Span taken off a population view),
+             which C# 12 forbids and C# 13 allows. Test assemblies are never packed, so nothing
+             here constrains what consumers can compile against. -->
+        <LangVersion>latest</LangVersion>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 

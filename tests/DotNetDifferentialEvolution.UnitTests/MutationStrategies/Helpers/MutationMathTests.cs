@@ -15,9 +15,15 @@ public class MutationMathTests
     public static IEnumerable<object[]> GenomeSizes()
     {
         var vectorWidth = System.Numerics.Vector<double>.Count;
-        foreach (var size in new[] { 1, 2, 3, vectorWidth - 1, vectorWidth, vectorWidth + 1, 2 * vectorWidth, 2 * vectorWidth + 3, 37 })
-            if (size >= 1)
-                yield return [size];
+
+        // Distinct(), because the sizes are partly literal and partly derived from the hardware
+        // vector width: at width 4 the literal 3 and vectorWidth - 1 are the same number, and xUnit
+        // silently drops the second case of a duplicate theory ID rather than failing. The set that
+        // actually runs would otherwise depend on which machine ran it.
+        foreach (var size in new[] { 1, 2, 3, vectorWidth - 1, vectorWidth, vectorWidth + 1, 2 * vectorWidth, 2 * vectorWidth + 3, 37 }
+                     .Where(size => size >= 1)
+                     .Distinct())
+            yield return [size];
     }
 
     [Theory]

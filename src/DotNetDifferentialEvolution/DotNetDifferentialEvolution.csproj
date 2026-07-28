@@ -4,7 +4,6 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Title>DotNetDifferentialEvolution</Title>
         <Authors>Eduard Burachek</Authors>
         <Description>A .NET library for Differential Evolution optimization with multi-processing and SIMD acceleration.</Description>
@@ -30,6 +29,11 @@
       Consumer experience: ship the XML doc (IntelliSense) and wire up SourceLink so debuggers
       can step into the library's sources straight from GitHub at the exact commit.
       SourceLink is built into the .NET 8+ SDK, so no package reference is needed.
+
+      Note that "the exact commit" is whatever HEAD happens to be, which is why this project does
+      NOT set GeneratePackageOnBuild: a package built from a local working branch would carry a
+      SourceLink map pointing at a commit that may never be pushed, and every source lookup
+      against it would 404 forever. The release workflow packs explicitly from a tagged commit.
     -->
     <PropertyGroup>
         <!-- Pack the XML documentation file so consumers get IntelliSense tooltips. -->
@@ -43,6 +47,22 @@
 
         <!-- Normalize source paths for a deterministic, SourceLink-friendly build on CI. -->
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    </PropertyGroup>
+
+    <!--
+      Package validation: diff the packed assembly's public surface against the last released
+      package and fail on any difference that would break a consumer. Deliberate breaks are
+      recorded in CompatibilitySuppressions.xml, regenerated with
+          dotnet pack src/DotNetDifferentialEvolution -c Release /p:ApiCompatGenerateSuppressionFile=true
+      which makes that file the checked, machine-produced list of everything this major version
+      breaks — the thing release notes are written from, rather than a list assembled by hand.
+
+      On a major release: bump PackageValidationBaselineVersion to the version just shipped and
+      delete the suppression file, so the next cycle starts from an empty break list.
+    -->
+    <PropertyGroup>
+        <EnablePackageValidation>true</EnablePackageValidation>
+        <PackageValidationBaselineVersion>4.0.0</PackageValidationBaselineVersion>
     </PropertyGroup>
 
     <ItemGroup>

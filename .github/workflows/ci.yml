@@ -40,3 +40,12 @@ jobs:
           dotnet test DotNetDifferentialEvolution.sln
           --configuration Release --no-build
           --filter "Category!=Slow"
+
+      # API gate: package validation only runs on pack, so pack here and throw the result away.
+      # Without this the public-surface diff against the last release would first be seen by the
+      # release workflow, at tag time, which is far too late to reconsider a break.
+      - name: Pack (public API check against the last release)
+        run: >-
+          dotnet pack src/DotNetDifferentialEvolution/DotNetDifferentialEvolution.csproj
+          --configuration Release --no-build
+          --output ${{ runner.temp }}/api-check
