@@ -66,6 +66,28 @@ public class JadeStrategyTests
         Assert.Equal(0.5, f, 1e-9);
     }
 
+    [Fact]
+    public void AfterGeneration_WithANegativeArchiveCapacity_LeavesTheArchiveAlone()
+    {
+        // ArchiveCapacity is writable by any generation hook — L-SHADE rescales it every time it
+        // shrinks the population. A negative value slipped past the `== 0` test that disables the
+        // archive and reached Next(capacity), which throws from inside a running generation
+        // instead of being treated as the disabled archive it is.
+        var jade = new JadeStrategy(PopulationSize, adaptationRate: 0.1, initialMean: 0.5);
+        var context = CreateContext();
+        context.ArchiveCapacity = -1;
+
+        var records = new[]
+        {
+            new TrialRecord { Succeeded = true, UsedCr = 0.4, UsedF = 0.2, ParentFfValue = 2, TrialFfValue = 1 },
+            new TrialRecord { Succeeded = true, UsedCr = 0.8, UsedF = 0.8, ParentFfValue = 2, TrialFfValue = 1 },
+        };
+
+        jade.AfterGeneration(new GenerationContext(context), records);
+
+        Assert.Equal(0, context.ArchiveSize);
+    }
+
     private static ProblemContext CreateContext()
     {
         var evaluator = new SphereEvaluator(dimension: 2);

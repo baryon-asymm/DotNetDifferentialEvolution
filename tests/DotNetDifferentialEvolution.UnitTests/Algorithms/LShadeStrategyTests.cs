@@ -166,6 +166,32 @@ public class LShadeStrategyTests
     }
 
     [Theory]
+    [InlineData(0L)]
+    [InlineData(-1L)]
+    public void Constructor_RejectsANonPositiveEvaluationBudget(
+        long maxEvaluationNumber)
+    {
+        // The budget is the denominator of the reduction schedule. Left unchecked it produces a
+        // non-finite progress and collapses the population to the minimum in one generation,
+        // which no exception ever reports.
+        Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
+            initialPopulationSize: InitialPopulationSize,
+            maxEvaluationNumber: maxEvaluationNumber,
+            archiveSizeRate: 0.0,
+            memorySize: 5));
+    }
+
+    [Fact]
+    public void Constructor_RejectsANegativeArchiveSizeRate()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
+            initialPopulationSize: InitialPopulationSize,
+            maxEvaluationNumber: MaxEvaluations,
+            archiveSizeRate: -0.5,
+            memorySize: 5));
+    }
+
+    [Theory]
     [InlineData(3)]                       // below the floor of 4
     [InlineData(InitialPopulationSize)]   // equal handled separately; this checks > initial
     public void Constructor_ValidatesMinimumPopulationSize(

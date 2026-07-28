@@ -54,6 +54,17 @@ public class LShadeStrategy : ShadeStrategy
             throw new ArgumentOutOfRangeException(nameof(minPopulationSize), "Minimum population size must be at least 4.");
         if (initialPopulationSize < minPopulationSize)
             throw new ArgumentException("Initial population size must be at least the minimum population size.");
+        // LShadeVariant validates both of these, but this class is public and constructible on its
+        // own, and neither failure announces itself: a budget of zero divides to a non-finite
+        // progress and collapses the population to its minimum in the first generation, and a
+        // negative rate produces a negative archive capacity that only surfaces later, from inside
+        // a running generation.
+        if (maxEvaluationNumber <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(maxEvaluationNumber), "Evaluation budget must be greater than 0.");
+        if (archiveSizeRate < 0.0)
+            throw new ArgumentOutOfRangeException(
+                nameof(archiveSizeRate), "Archive size rate must be non-negative.");
 
         _initialPopulationSize = initialPopulationSize;
         _minPopulationSize = minPopulationSize;

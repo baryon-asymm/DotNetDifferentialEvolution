@@ -52,8 +52,11 @@ public abstract class AdaptiveStrategyBase
         var archive = context.Archive.Span;
         var genomeSize = context.GenomeSize;
         var bufferCapacity = genomeSize == 0 ? 0 : archive.Length / genomeSize;
+        // Not `== 0`: a hook is free to set ArchiveCapacity, and a negative one would slip past an
+        // equality test into Next(capacity), which throws from inside a running generation rather
+        // than being ignored the way a disabled archive is.
         var capacity = Math.Min(context.ArchiveCapacity, bufferCapacity);
-        if (capacity == 0)
+        if (capacity <= 0)
             return;
 
         var discardedParents = context.DiscardedParents.Genes.Span;
