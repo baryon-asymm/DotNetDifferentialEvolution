@@ -124,6 +124,21 @@ tests).
 DE/rand/1/bin on 10-D Rastrigin give Welch t = 0.097 and Mann–Whitney z = −0.204. At that sample
 size the test would detect a shift of 7.3% of the mean.
 
+### Documentation
+
+- **`docs/ALGORITHMS.md` — a specification of what the library computes.** Every variant is stated
+  in the notation of the paper it comes from, cited down to the equation number or algorithm line,
+  next to the type that implements it. It exists because of the L-SHADE `M_CR` bug above: the code
+  was clear and the tests were green, but nothing in the repository *stated* which mean the paper
+  specifies, so there was nowhere the wrong one could be noticed.
+
+  Its last section lists every deliberate deviation from a literal reading of the papers — midpoint
+  bound repair applied to all strategies, NaN ordering, the p-best pool floor of 2, round-half-away
+  -from-zero, the evaluation count starting at `N`, and reproducibility holding only per worker
+  count — which is the section to read before comparing results against a reference implementation.
+
+  CI checks that the file paths it references still exist, so a rename cannot silently orphan them.
+
 ### Build and tooling
 
 - Package validation runs against the previously released package on every build, and CI packs so

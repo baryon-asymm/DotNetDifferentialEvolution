@@ -12,6 +12,8 @@ Differential Evolution (DE) is a stochastic optimization algorithm used for find
 It was introduced by Kenneth Price and Rainer Storn in 1997.
 DE is known for its simplicity and effectiveness, especially for complex optimization problems. For more details on the algorithm, you can refer to the [Wikipedia page](https://en.wikipedia.org/wiki/Differential_evolution).
 
+📐 **[Algorithms, formulas, and where they live in the code](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/ALGORITHMS.md)** — every variant stated in the notation of the paper it comes from, cited down to the equation or algorithm line, with the type that implements it and the deliberate deviations listed in one place.
+
 ## Features
 
 - **Extensible Design**: Easily extend the library with custom components.
@@ -145,6 +147,9 @@ This approach ensures efficient access and manipulation of individuals while pro
 In addition to the classic `DE/rand/1/bin` scheme, the library ships a range of
 well-established mutation strategies and self-adaptive algorithms, all selectable through
 the fluent builder.
+
+For the mathematics behind each of them — formulas, citations, and the code that implements
+them — see [docs/ALGORITHMS.md](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/ALGORITHMS.md).
 
 ### Mutation strategies (constant parameters)
 

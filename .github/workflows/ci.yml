@@ -13,6 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # docs/ALGORITHMS.md maps each formula onto the file that implements it. A rename that
+      # orphans one of those links leaves the document rendering correctly and claiming something
+      # untrue, so the paths are checked rather than trusted. Runs first: it needs no toolchain.
+      - name: Documentation references
+        run: ./scripts/check-doc-references.sh
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
