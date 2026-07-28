@@ -229,6 +229,7 @@ public class ProblemContext
         _population.GenerationNumber = generationNumber;
         _population.BestIndividualIndex = bestIndividualIndex;
         _population.EvaluationCount = EvaluationCount;
+        _population.PopulationSize = CurrentPopulationSize;
 
         return _population;
     }
