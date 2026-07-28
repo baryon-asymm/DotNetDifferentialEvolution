@@ -14,7 +14,7 @@
         <PackageTags>differential-evolution de optimization .net</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <Version>4.1.0</Version>
+        <Version>5.1.0</Version>
     </PropertyGroup>
 
     <!-- Shared contracts for the DotNetOptimization family. The objective evaluator, the random
@@ -59,6 +59,11 @@
 
       On a major release: bump PackageValidationBaselineVersion to the version just shipped and
       delete the suppression file, so the next cycle starts from an empty break list.
+
+      The baseline is still 4.0.0 rather than 4.1.0 because a baseline has to be downloadable from
+      nuget.org and 4.1.0 is not published yet. Once it is, move this to 4.1.0 and regenerate: the
+      suppression list then describes the step consumers actually take, instead of folding in the
+      4.1.0 changes a second time.
     -->
     <PropertyGroup>
         <EnablePackageValidation>true</EnablePackageValidation>

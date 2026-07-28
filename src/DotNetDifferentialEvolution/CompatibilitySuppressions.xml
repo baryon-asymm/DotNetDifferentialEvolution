@@ -45,13 +45,6 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
-    <Target>M:DotNetDifferentialEvolution.DifferentialEvolution.RunAsync</Target>
-    <Left>lib/net8.0/DotNetDifferentialEvolution.dll</Left>
-    <Right>lib/net8.0/DotNetDifferentialEvolution.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:DotNetDifferentialEvolution.GenerationStrategies.IGenerationStrategy.AfterGeneration(DotNetDifferentialEvolution.Models.ProblemContext,System.ReadOnlySpan{DotNetDifferentialEvolution.Models.TrialRecord})</Target>
     <Left>lib/net8.0/DotNetDifferentialEvolution.dll</Left>
     <Right>lib/net8.0/DotNetDifferentialEvolution.dll</Right>
