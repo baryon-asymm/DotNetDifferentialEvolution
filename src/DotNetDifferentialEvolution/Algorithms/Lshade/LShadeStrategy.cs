@@ -28,6 +28,13 @@ public class LShadeStrategy : ShadeStrategy
     protected override bool UseTerminalCr => true;
 
     /// <summary>
+    /// L-SHADE is built on SHADE 1.1, which updates <c>M_CR</c> with the weighted Lehmer mean
+    /// rather than SHADE (2013)'s weighted arithmetic mean — the other half of the same memory
+    /// update rule the terminal <c>M_CR</c> value comes from.
+    /// </summary>
+    protected override bool UseLehmerCrMean => true;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="LShadeStrategy"/> class.
     /// </summary>
     /// <param name="initialPopulationSize">The initial (maximum) population size.</param>
