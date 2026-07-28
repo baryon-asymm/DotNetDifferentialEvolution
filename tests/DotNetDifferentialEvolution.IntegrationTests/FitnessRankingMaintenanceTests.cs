@@ -165,7 +165,7 @@ public class FitnessRankingMaintenanceTests
 
             var activeSize = context.CurrentPopulationSize;
             var ranking = context.FitnessSortedIndices.Span.Slice(0, activeSize).ToArray();
-            var ffValues = context.PopulationFfValues.Span.Slice(0, activeSize).ToArray();
+            var ffValues = context.CurrentPopulation.FfValues.Span.Slice(0, activeSize).ToArray();
 
             if (_previousRanking is not null && ranking.SequenceEqual(_previousRanking) == false)
                 RankingEverChanged = true;

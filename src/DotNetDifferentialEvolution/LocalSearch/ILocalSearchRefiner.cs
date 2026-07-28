@@ -17,10 +17,10 @@ public interface ILocalSearchRefiner
 {
     /// <summary>
     /// Refines the current population in place. Implementations typically improve the best
-    /// individual — reading its genes from <see cref="ProblemContext.Population"/> and writing the
-    /// improved genes and fitness back into <see cref="ProblemContext.Population"/> and
-    /// <see cref="ProblemContext.PopulationFfValues"/>. Improving the best in place keeps it the
-    /// best, so the best index does not need to change.
+    /// individual — reading its genes through <see cref="ProblemContext.CurrentPopulation"/>, for
+    /// instance with <see cref="PopulationView.GenesOf"/>, and writing the improved genes and
+    /// fitness back into the same view. Improving the best in place keeps it the best, so the best
+    /// index does not need to change.
     /// </summary>
     /// <param name="context">
     /// The problem context for the just-produced generation. Its population buffers, fitness

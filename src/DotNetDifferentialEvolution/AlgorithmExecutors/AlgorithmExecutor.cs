@@ -83,16 +83,19 @@ public class AlgorithmExecutor : IAlgorithmExecutor
 
         var randomProvider = _randomProviders[workerId];
 
-        var population = _context.Population.Span;
-        var populationFfValues = _context.PopulationFfValues.Span;
-        var nextPopulation = _context.TrialPopulation.Span;
-        var nextPopulationFfValues = _context.TrialPopulationFfValues.Span;
+        var currentPopulation = _context.CurrentPopulation;
+        var nextGeneration = _context.TrialPopulation;
+
+        var population = currentPopulation.Genes.Span;
+        var populationFfValues = currentPopulation.FfValues.Span;
+        var nextPopulation = nextGeneration.Genes.Span;
+        var nextPopulationFfValues = nextGeneration.FfValues.Span;
         var trialRecords = _context.TrialRecords.Span;
 
         var fitnessFunctionEvaluator = _context.FitnessFunctionEvaluator;
         var controlParameterProvider = _context.ControlParameterProvider;
 
-        var populationSize = _context.CurrentPopulationSize;
+        var populationSize = currentPopulation.Count;
         var bestIndividualIndex = _context.BestIndividualIndex;
         var lowerBound = _context.GenesLowerBound.Span;
         var upperBound = _context.GenesUpperBound.Span;

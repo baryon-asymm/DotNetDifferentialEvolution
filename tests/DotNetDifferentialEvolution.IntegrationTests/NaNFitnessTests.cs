@@ -35,7 +35,7 @@ public class NaNFitnessTests
         // which is the NaN one here, so it has to be displaced by a real-valued individual.
         const int populationSize = 8;
         var (context, executor) = CreateRunWithNaNTrials(populationSize, workersCount: 1);
-        context.PopulationFfValues.Span[0] = double.NaN;
+        context.CurrentPopulation.FfValues.Span[0] = double.NaN;
 
         var result = await RunOneGenerationAsync(context, executor, workersCount: 1);
 
@@ -51,7 +51,7 @@ public class NaNFitnessTests
         // from the master's NaN, so the slave's real-valued best has to win.
         const int populationSize = 6;
         var (context, executor) = CreateRunWithNaNTrials(populationSize, workersCount: 2);
-        var populationFfValues = context.PopulationFfValues.Span;
+        var populationFfValues = context.CurrentPopulation.FfValues.Span;
         populationFfValues[1] = double.NaN;
         populationFfValues[3] = double.NaN;
         populationFfValues[5] = double.NaN;
@@ -70,7 +70,7 @@ public class NaNFitnessTests
         const int populationSize = 8;
         var (context, executor) = CreateRunWithNaNTrials(
             populationSize, workersCount: 1, generationStrategy: new NoOpGenerationStrategy());
-        context.PopulationFfValues.Span[0] = double.NaN;
+        context.CurrentPopulation.FfValues.Span[0] = double.NaN;
 
         var result = await RunOneGenerationAsync(context, executor, workersCount: 1);
 
@@ -86,7 +86,7 @@ public class NaNFitnessTests
         const int populationSize = 8;
         var (context, executor) = CreateRunWithNaNTrials(
             populationSize, workersCount: 1, generationStrategy: new NoOpGenerationStrategy());
-        context.PopulationFfValues.Span.Fill(double.NaN);
+        context.CurrentPopulation.FfValues.Span.Fill(double.NaN);
 
         var result = await RunOneGenerationAsync(context, executor, workersCount: 1);
 

@@ -100,10 +100,19 @@ public class ProblemContext
     public Memory<TrialRecord> TrialRecords { get; private set; }
 
     /// <summary>
-    /// Gets or sets the number of active individuals in the population. This equals
-    /// <see cref="PopulationSize"/> unless a strategy (e.g. L-SHADE) reduces it.
+    /// Gets or sets the number of live individuals. This equals <see cref="PopulationSize"/> unless
+    /// a strategy (e.g. L-SHADE) reduces it. Setting it narrows both population views at once, so
+    /// the current and trial buffers can never disagree about how many individuals are live.
     /// </summary>
-    public int CurrentPopulationSize { get; set; }
+    public int CurrentPopulationSize
+    {
+        get => CurrentPopulation.Count;
+        set
+        {
+            CurrentPopulation = CurrentPopulation with { Count = value };
+            TrialPopulation = TrialPopulation with { Count = value };
+        }
+    }
 
     /// <summary>
     /// Gets or sets the index of the best individual in the current population, refreshed
@@ -140,24 +149,16 @@ public class ProblemContext
     public Memory<int> FitnessSortedIndices { get; private set; }
 
     /// <summary>
-    /// Gets the current population.
+    /// Gets the population the current generation was produced into — the one being read from.
     /// </summary>
-    public Memory<double> Population { get; private set; }
+    public PopulationView CurrentPopulation { get; private set; }
 
     /// <summary>
-    /// Gets the fitness function values of the current population.
+    /// Gets the buffer the next generation is written into. Between
+    /// <see cref="SwapPopulations"/> and the next generation it holds the parents that were just
+    /// discarded, which is what the external archive stores.
     /// </summary>
-    public Memory<double> PopulationFfValues { get; private set; }
-
-    /// <summary>
-    /// Gets the trial population.
-    /// </summary>
-    public Memory<double> TrialPopulation { get; private set; }
-
-    /// <summary>
-    /// Gets the fitness function values of the trial population.
-    /// </summary>
-    public Memory<double> TrialPopulationFfValues { get; private set; }
+    public PopulationView TrialPopulation { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProblemContext"/> class.
@@ -193,12 +194,10 @@ public class ProblemContext
         GenesUpperBound = genesUpperBound;
         FitnessFunctionEvaluator = fitnessFunctionEvaluator;
         TerminationStrategy = terminationStrategy;
-        Population = population;
-        PopulationFfValues = populationFfValues;
-        TrialPopulation = trialPopulation;
-        TrialPopulationFfValues = trialPopulationFfValues;
 
-        CurrentPopulationSize = populationSize;
+        CurrentPopulation = new PopulationView(population, populationFfValues, populationSize, genomeSize);
+        TrialPopulation = new PopulationView(trialPopulation, trialPopulationFfValues, populationSize, genomeSize);
+
         TrialRecords = new TrialRecord[populationSize];
         FitnessSortedIndices = new int[populationSize];
 
@@ -216,9 +215,7 @@ public class ProblemContext
     /// </summary>
     public void SwapPopulations()
     {
-        (Population, TrialPopulation) = (TrialPopulation, Population);
-
-        (PopulationFfValues, TrialPopulationFfValues) = (TrialPopulationFfValues, PopulationFfValues);
+        (CurrentPopulation, TrialPopulation) = (TrialPopulation, CurrentPopulation);
 
         (_population, _trialPopulation) = (_trialPopulation, _population);
     }

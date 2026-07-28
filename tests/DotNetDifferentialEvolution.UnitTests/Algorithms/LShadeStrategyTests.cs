@@ -43,13 +43,13 @@ public class LShadeStrategyTests
         var context = CreateContext();
         context.EvaluationCount = 50; // reduces 10 → 7
 
-        var originalFitness = context.PopulationFfValues.ToArray();
+        var originalFitness = context.CurrentPopulation.FfValues.ToArray();
 
         lshade.AfterGeneration(context, new TrialRecord[InitialPopulationSize]);
 
         var newSize = context.CurrentPopulationSize;
         var expectedSurvivors = originalFitness.OrderBy(v => v).Take(newSize).ToArray();
-        var actualSurvivors = context.PopulationFfValues.Span[..newSize].ToArray();
+        var actualSurvivors = context.CurrentPopulation.FfValues.Span[..newSize].ToArray();
 
         Assert.Equal(expectedSurvivors, actualSurvivors); // best `newSize`, ascending
     }

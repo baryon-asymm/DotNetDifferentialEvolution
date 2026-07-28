@@ -55,7 +55,7 @@ public abstract class AdaptiveStrategyBase
         if (capacity == 0)
             return;
 
-        var discardedParents = context.TrialPopulation.Span;
+        var discardedParents = context.TrialPopulation.Genes.Span;
         var archiveSize = Math.Min(context.ArchiveSize, capacity);
 
         for (int i = 0; i < currentPopulationSize; i++)
@@ -95,7 +95,7 @@ public abstract class AdaptiveStrategyBase
 
         PopulationSortHelper.SortIndicesByFitness(
             context.FitnessSortedIndices.Span,
-            context.PopulationFfValues.Span,
+            context.CurrentPopulation.FfValues.Span,
             currentPopulationSize,
             _sortKeys);
     }

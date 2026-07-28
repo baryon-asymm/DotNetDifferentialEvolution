@@ -92,8 +92,8 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             generationStrategy?.AfterGeneration(_context, _context.TrialRecords.Span);
 
             var bestIndividualIndex = generationStrategy is null
-                ? GetBestIndividualIndex(masterWorker, _context.PopulationFfValues.Span)
-                : FindBestIndividualIndex(_context.PopulationFfValues.Span, _context.CurrentPopulationSize);
+                ? GetBestIndividualIndex(masterWorker, _context.CurrentPopulation.FfValues.Span)
+                : FindBestIndividualIndex(_context.CurrentPopulation.ActiveFfValues);
             _context.BestIndividualIndex = bestIndividualIndex;
 
             var generationNumber = ++_passLoopCounter;
@@ -146,8 +146,8 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
 
         PopulationSortHelper.SortIndicesByFitness(
             _context.FitnessSortedIndices.Span,
-            _context.PopulationFfValues.Span,
-            _context.CurrentPopulationSize,
+            _context.CurrentPopulation.FfValues.Span,
+            _context.CurrentPopulation.Count,
             _fitnessSortKeys);
     }
 
@@ -258,15 +258,13 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// population. Used when a generation strategy may have reordered or resized the population.
     /// A NaN individual never wins the scan; an all-NaN population still yields a valid index.
     /// </summary>
-    /// <param name="populationFfValues">The fitness function values of the population.</param>
-    /// <param name="currentPopulationSize">The number of active individuals.</param>
+    /// <param name="populationFfValues">The fitness function values of the live individuals.</param>
     /// <returns>The index of the best individual.</returns>
     private static int FindBestIndividualIndex(
-        ReadOnlySpan<double> populationFfValues,
-        int currentPopulationSize)
+        ReadOnlySpan<double> populationFfValues)
     {
         var bestIndividualIndex = 0;
-        for (int i = 1; i < currentPopulationSize; i++)
+        for (int i = 1; i < populationFfValues.Length; i++)
         {
             if (FitnessComparisonHelper.IsBetter(populationFfValues[i], populationFfValues[bestIndividualIndex]))
                 bestIndividualIndex = i;

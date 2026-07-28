@@ -89,15 +89,16 @@ public class LShadeStrategy : ShadeStrategy
         if (newPopulationSize >= currentPopulationSize)
             return;
 
-        var genomeSize = context.GenomeSize;
-        var population = context.Population.Span;
-        var populationFfValues = context.PopulationFfValues.Span;
+        var current = context.CurrentPopulation;
+        var genomeSize = current.GenomeSize;
+        var population = current.Genes.Span;
+        var populationFfValues = current.FfValues.Span;
         var sortedIndices = context.FitnessSortedIndices.Span;
 
         // Use the swapped-out trial buffers as scratch to gather the best survivors (the
         // ranking is ascending, so the first newPopulationSize indices are the survivors).
-        var scratch = context.TrialPopulation.Span;
-        var scratchFfValues = context.TrialPopulationFfValues.Span;
+        var scratch = context.TrialPopulation.Genes.Span;
+        var scratchFfValues = context.TrialPopulation.FfValues.Span;
 
         for (int k = 0; k < newPopulationSize; k++)
         {
