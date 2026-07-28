@@ -158,6 +158,27 @@ size the test would detect a shift of 7.3% of the mean.
   25 runs at the paper's settings, the rule never fires at all), and the archive capacity is
   rounded on every resize where the reference truncates.
 
+- **The builder's documentation was reaching nobody.** Every call in the fluent chain returns one of
+  the staged interfaces, so an IDE tooltip — and any other consumer of the shipped XML file —
+  resolves to the interface declaration, never to `DifferentialEvolutionBuilder`'s own members. The
+  interfaces carried one-line summaries with no parameter documentation, while the detailed text
+  sat on the implementation where nothing consuming the package would ever look. The interface
+  declarations are now the authoritative documentation for the whole builder — constraints,
+  exceptions, minimum population sizes per operator, and worked examples on the entry point and on
+  `WithLShade` — and the implementing members carry `<inheritdoc />`, so there is still one source
+  of truth.
+
+- **`docs/AGENT_GUIDE.md`, and both documents now ship inside the package.** The guide states the
+  contracts and the mistakes that compile and run but produce a wrong search: L-SHADE silently
+  mis-scheduled by a non-evaluation termination strategy, a seed that does not survive a change of
+  worker count, a cursor mistaken for a value, `WithShade` compared against the 1.1 sources the
+  authors distribute. Packing them under `docs/` puts the specification on disk next to `lib/`,
+  pinned to the version actually restored — README is the only file nuget.org renders, and a link
+  to a branch describes whatever that branch says today rather than the package in hand.
+
+- **The documented examples are compiled and run** by `DocumentedExampleTests`, so a signature
+  change breaks the build next to the document instead of in a consumer's project.
+
 ### Build and tooling
 
 - Package validation runs against the previously released package on every build, and CI packs so

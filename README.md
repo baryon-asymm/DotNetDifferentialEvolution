@@ -14,6 +14,10 @@ DE is known for its simplicity and effectiveness, especially for complex optimiz
 
 📐 **[Algorithms, formulas, and where they live in the code](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/ALGORITHMS.md)** — every variant stated in the notation of the paper it comes from, cited down to the equation or algorithm line, with the type that implements it and the deliberate deviations listed in one place.
 
+🤖 **[Using this library: a task-oriented guide](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/AGENT_GUIDE.md)** — the contracts, the constraints, and the mistakes that compile and run but produce a wrong search, as a checklist. Written for a coding agent that needs working code on the first attempt, and for anyone who prefers a checklist to prose.
+
+Both documents ship **inside the NuGet package** under `docs/`, so a restored copy sits on disk next to `lib/` — readable offline and pinned to the version actually in use, which a link to a branch is not.
+
 ## Features
 
 - **Extensible Design**: Easily extend the library with custom components.

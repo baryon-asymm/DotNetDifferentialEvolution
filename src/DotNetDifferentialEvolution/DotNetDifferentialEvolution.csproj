@@ -75,6 +75,23 @@
         <None Include="../../README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
+    <!--
+      Ship the long-form documentation inside the package, not only on GitHub.
+
+      README is the only document nuget.org renders, and a consumer working from a restored package
+      — increasingly a coding agent, which has the extracted package on disk and no reason to go
+      looking for a repository — otherwise has no access to the specification at all. These land in
+      the global packages folder next to lib/, so they are readable without network access and are
+      pinned to the exact version being consumed, which a link to the default branch is not.
+
+      They are documentation, not build inputs: PackagePath is a plain folder, so nothing in the
+      consumer's build reacts to them.
+    -->
+    <ItemGroup>
+        <None Include="../../docs/ALGORITHMS.md" Pack="true" PackagePath="docs\" />
+        <None Include="../../docs/AGENT_GUIDE.md" Pack="true" PackagePath="docs\" />
+    </ItemGroup>
+
     <!-- Expose internal helpers (MutationMath, CrossoverHelper, RandomIndexSelector) to the
          unit-test assembly so they can be tested in isolation. Test-only; no behavior change. -->
     <ItemGroup>
