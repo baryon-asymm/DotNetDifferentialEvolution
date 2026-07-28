@@ -3,7 +3,6 @@ using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
 using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
 using DotNetDifferentialEvolution.Tests.Shared.Helpers;
 
@@ -28,15 +27,14 @@ internal static class ManualAlgorithmRunner
         var context = ProblemContextHelper.CreateContext(
             populationSize, evaluator, terminationStrategy, workersCount: 1, seed: seed);
 
-        // A non-thread-safe seeded provider is safe here because the loop is single-threaded.
-        var randomProvider = new DeterministicRandomProvider(seed);
+        // The executor derives the worker's generator from the context's seed, so the run is
+        // reproducible without the strategy holding a provider of its own.
         var mutationStrategy = new MutationStrategy(
             mutationForce: mutationForce,
             crossoverProbability: crossoverProbability,
             populationSize: populationSize,
             lowerBound: context.GenesLowerBound,
-            upperBound: context.GenesUpperBound,
-            randomProvider: randomProvider);
+            upperBound: context.GenesUpperBound);
         var selectionStrategy = new SelectionStrategy(context.GenomeSize);
         var executor = new AlgorithmExecutor(mutationStrategy, selectionStrategy, context);
 

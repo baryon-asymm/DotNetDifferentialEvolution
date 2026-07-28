@@ -16,7 +16,6 @@ namespace DotNetDifferentialEvolution.Benchmark.BenchmarkTesters;
 
 public class SimpleSumTester
 {
-    private readonly BaseRandomProvider _randomProvider;
     private readonly IMutationStrategy _mutationStrategy;
     private readonly ISelectionStrategy _selectionStrategy;
     private readonly IAlgorithmExecutor _algorithmExecutor;
@@ -38,11 +37,11 @@ public class SimpleSumTester
         const int maxGenerationNumber = 100; // Not used in this benchmark
         var terminationStrategy = new LimitGenerationNumberTerminationStrategy(maxGenerationNumber); // ...also not used
         const int populationSize = 300;
-        var context = ProblemContextHelper.CreateContext(populationSize, evaluator, terminationStrategy);
+        // Seeded so the benchmark measures the same work every run; the executor derives the
+        // worker's generator from it.
+        var context = ProblemContextHelper.CreateContext(
+            populationSize, evaluator, terminationStrategy, seed: 0x12345678);
 
-        const int seed = 0x12345678;
-        _randomProvider = new DeterminedRandomProvider(seed);
-        
         const double mutationForce = 0.5;
         const double crossoverProbability = 0.9;
         
@@ -51,8 +50,7 @@ public class SimpleSumTester
             crossoverProbability: crossoverProbability,
             populationSize: populationSize,
             lowerBound: context.GenesLowerBound,
-            upperBound: context.GenesUpperBound,
-            randomProvider: _randomProvider);
+            upperBound: context.GenesUpperBound);
         _selectionStrategy = new SelectionStrategy(genomeSize);
         _algorithmExecutor = new AlgorithmExecutor(_mutationStrategy,
                                                    _selectionStrategy,

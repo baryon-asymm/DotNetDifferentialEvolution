@@ -12,6 +12,7 @@ using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.PopulationSamplingMaker;
+using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
@@ -58,6 +59,8 @@ public class DifferentialEvolutionBuilder
 
     private ILocalSearchRefiner? _localSearchRefiner;
     private int _localSearchInterval = 1;
+
+    private int? _seed;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="DifferentialEvolutionBuilder"/> class.
@@ -460,15 +463,54 @@ public class DifferentialEvolutionBuilder
     }
 
     /// <summary>
+    /// Makes the run reproducible: the same seed, the same configuration and the same number of
+    /// workers produce a bit-identical run, initial population included.
+    /// </summary>
+    /// <param name="seed">The seed.</param>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
+    /// <remarks>
+    /// <para>
+    /// Every worker gets its own generator derived from the seed, which is what makes a parallel
+    /// run reproducible at all: the striping is fixed and each individual is built, evaluated and
+    /// selected end-to-end by one worker, so no result depends on how the workers interleave.
+    /// <strong>The worker count is part of the seed's meaning</strong> — individual <c>i</c> draws
+    /// from worker <c>i mod W</c>'s stream, so the same seed at a different
+    /// <see cref="IWorkersCountRequired.UseProcessors"/> is a different run. It is reproducible,
+    /// not portable across worker counts.
+    /// </para>
+    /// <para>
+    /// <strong>A seed is reproducible only within a minor version.</strong> A change to how the
+    /// engine consumes randomness — a different number of draws per trial, say — reshuffles every
+    /// seeded run without being a defect in either version.
+    /// </para>
+    /// <para>
+    /// The seed reaches the workers, the population sampler and the generation strategy's own
+    /// bookkeeping. A custom <see cref="IPopulationSamplingMaker"/> or
+    /// <see cref="IGenerationStrategy"/> receives it through <c>UseRandomProvider</c> and is
+    /// reproducible only if it uses what it is given; an <see cref="ILocalSearchRefiner"/> owns
+    /// its randomness entirely and must seed itself.
+    /// </para>
+    /// </remarks>
+    public IDifferentialEvolutionBuilder WithSeed(
+        int seed)
+    {
+        _seed = seed;
+
+        return this;
+    }
+
+    /// <summary>
     /// Builds the Differential Evolution instance.
     /// </summary>
     /// <returns>An instance of <see cref="DifferentialEvolution"/>.</returns>
     public DifferentialEvolution Build()
     {
         EnsureReadyStateToBuild();
-        
+
         var genomeSize = _lowerBound.Length;
-        
+
+        SeedComponents();
+
         var population = new double[_populationSize * genomeSize];
         var populationFfValues = new double[_populationSize];
         var trialPopulation = new double[_populationSize * genomeSize];
@@ -497,6 +539,7 @@ public class DifferentialEvolutionBuilder
             ControlParameterProvider = _controlParameterProvider,
             GenerationStrategy = _generationStrategy,
             MutationRequirements = _mutationStrategy!.Requirements,
+            RandomSeed = _seed,
             LocalSearchRefiner = _localSearchRefiner,
             LocalSearchInterval = _localSearchInterval,
             BestIndividualIndex = FindBestIndividualIndex(populationFfValues),
@@ -572,6 +615,27 @@ public class DifferentialEvolutionBuilder
             var configuration = CreateVariantConfiguration();
             _variant.Validate(in configuration, _terminationStrategy);
         }
+    }
+
+    /// <summary>
+    /// Hands the seeded random sources to the components that draw outside the workers: the
+    /// population sampler, which runs once before the first generation, and the generation
+    /// strategy, which runs single-threaded between generations. The workers' own generators are
+    /// derived from <see cref="ProblemContext.RandomSeed"/> by the executor.
+    /// </summary>
+    /// <remarks>
+    /// The streams are laid out so none can collide: workers take <c>seed .. seed + W - 1</c>, the
+    /// generation strategy takes <c>seed + W</c> and the sampler <c>seed + W + 1</c>. Two
+    /// components sharing a stream would still be reproducible, but only by accident — a change
+    /// in how one of them draws would silently reshuffle the other.
+    /// </remarks>
+    private void SeedComponents()
+    {
+        if (_seed is not { } seed)
+            return;
+
+        _generationStrategy?.UseRandomProvider(new SeededRandomProvider(seed + _workersCount));
+        _populationSamplingMaker!.UseRandomProvider(new SeededRandomProvider(seed + _workersCount + 1));
     }
 
     /// <summary>
@@ -844,6 +908,15 @@ public interface IDifferentialEvolutionBuilder
     public IDifferentialEvolutionBuilder WithLocalSearch(
         ILocalSearchRefiner refiner,
         int everyNGenerations = 1);
+
+    /// <summary>
+    /// Makes the run reproducible: the same seed, the same configuration and the same number of
+    /// workers produce a bit-identical run, initial population included.
+    /// </summary>
+    /// <param name="seed">The seed.</param>
+    /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
+    public IDifferentialEvolutionBuilder WithSeed(
+        int seed);
 
     /// <summary>
     /// Builds the Differential Evolution instance.

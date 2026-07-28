@@ -252,6 +252,29 @@ declared `Requirements` are checked against what the variant installed, the popu
 checked against the operator's minimum, and the engine maintains whatever the operator declared it
 needs — including the p-best fitness ranking, which no strategy has to maintain for itself.
 
+### Reproducible runs
+
+```csharp
+.WithSeed(20260728)
+```
+
+Every worker gets its own generator derived from the seed, which is what makes a *parallel* run
+reproducible: the striping is fixed and each individual is built, evaluated and selected
+end-to-end by one worker, so nothing depends on how the workers interleave. The seed covers the
+initial population, mutation and crossover, control-parameter sampling and archive eviction.
+
+Two caveats worth knowing before you rely on it:
+
+- **The worker count is part of the seed's meaning.** Individual *i* draws from worker *i mod W*'s
+  stream, so the same seed under a different `UseProcessors(...)` is a different run. Reproducible,
+  not portable across worker counts.
+- **A seed is reproducible within a minor version.** Changing how the engine consumes randomness
+  reshuffles every seeded run without being a defect in either version.
+
+A custom `IPopulationSamplingMaker` or `IGenerationStrategy` is offered the seeded source through
+`UseRandomProvider` and is reproducible if it uses what it is given; an `ILocalSearchRefiner` owns
+its randomness entirely and must seed itself.
+
 ### Hybrid / memetic local search
 
 You can interleave a local-search refinement into the evolutionary loop: supply an

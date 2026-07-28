@@ -21,4 +21,20 @@ public interface IGenerationStrategy
     public void AfterGeneration(
         ProblemContext context,
         ReadOnlySpan<TrialRecord> trialRecords);
+
+    /// <summary>
+    /// Adopts the random source the engine supplies for this hook's own bookkeeping — the
+    /// randomness it consumes outside the workers, such as JADE/SHADE's random archive eviction.
+    /// </summary>
+    /// <param name="randomProvider">The random source to draw from.</param>
+    /// <remarks>
+    /// Called at most once, from <see cref="DifferentialEvolutionBuilder.Build"/>, and only when
+    /// <see cref="DifferentialEvolutionBuilder.WithSeed"/> was used. The hook runs single-threaded
+    /// on the orchestrator thread, so the provider it receives is used by nothing else. Defaults
+    /// to ignoring the provider, so a hook that draws no randomness is unaffected.
+    /// </remarks>
+    public void UseRandomProvider(
+        BaseRandomProvider randomProvider)
+    {
+    }
 }

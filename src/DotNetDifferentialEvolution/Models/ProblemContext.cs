@@ -67,6 +67,13 @@ public class ProblemContext
     public IGenerationStrategy? GenerationStrategy { get; init; }
 
     /// <summary>
+    /// Gets the seed making the run reproducible, or <see langword="null"/> for a run that is
+    /// free to differ. Each worker draws from its own generator derived from this seed, so a
+    /// seeded run reproduces exactly at a given worker count.
+    /// </summary>
+    public int? RandomSeed { get; init; }
+
+    /// <summary>
     /// Gets what the configured mutation strategy needs the engine to provision (see
     /// <see cref="IMutationStrategy.Requirements"/>). The engine acts on this: a declared
     /// <see cref="MutationRequirements.FitnessRanking"/> makes it re-rank the active population

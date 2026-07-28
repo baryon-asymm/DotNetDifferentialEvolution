@@ -10,7 +10,20 @@ namespace DotNetDifferentialEvolution.Algorithms.Common;
 public abstract class AdaptiveStrategyBase
 {
     /// <summary>A single-threaded random provider for end-of-generation bookkeeping.</summary>
-    protected BaseRandomProvider RandomProvider { get; } = new RandomProvider();
+    protected BaseRandomProvider RandomProvider { get; private set; } = new RandomProvider();
+
+    /// <summary>
+    /// Adopts the seeded random source the engine supplies, so that archive eviction — the one
+    /// place this family draws randomness outside the workers — is reproducible too.
+    /// </summary>
+    /// <param name="randomProvider">The random source to draw from.</param>
+    public void UseRandomProvider(
+        BaseRandomProvider randomProvider)
+    {
+        ArgumentNullException.ThrowIfNull(randomProvider);
+
+        RandomProvider = randomProvider;
+    }
 
     private readonly double[] _sortKeys;
 

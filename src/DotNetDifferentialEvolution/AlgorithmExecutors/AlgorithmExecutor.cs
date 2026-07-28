@@ -3,6 +3,7 @@ using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
+using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 
 namespace DotNetDifferentialEvolution.AlgorithmExecutors;
@@ -19,7 +20,14 @@ public class AlgorithmExecutor : IAlgorithmExecutor
 
     private readonly ProblemContext _context;
 
-    private readonly BaseRandomProvider _randomProvider = new RandomProvider();
+    /// <summary>
+    /// One random provider per worker, indexed by worker id. Each worker owns its own stream, so
+    /// no draw is contended and — when the run is seeded — no draw depends on how the workers
+    /// interleave. The striping is fixed (worker <c>k</c> handles <c>{k, k+W, …}</c>) and each
+    /// individual is built, evaluated and selected end-to-end by one worker, so a seeded run is
+    /// bit-reproducible at any worker count.
+    /// </summary>
+    private readonly BaseRandomProvider[] _randomProviders;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AlgorithmExecutor"/> class.
@@ -51,6 +59,14 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         _selectionStrategy = selectionStrategy;
 
         _context = context;
+
+        _randomProviders = new BaseRandomProvider[context.WorkersCount];
+        for (int workerId = 0; workerId < _randomProviders.Length; workerId++)
+        {
+            _randomProviders[workerId] = context.RandomSeed is { } seed
+                ? new SeededRandomProvider(seed + workerId)
+                : new RandomProvider();
+        }
     }
 
     /// <summary>
@@ -64,6 +80,8 @@ public class AlgorithmExecutor : IAlgorithmExecutor
     {
         var genomeSize = _context.GenomeSize;
         Span<double> trialIndividual = stackalloc double[genomeSize];
+
+        var randomProvider = _randomProviders[workerId];
 
         var population = _context.Population.Span;
         var populationFfValues = _context.PopulationFfValues.Span;
@@ -95,7 +113,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
             else
             {
                 controlParameterProvider.GetControlParameters(
-                    i, _randomProvider, out mutationForce, out crossoverProbability);
+                    i, randomProvider, out mutationForce, out crossoverProbability);
             }
 
             var mutationContext = new MutationContext
@@ -111,7 +129,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
                 TrialIndividual = trialIndividual,
                 LowerBound = lowerBound,
                 UpperBound = upperBound,
-                RandomProvider = _randomProvider,
+                RandomProvider = randomProvider,
                 Archive = archive,
                 ArchiveSize = archiveSize,
                 FitnessSortedIndices = fitnessSortedIndices

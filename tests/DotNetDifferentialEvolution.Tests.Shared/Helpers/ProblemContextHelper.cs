@@ -31,7 +31,8 @@ public static class ProblemContextHelper
         var boundsSize = lowerBound.Length;
         var populationHelper = new PopulationHelper(populationSize, boundsSize);
 
-        // A seed makes the initial population reproducible (single-threaded callers only).
+        // A seed makes both the initial population and the search reproducible: the context
+        // carries it, and the executor derives one generator per worker from it.
         var random = seed.HasValue ? new Random(seed.Value) : null;
         populationHelper.InitializePopulationWithRandomValues(lowerBound.Span, upperBound.Span, random);
         populationHelper.EvaluatePopulationFfValues(testFitnessFunctionEvaluator);
@@ -49,7 +50,8 @@ public static class ProblemContextHelper
             trialPopulation: populationHelper.TrialPopulation,
             trialPopulationFfValues: populationHelper.TrialPopulationFfValues)
         {
-            GenerationStrategy = generationStrategy
+            GenerationStrategy = generationStrategy,
+            RandomSeed = seed
         };
 
         return context;
