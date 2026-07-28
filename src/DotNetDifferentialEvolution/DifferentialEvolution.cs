@@ -48,17 +48,34 @@ public class DifferentialEvolution : IDisposable
     /// <summary>
     /// Runs the Differential Evolution algorithm asynchronously.
     /// </summary>
+    /// <param name="cancellationToken">
+    /// A token that abandons the run. Cancellation is observed at the next generation barrier —
+    /// the one point at which every worker has finished its stripe and none has started the next —
+    /// so a run with an expensive objective stops within roughly one generation of the request,
+    /// not instantly. The returned task then completes as canceled and every worker is stopped.
+    /// </param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the final population.</returns>
-    public Task<Population> RunAsync()
+    /// <exception cref="OperationCanceledException">The run was canceled.</exception>
+    public Task<Population> RunAsync(
+        CancellationToken cancellationToken = default)
     {
         var task = _orchestratorWorkerHandler.GetResultPopulationTask();
-        
+
         if (task.IsCompleted)
             return task;
-        
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            _orchestratorWorkerHandler.CancelBeforeStart(cancellationToken);
+
+            return _orchestratorWorkerHandler.GetResultPopulationTask();
+        }
+
+        _orchestratorWorkerHandler.UseCancellationToken(cancellationToken);
+
         foreach (var workerController in _workerControllers.Span)
             workerController.Start(throwIfRunning: true);
-        
+
         return _orchestratorWorkerHandler.GetResultPopulationTask();
     }
     

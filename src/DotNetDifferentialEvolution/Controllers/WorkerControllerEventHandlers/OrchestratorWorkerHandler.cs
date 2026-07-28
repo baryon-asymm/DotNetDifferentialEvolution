@@ -26,6 +26,11 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
 
     private readonly TaskCompletionSource<Population> _resultPopulationTcs = new(
         TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    /// The token the run was started with. Read only on the orchestrator thread, at the barrier.
+    /// </summary>
+    private CancellationToken _cancellationToken = CancellationToken.None;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="OrchestratorWorkerHandler"/> class.
@@ -116,9 +121,19 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             if (shouldTerminate)
             {
                 StopAllWorkers();
-                
+
                 population.MoveCursorToBestIndividual();
                 _resultPopulationTcs.SetResult(population);
+            }
+            else if (_cancellationToken.IsCancellationRequested)
+            {
+                // The barrier is the one moment the run is quiescent: every worker has finished
+                // its stripe and none has been permitted to start the next. Stopping here leaves
+                // the population in a consistent state and no thread mid-generation.
+                StopAllWorkers();
+
+                shouldTerminate = true;
+                _resultPopulationTcs.SetCanceled(_cancellationToken);
             }
             else
             {
@@ -148,6 +163,26 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// </summary>
     /// <returns>A task that represents the result population.</returns>
     public Task<Population> GetResultPopulationTask() => _resultPopulationTcs.Task;
+
+    /// <summary>
+    /// Sets the token the run may be abandoned through. Called once, before the workers start.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    internal void UseCancellationToken(
+        CancellationToken cancellationToken)
+    {
+        _cancellationToken = cancellationToken;
+    }
+
+    /// <summary>
+    /// Completes the result task as canceled without a generation having run.
+    /// </summary>
+    /// <param name="cancellationToken">The already-canceled token.</param>
+    internal void CancelBeforeStart(
+        CancellationToken cancellationToken)
+    {
+        _resultPopulationTcs.TrySetCanceled(cancellationToken);
+    }
     
     /// <summary>
     /// Waits for all workers to complete their pass loops or encounter exceptions.

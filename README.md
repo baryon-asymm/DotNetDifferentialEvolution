@@ -252,6 +252,18 @@ declared `Requirements` are checked against what the variant installed, the popu
 checked against the operator's minimum, and the engine maintains whatever the operator declared it
 needs — including the p-best fitness ranking, which no strategy has to maintain for itself.
 
+### Cancellation
+
+```csharp
+var result = await de.RunAsync(cancellationToken);
+```
+
+Cancellation is observed at the next generation barrier — the one point at which every worker has
+finished its stripe and none has started the next — so the workers stop with the population in a
+consistent state. A run with an expensive objective therefore stops within roughly one generation
+of the request rather than instantly. The task completes as canceled (`OperationCanceledException`)
+and every worker thread is stopped.
+
 ### Reproducible runs
 
 ```csharp
