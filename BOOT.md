@@ -144,8 +144,11 @@ Slices, in order (bottom-up within each):
    then the synthesis of `src/DotNetDifferentialEvolution` itself (2026-10-02; 11 new
    nodes and the package node rewritten; `src/` linter-clean). `Algorithms/` holds no
    code of its own and is not a node: its four children take the package as parent.
-6. [ ] CPU test support: `tests/DotNetDifferentialEvolution.Tests.Shared` and its
-   subdirectories.
+6. [x] CPU test support: `tests/DotNetDifferentialEvolution.Tests.Shared` and its
+   subdirectories (2026-10-02; 5 nodes). Found for later slices: the benchmark project
+   keeps its own copies of Ackley and Rastrigin (slice 9); the declared optima of
+   Schwefel and Styblinski-Tang are off by up to 8.8e-4, absorbed by tolerances that the
+   unit and integration slices should look at (7, 8).
 7. [ ] CPU unit tests: `tests/DotNetDifferentialEvolution.UnitTests` and its 13
    subdirectories.
 8. [ ] CPU integration tests: `tests/DotNetDifferentialEvolution.IntegrationTests` and
