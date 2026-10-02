@@ -29,9 +29,11 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 - [x] Green: 2026-10-02, 9 cases in 1 class.
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. Ignoring `acceptsTies`
       turned `WithTiesRejectedKeepsTheParentOnEqualFitness` red.
-- [ ] ⚠ The default `SelectTrial` member of `ISelectionStrategy` (the bridge for
-      third-party strategies, `68f3a92`) is called by no test in `tests/` (searched
-      2026-10-02).
+- [x] A third-party strategy's own outcome is what reaches the trial record:
+      2026-10-02, integration `TrialOutcomeReportingTests` (3 cases).
+      ⚠ Corrected 2026-10-02, slice 8: this item first said a default `SelectTrial`
+      member of `ISelectionStrategy` was called by no test. That member was removed in
+      `c7c4f1f`; the item was written from history without checking the current code.
 
 ## Taboos
 

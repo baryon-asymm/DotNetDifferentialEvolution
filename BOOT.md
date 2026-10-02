@@ -154,8 +154,11 @@ Slices, in order (bottom-up within each):
    in a scratch clone). Found for slice 8: the builder's and the executor's
    control-parameter guards each mask the other in the unit suite; whether an
    integration test holds the executor's alone is to be checked there.
-8. [ ] CPU integration tests: `tests/DotNetDifferentialEvolution.IntegrationTests` and
-   its 3 subdirectories.
+8. [x] CPU integration tests: `tests/DotNetDifferentialEvolution.IntegrationTests` and
+   its 3 subdirectories (2026-10-02; 4 nodes; each node with tests shown red by two
+   mutations). Answer to slice 7's question: no test holds `AlgorithmExecutor`'s
+   control-parameter guard alone. Slice 8 also corrected a slice-7 item that named a
+   removed member (`SelectTrial`) in `UnitTests/SelectionStrategies`.
 9. [ ] Benchmarks: `benchmarks/DotNetDifferentialEvolution.Benchmark` and its 3
    subdirectories.
 10. [ ] Root: `## Decomposition`, root `API.md`, removal of this section.
