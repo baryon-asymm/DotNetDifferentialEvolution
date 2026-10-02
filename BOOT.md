@@ -118,14 +118,21 @@ Slices, in order (bottom-up within each):
    (2026-10-02; 15 nodes, all ✅, linter clean for them).
 2. [x] GPU tests: `tests/DotNetDifferentialEvolution.GPU.Test`, `FitnessFunctions`,
    `Helpers` (2026-10-02; 3 nodes, the tests shown non-degenerate by two mutations).
-3. [ ] CPU leaves: `RandomProviders`, `Helpers`, `ControlParameterProviders`,
-   `PopulationSamplingMaker`, `SelectionStrategies` (+ `Interfaces`),
-   `MutationStrategies` (+ `Interfaces`, `Helpers`).
+3. [x] CPU leaves: `RandomProviders`, `Helpers`, `ControlParameterProviders`,
+   `SelectionStrategies` (+ `Interfaces`) (2026-10-02; 5 nodes). The package node
+   `src/DotNetDifferentialEvolution` was started here with package-level facts only,
+   because its children link to it for their frame.
+   ⚠ 2026-10-02: the slice first also listed `PopulationSamplingMaker` and
+   `MutationStrategies` (+ `Interfaces`, `Helpers`). They are not leaves: they use
+   `Interfaces` and `Models`, and `MutationStrategies` closes the cycle below through
+   `Models` → `MutationStrategies/Interfaces` → its parent. Moved to slice 4; found when
+   the slice was read, before anything was written for them.
 4. [ ] CPU core with the cycle: `Models` (+ `Interfaces`), `Interfaces`,
-   `GenerationStrategies`, `LocalSearch`, `TerminationStrategies` (+ `Interfaces`).
+   `GenerationStrategies`, `LocalSearch`, `TerminationStrategies` (+ `Interfaces`),
+   `MutationStrategies` (+ `Interfaces`, `Helpers`), `PopulationSamplingMaker`.
 5. [ ] CPU engine: `AlgorithmExecutors` (+ `Interfaces`), `Controllers` (and its two
    nested levels), `Algorithms/Common`, `Jde`, `Jade`, `Shade`, `Lshade`, `Variants`,
-   then `src/DotNetDifferentialEvolution` itself.
+   then the synthesis of `src/DotNetDifferentialEvolution` itself.
 6. [ ] CPU test support: `tests/DotNetDifferentialEvolution.Tests.Shared` and its
    subdirectories.
 7. [ ] CPU unit tests: `tests/DotNetDifferentialEvolution.UnitTests` and its 13
