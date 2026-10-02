@@ -1,0 +1,137 @@
+# BOOT.md — DotNetDifferentialEvolution (tree root)
+
+<!-- Brownfield reconstruction in progress (AGENTS.md §9). This file records the state
+     of the repository as it is, not as it should be. Sections marked "to be synthesized"
+     are filled bottom-up once the slices under them are described. -->
+
+## Purpose
+
+The repository builds two NuGet packages of Differential Evolution (DE) for .NET:
+
+- `DotNetDifferentialEvolution` (`src/DotNetDifferentialEvolution`, version 5.1.0 in
+  its csproj): CPU, multi-threaded, SIMD; classic DE plus jDE, JADE, SHADE and L-SHADE.
+  It depends on the shared `DotNetOptimization.Abstractions` package for the objective
+  contract and the solution type.
+- `DotNetDifferentialEvolution.GPU` (`src/DotNetDifferentialEvolution.GPU`, version
+  0.0.2 in its csproj): DE on a GPU through ILGPU. Imported into this repository with
+  its history on 2026-10-02 (merge `fe13623`) from the separate repository
+  `baryon-asymm/DotNetDifferentialEvolution.GPU`.
+
+The two packages are siblings: neither references the other.
+
+Not goals: asynchronous or GPU evaluation in the CPU package (`docs/AGENT_GUIDE.md`,
+"What it does not do"); constraints beyond box bounds; integer or variable-length
+genomes; multi-objective optimization.
+
+## Invariants
+
+- **Every build is warnings-as-errors with the full analyzer set** (`latest-all`,
+  code style enforced). Held by `Directory.Build.props`, imported by every project; a
+  rule is relaxed only in `.editorconfig`, scoped to a path, with its reason.
+- **The CPU package does not depend on ILGPU or on the GPU package.** Held by the
+  project references of `src/DotNetDifferentialEvolution`; the owner's decision of
+  2026-10-02, recorded at the import.
+- **The CPU package's public surface is diffed against its last release on every CI
+  run.** Held by package validation (`EnablePackageValidation`, baseline 4.0.0) and the
+  CI "Pack" step; deliberate breaks are listed in `CompatibilitySuppressions.xml`.
+
+## Dependencies
+
+None.
+
+Outside the tree: .NET SDK 8 and 10 (CI installs both); `DotNetOptimization.Abstractions`
+1.0.0 (CPU package); ILGPU and ILGPU.Algorithms 1.5.1 (GPU package); xUnit 2.5.3,
+Microsoft.NET.Test.Sdk 17.8.0, coverlet 6.0.0 (tests); BenchmarkDotNet 0.14.0 (benchmarks);
+Python 3.8+ (`tools/protocol-lint`).
+
+## Constraints
+
+- Shipping code targets `net8.0` with C# 12 pinned (`LangVersion` 12); test projects
+  use `latest` and `RollForward=Major` (`tests/Directory.Build.props`).
+- CI (`.github/workflows/ci.yml`) runs on `ubuntu-latest`: documentation references,
+  build, `Category=Unit`, then everything except `Category=Slow` and `Category=Gpu`,
+  then a throw-away pack of the CPU package for the API check. Hosted runners have no
+  OpenCL device, so the GPU tests run only on a developer machine.
+- Releases: `.github/workflows/release.yml` publishes on a `v*` tag and packs the CPU
+  package only.
+- There is no external ancestor: the tree root is the repository root. The loader
+  (`CLAUDE.md`) carries no subject-matter claims (AGENTS.md §2). `README.md` and
+  `docs/*.md` are consumer documentation shipped in the package, not part of the tree.
+
+## Acceptance criteria
+
+- [x] The solution builds with 0 warnings and 0 errors in Release: 2026-10-02,
+      `dotnet build DotNetDifferentialEvolution.sln -c Release` (local, Windows 11,
+      .NET SDK 10.0.112).
+- [x] The CI test gates pass: 2026-10-02, local run of the CI filters: `Category=Unit`
+      232 passed; `Category!=Slow&Category!=Gpu` 232 + 70 passed, exit code 0 for both.
+- [x] The GPU tests pass on a machine with an OpenCL device: 2026-10-02,
+      `tests/DotNetDifferentialEvolution.GPU.Test`, 2 of 2 passed (local).
+- [ ] The tree passes `protocol_lint` without errors. Red until the reconstruction
+      below is finished; the linter is not in CI until then (AGENTS.md §13).
+- [ ] The reflection checks are written for this stack and each is proven
+      non-degenerate (AGENTS.md §13). ⚠ The installed kit copy has an empty
+      `reference/dotnet/`; the reference implementation has to be obtained first.
+- [ ] ⚠ The GPU package has no release path: `release.yml` packs only the CPU package
+      and both would share the `v*` tags.
+- [ ] ⚠ The GPU package's csproj says 0.0.2 while nuget.org carries 0.1.0, 0.0.2 and
+      0.2.0; 0.2.0 was published from a version never committed to git.
+- [ ] ⚠ The GPU tests run in no CI: hosted runners have no OpenCL device.
+
+## Taboos
+
+- **No ILGPU (or any GPU runtime) in the CPU package.** Every CPU consumer would carry
+  a native GPU runtime it does not use (owner, 2026-10-02).
+- **No `GeneratePackageOnBuild`.** A package built from a local branch carries a
+  SourceLink map to a commit that may never be pushed; packages are packed only from a
+  tagged commit (`ecd8f09`, 2026-07-28; the CPU csproj explains it).
+- **No blanket analyzer suppression.** A rule is turned off only in `.editorconfig`,
+  scoped to the paths it does not fit, with the reason written beside it.
+- **No push, tag, publish or merge into `main` without the owner's word**, each time.
+
+## Decomposition
+
+To be synthesized when the slices below are described. As it stands: one directory per
+package under `src/`, test projects under `tests/` (the CPU package has unit,
+integration and shared-support projects; the GPU package has one), benchmarks under
+`benchmarks/`, the protocol linter under `tools/protocol-lint/`.
+
+## Reconstruction
+
+Temporary section (prompt 02): the memory between slices. Removed when the tree is
+reconstructed. Node list from `protocol_lint.py --list-nodes`, 2026-10-02: 75 nodes.
+Couplings estimated textually (type names declared in one directory and used in
+another, method bodies included); the reflection checks will replace the estimate.
+
+Findings of the inventory, for the slices to record in their nodes:
+
+- Namespaces match directory paths in every directory (checked 2026-10-02).
+- ⚠ One cycle, CPU package: `Models` ↔ `GenerationStrategies`, `Interfaces`,
+  `LocalSearch`, `TerminationStrategies/Interfaces`.
+- The GPU package has no cycles; its `*/Interfaces` directories each hold one
+  interface and are nodes of their own (owner to decide the boundaries).
+
+Slices, in order (bottom-up within each):
+
+1. [ ] GPU package: `src/DotNetDifferentialEvolution.GPU` and its 14 subdirectories.
+2. [ ] GPU tests: `tests/DotNetDifferentialEvolution.GPU.Test`, `FitnessFunctions`,
+   `Helpers`.
+3. [ ] CPU leaves: `RandomProviders`, `Helpers`, `ControlParameterProviders`,
+   `PopulationSamplingMaker`, `SelectionStrategies` (+ `Interfaces`),
+   `MutationStrategies` (+ `Interfaces`, `Helpers`).
+4. [ ] CPU core with the cycle: `Models` (+ `Interfaces`), `Interfaces`,
+   `GenerationStrategies`, `LocalSearch`, `TerminationStrategies` (+ `Interfaces`).
+5. [ ] CPU engine: `AlgorithmExecutors` (+ `Interfaces`), `Controllers` (and its two
+   nested levels), `Algorithms/Common`, `Jde`, `Jade`, `Shade`, `Lshade`, `Variants`,
+   then `src/DotNetDifferentialEvolution` itself.
+6. [ ] CPU test support: `tests/DotNetDifferentialEvolution.Tests.Shared` and its
+   subdirectories.
+7. [ ] CPU unit tests: `tests/DotNetDifferentialEvolution.UnitTests` and its 13
+   subdirectories.
+8. [ ] CPU integration tests: `tests/DotNetDifferentialEvolution.IntegrationTests` and
+   its 3 subdirectories.
+9. [ ] Benchmarks: `benchmarks/DotNetDifferentialEvolution.Benchmark` and its 3
+   subdirectories.
+10. [ ] Root: `## Decomposition`, root `API.md`, removal of this section.
+
+`tools/protocol-lint` came with the kit and already carries its pair.

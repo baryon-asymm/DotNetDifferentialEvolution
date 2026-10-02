@@ -7,14 +7,19 @@
 # is the cheapest guard against that: it checks paths only. Type and member names named in prose
 # still rely on review.
 #
-# Usage: scripts/check-doc-references.sh [file.md ...]   (defaults to every .md under docs/)
+# Usage: scripts/check-doc-references.sh [file.md ...]
+#   (defaults to every .md under docs/ except docs/protocol/templates/)
+#
+# docs/protocol/templates/ holds the BOOT/API protocol kit's blank node documents. Their links are
+# placeholders by design ("../<Neighbour>/API.md") and resolve only once a template is copied into
+# a node, which is why the protocol linter is run with --exclude templates for the same reason.
 
 set -euo pipefail
 
 if [ "$#" -gt 0 ]; then
     documents=("$@")
 else
-    mapfile -t documents < <(find docs -name '*.md' | sort)
+    mapfile -t documents < <(find docs -path docs/protocol/templates -prune -o -name '*.md' -print | sort)
 fi
 
 if [ "${#documents[@]}" -eq 0 ]; then
