@@ -75,7 +75,8 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       2026-10-02, `ParallelDeterminismTests` (3 tests).
 - [x] Build, run, cancel and dispose leave no workers or threads behind: 2026-10-02,
       `WorkerLifecycleTests` (2), `CancellationTests` (5), `ResourceUsageTests` (1).
-- [x] The children are described: 2026-10-02, root `## Reconstruction`, slices 3 to 5.
+- [x] The children are described: 2026-10-02, brownfield slices 3 to 5 (commits
+      `1faf888`, `c293ccb`, `c8bf78f`).
 - [ ] ⚠ The validation baseline is 4.0.0 although 4.1.0 and 5.1.0 shipped; the csproj
       explains that 4.1.0 was not yet downloadable when it was set, and the suppression
       file therefore folds the 4.1.0 changes in a second time.
@@ -114,8 +115,12 @@ Five groups, by role. Only the engine runs threads; everything else is called fr
 - **Hooks and state.** [Models](Models/API.md) (`ProblemContext` holds every hook),
   [GenerationStrategies](GenerationStrategies/API.md), [LocalSearch](LocalSearch/API.md),
   [Interfaces](Interfaces/API.md), [TerminationStrategies](TerminationStrategies/API.md).
-  `Models` and the hook contracts form the package's one cycle (root `BOOT.md`,
-  `## Reconstruction`).
+  `Models` and the hook contracts form the package's one cycle: `ProblemContext` holds
+  each hook, and each hook (`GenerationStrategies`, `Interfaces`, `LocalSearch`,
+  `TerminationStrategies/Interfaces`) takes a `Models` type (found by a textual estimate
+  and confirmed on the code, 2026-10-02; recorded in [Models](Models/BOOT.md)).
+  `MutationStrategies` is not in it, although the estimate first said so: it matched
+  the property `MutationContext.Population` against the type `Models.Population`.
 - **Variants.** [Variants](Variants/API.md) bundles operators with an adaptation from
   `Algorithms/`: [Common](Algorithms/Common/API.md) (archive, ranking),
   [Jde](Algorithms/Jde/API.md), [Jade](Algorithms/Jade/API.md),

@@ -8,8 +8,9 @@ engine context without the builder. One copy, so the unit tests, the integration
 and the benchmarks agree on what "Rosenbrock" and its optimum are.
 
 This is a support library, not a tests node in the sense of AGENTS.md §1: it defines no
-readiness levels. Those belong to the test projects that use it (slices 7 and 8 of the
-root's `## Reconstruction`).
+readiness levels. Those belong to the test projects that use it
+([UnitTests](../DotNetDifferentialEvolution.UnitTests/BOOT.md),
+[IntegrationTests](../DotNetDifferentialEvolution.IntegrationTests/BOOT.md)).
 
 ## Invariants
 

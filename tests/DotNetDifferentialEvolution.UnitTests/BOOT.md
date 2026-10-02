@@ -5,7 +5,7 @@
 What "each part of the CPU package is correct on its own" means: the levels of
 verification below the engine, what each is checked against, and what is not covered.
 The whole-engine level (runs, convergence, threads, cancellation) belongs to the
-integration tests (root `## Reconstruction`, slice 8).
+integration tests ([IntegrationTests](../DotNetDifferentialEvolution.IntegrationTests/BOOT.md)).
 
 | Level | What it checks | Against what (source of truth) | State |
 |---|---|---|---|

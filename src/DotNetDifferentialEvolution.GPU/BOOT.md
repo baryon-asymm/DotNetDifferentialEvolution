@@ -83,3 +83,16 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
   was rebuilt on 2024-08-10 (`1ad5a86`) to remove one.
 - **No `GeneratePackageOnBuild`.** Removed at the import (`54cf002`); packages are
   packed from a tagged commit (root `BOOT.md`).
+
+## Decomposition
+
+One directory per role (controller and kernels, mutation, selection, random generator,
+initial sampling, termination, models), plus the package-level `Interfaces`. Every
+strategy directory has an `Interfaces` subdirectory holding its one contract (the
+controller's is `Controllers/Kernels/Interfaces`; `Models` has none); the list is in
+[API.md](API.md), `## Children`. No cycles between
+them (textual estimate, 2026-10-02).
+
+The `*/Interfaces` directories are nodes of their own, each with a single interface.
+Owner's decision, 2026-10-02: describe them as they are; merging each into its parent
+would break the public namespaces, and is left for the GPU redesign.

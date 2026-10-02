@@ -1,9 +1,5 @@
 # BOOT.md — DotNetDifferentialEvolution (tree root)
 
-<!-- Brownfield reconstruction in progress (AGENTS.md §9). This file records the state
-     of the repository as it is, not as it should be. Sections marked "to be synthesized"
-     are filled bottom-up once the slices under them are described. -->
-
 ## Purpose
 
 The repository builds two NuGet packages of Differential Evolution (DE) for .NET:
@@ -23,6 +19,10 @@ Not goals: asynchronous or GPU evaluation in the CPU package (`docs/AGENT_GUIDE.
 "What it does not do"); constraints beyond box bounds; integer or variable-length
 genomes; multi-objective optimization.
 
+The tree was reconstructed brownfield, bottom-up, in nine slices on 2026-10-02 (commits
+`63d3ff1` to `60ebcd0`): it records the repository as it is. Where that differs from
+what it should be, the node says so with a ⚠; those are the agenda for design sessions.
+
 ## Invariants
 
 - **Every build is warnings-as-errors with the full analyzer set** (`latest-all`,
@@ -34,6 +34,8 @@ genomes; multi-objective optimization.
 - **The CPU package's public surface is diffed against its last release on every CI
   run.** Held by package validation (`EnablePackageValidation`, baseline 4.0.0) and the
   CI "Pack" step; deliberate breaks are listed in `CompatibilitySuppressions.xml`.
+- **Namespaces follow directory paths.** Checked in every directory on 2026-10-02;
+  held by convention, not by a check.
 
 ## Dependencies
 
@@ -67,8 +69,12 @@ Python 3.8+ (`tools/protocol-lint`).
       232 passed; `Category!=Slow&Category!=Gpu` 232 + 70 passed, exit code 0 for both.
 - [x] The GPU tests pass on a machine with an OpenCL device: 2026-10-02,
       `tests/DotNetDifferentialEvolution.GPU.Test`, 2 of 2 passed (local).
-- [ ] The tree passes `protocol_lint` without errors. Red until the reconstruction
-      below is finished; the linter is not in CI until then (AGENTS.md §13).
+- [x] The tree passes `protocol_lint` without errors or warnings: 2026-10-02, 75 nodes,
+      `python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates`.
+- [x] Every test node of the repository was shown red once: 2026-10-02, mutations in
+      scratch clones (GPU tests in slice 2, unit tests in slice 7, integration tests in
+      slice 8); listed in each test node.
+- [ ] The linter runs in no CI step yet; a red tree is seen only locally.
 - [ ] The reflection checks are written for this stack and each is proven
       non-degenerate (AGENTS.md §13). ⚠ The installed kit copy has an empty
       `reference/dotnet/`; the reference implementation has to be obtained first.
@@ -91,77 +97,40 @@ Python 3.8+ (`tools/protocol-lint`).
 
 ## Decomposition
 
-To be synthesized when the slices below are described. As it stands: one directory per
-package under `src/`, test projects under `tests/` (the CPU package has unit,
-integration and shared-support projects; the GPU package has one), benchmarks under
-`benchmarks/`, the protocol linter under `tools/protocol-lint/`.
+75 nodes. `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
+nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 
-## Reconstruction
+| Node | Role | Nodes | Readiness defined by |
+|---|---|---|---|
+| [DotNetDifferentialEvolution](src/DotNetDifferentialEvolution/API.md) | the CPU package | 28 | UnitTests (U0–U2, surface) and IntegrationTests (I0–I3) |
+| [DotNetDifferentialEvolution.GPU](src/DotNetDifferentialEvolution.GPU/API.md) | the GPU package | 15 | GPU.Test (L2 only) |
+| [Tests.Shared](tests/DotNetDifferentialEvolution.Tests.Shared/API.md) | CPU test support: benchmark functions, fakes, context helper | 5 | its consumers |
+| [UnitTests](tests/DotNetDifferentialEvolution.UnitTests/API.md) | the CPU package part by part | 14 | — |
+| [IntegrationTests](tests/DotNetDifferentialEvolution.IntegrationTests/API.md) | the CPU engine as a whole | 4 | — |
+| [GPU.Test](tests/DotNetDifferentialEvolution.GPU.Test/API.md) | two end-to-end GPU runs | 3 | — |
+| [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/API.md) | throughput and convergence measurement, no assertions | 4 | — |
+| [protocol-lint](tools/protocol-lint/API.md) | the tree's file-level checks | 1 | its own tests |
 
-Temporary section (prompt 02): the memory between slices. Removed when the tree is
-reconstructed. Node list from `protocol_lint.py --list-nodes`, 2026-10-02: 75 nodes.
-Couplings estimated textually (type names declared in one directory and used in
-another, method bodies included); the reflection checks will replace the estimate.
+Dependencies run one way: test projects and benchmarks depend on a package and on
+Tests.Shared; Tests.Shared on the CPU package; the packages on nothing in the tree. The
+one cycle is inside the CPU package (`Models` and the hook contracts; see its
+`BOOT.md`, `## Decomposition`).
 
-Findings of the inventory, for the slices to record in their nodes:
+The open findings with the most weight, each recorded in full in its node:
 
-- Namespaces match directory paths in every directory (checked 2026-10-02).
-- ⚠ One cycle, CPU package: `Models` ↔ `GenerationStrategies`, `Interfaces`,
-  `LocalSearch`, `TerminationStrategies/Interfaces`. Confirmed on the code in slice 4:
-  `ProblemContext` holds each hook, and each hook takes a `Models` type.
-- The textual estimate gives false positives where a member shares a type's name:
-  `MutationContext.Population` read as the type `Models.Population` (found in slice 4).
-- The GPU package has no cycles; its `*/Interfaces` directories each hold one
-  interface and are nodes of their own. Owner, 2026-10-02: describe them as they are;
-  merging them into their parents is a public break left for the GPU redesign.
-
-Slices, in order (bottom-up within each):
-
-1. [x] GPU package: `src/DotNetDifferentialEvolution.GPU` and its 14 subdirectories
-   (2026-10-02; 15 nodes, all ✅, linter clean for them).
-2. [x] GPU tests: `tests/DotNetDifferentialEvolution.GPU.Test`, `FitnessFunctions`,
-   `Helpers` (2026-10-02; 3 nodes, the tests shown non-degenerate by two mutations).
-3. [x] CPU leaves: `RandomProviders`, `Helpers`, `ControlParameterProviders`,
-   `SelectionStrategies` (+ `Interfaces`) (2026-10-02; 5 nodes). The package node
-   `src/DotNetDifferentialEvolution` was started here with package-level facts only,
-   because its children link to it for their frame.
-   ⚠ 2026-10-02: the slice first also listed `PopulationSamplingMaker` and
-   `MutationStrategies` (+ `Interfaces`, `Helpers`). They are not leaves: they use
-   `Interfaces` and `Models`, and `MutationStrategies` closes the cycle below through
-   `Models` → `MutationStrategies/Interfaces` → its parent. Moved to slice 4; found when
-   the slice was read, before anything was written for them.
-   ⚠ 2026-10-02, slice 4: half of that note was wrong. `PopulationSamplingMaker` does
-   use `Interfaces`, but `MutationStrategies` uses no `Models` type: the estimate
-   matched the property `MutationContext.Population` against the type
-   `Models.Population`. `MutationStrategies` depends only on `RandomProviders` and is
-   not in the cycle; it stayed in slice 4, which changed nothing but the order.
-4. [x] CPU core with the cycle: `Models` (+ `Interfaces`), `Interfaces`,
-   `GenerationStrategies`, `LocalSearch`, `TerminationStrategies` (+ `Interfaces`),
-   `MutationStrategies` (+ `Interfaces`, `Helpers`), `PopulationSamplingMaker`
-   (2026-10-02; 11 nodes).
-5. [x] CPU engine: `AlgorithmExecutors` (+ `Interfaces`), `Controllers` (and its two
-   nested levels), `Algorithms/Common`, `Jde`, `Jade`, `Shade`, `Lshade`, `Variants`,
-   then the synthesis of `src/DotNetDifferentialEvolution` itself (2026-10-02; 11 new
-   nodes and the package node rewritten; `src/` linter-clean). `Algorithms/` holds no
-   code of its own and is not a node: its four children take the package as parent.
-6. [x] CPU test support: `tests/DotNetDifferentialEvolution.Tests.Shared` and its
-   subdirectories (2026-10-02; 5 nodes). Found for later slices: the benchmark project
-   keeps its own copies of Ackley and Rastrigin (slice 9); the declared optima of
-   Schwefel and Styblinski-Tang are off by up to 8.8e-4, absorbed by tolerances that the
-   unit and integration slices should look at (7, 8).
-7. [x] CPU unit tests: `tests/DotNetDifferentialEvolution.UnitTests` and its 13
-   subdirectories (2026-10-02; 14 nodes; every test node shown red once by a mutation
-   in a scratch clone). Found for slice 8: the builder's and the executor's
-   control-parameter guards each mask the other in the unit suite; whether an
-   integration test holds the executor's alone is to be checked there.
-8. [x] CPU integration tests: `tests/DotNetDifferentialEvolution.IntegrationTests` and
-   its 3 subdirectories (2026-10-02; 4 nodes; each node with tests shown red by two
-   mutations). Answer to slice 7's question: no test holds `AlgorithmExecutor`'s
-   control-parameter guard alone. Slice 8 also corrected a slice-7 item that named a
-   removed member (`SelectTrial`) in `UnitTests/SelectionStrategies`.
-9. [x] Benchmarks: `benchmarks/DotNetDifferentialEvolution.Benchmark` and its 3
-   subdirectories (2026-10-02; 4 nodes; the convergence mode run once, the
-   BenchmarkDotNet mode not run). The linter is clean for the whole tree from here.
-10. [ ] Root: `## Decomposition`, root `API.md`, removal of this section.
-
-`tools/protocol-lint` came with the kit and already carries its pair.
+- `AlgorithmExecutor`'s control-parameter guard is tested by nothing on its own
+  ([UnitTests/Builder](tests/DotNetDifferentialEvolution.UnitTests/Builder/BOOT.md)).
+- The convergence tests are unseeded best-of-3/4
+  ([IntegrationTests/TestSupport](tests/DotNetDifferentialEvolution.IntegrationTests/TestSupport/BOOT.md)).
+- jDE's tie rule has neither a source nor a test
+  ([Variants](src/DotNetDifferentialEvolution/Variants/BOOT.md)).
+- Two documented divergences of L-SHADE from Tanabe's code
+  ([Lshade](src/DotNetDifferentialEvolution/Algorithms/Lshade/BOOT.md),
+  [Shade](src/DotNetDifferentialEvolution/Algorithms/Shade/BOOT.md)).
+- Approximate declared optima for Schwefel and Styblinski-Tang
+  ([FitnessFunctionEvaluators](tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/BOOT.md)).
+- Dead or duplicated code in test support and benchmarks
+  ([Tests.Shared/Helpers](tests/DotNetDifferentialEvolution.Tests.Shared/Helpers/BOOT.md),
+  [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/BOOT.md)).
+- The GPU package diverges from the CPU package in semantics a user may carry over
+  ([GPU](src/DotNetDifferentialEvolution.GPU/BOOT.md)).
