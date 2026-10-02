@@ -107,7 +107,10 @@ Findings of the inventory, for the slices to record in their nodes:
 
 - Namespaces match directory paths in every directory (checked 2026-10-02).
 - ⚠ One cycle, CPU package: `Models` ↔ `GenerationStrategies`, `Interfaces`,
-  `LocalSearch`, `TerminationStrategies/Interfaces`.
+  `LocalSearch`, `TerminationStrategies/Interfaces`. Confirmed on the code in slice 4:
+  `ProblemContext` holds each hook, and each hook takes a `Models` type.
+- The textual estimate gives false positives where a member shares a type's name:
+  `MutationContext.Population` read as the type `Models.Population` (found in slice 4).
 - The GPU package has no cycles; its `*/Interfaces` directories each hold one
   interface and are nodes of their own. Owner, 2026-10-02: describe them as they are;
   merging them into their parents is a public break left for the GPU redesign.
@@ -127,9 +130,15 @@ Slices, in order (bottom-up within each):
    `Interfaces` and `Models`, and `MutationStrategies` closes the cycle below through
    `Models` → `MutationStrategies/Interfaces` → its parent. Moved to slice 4; found when
    the slice was read, before anything was written for them.
-4. [ ] CPU core with the cycle: `Models` (+ `Interfaces`), `Interfaces`,
+   ⚠ 2026-10-02, slice 4: half of that note was wrong. `PopulationSamplingMaker` does
+   use `Interfaces`, but `MutationStrategies` uses no `Models` type: the estimate
+   matched the property `MutationContext.Population` against the type
+   `Models.Population`. `MutationStrategies` depends only on `RandomProviders` and is
+   not in the cycle; it stayed in slice 4, which changed nothing but the order.
+4. [x] CPU core with the cycle: `Models` (+ `Interfaces`), `Interfaces`,
    `GenerationStrategies`, `LocalSearch`, `TerminationStrategies` (+ `Interfaces`),
-   `MutationStrategies` (+ `Interfaces`, `Helpers`), `PopulationSamplingMaker`.
+   `MutationStrategies` (+ `Interfaces`, `Helpers`), `PopulationSamplingMaker`
+   (2026-10-02; 11 nodes).
 5. [ ] CPU engine: `AlgorithmExecutors` (+ `Interfaces`), `Controllers` (and its two
    nested levels), `Algorithms/Common`, `Jde`, `Jade`, `Shade`, `Lshade`, `Variants`,
    then the synthesis of `src/DotNetDifferentialEvolution` itself.
