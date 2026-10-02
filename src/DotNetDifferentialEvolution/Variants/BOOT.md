@@ -20,7 +20,9 @@ caller can implement.
   `LShadeInstallsCurrentToPBestWithTheLargerArchiveItsPaperSpecifies`.
 - **Each variant carries its own paper's tie rule.** JADE keeps the parent (Table I line
   20); SHADE and L-SHADE let the trial survive; jDE takes the engine default (`a88001a`).
-  Held by `DeVariantTests.EachPresetInstallsItsOwnPapersRuleForATie`.
+  Held by `DeVariantTests.EachPresetInstallsItsOwnPapersRuleForATie` for JADE, SHADE
+  and L-SHADE. ⚠ Corrected 2026-10-02, slice 7: this line first said the test held the
+  rule for every variant; it has no jDE case, so jDE's tie rule is pinned by nothing.
 - **Every preset satisfies its own mutation strategy's requirements.** Held by
   `DeVariantTests.EveryPresetSatisfiesItsOwnMutationStrategysRequirements`.
 - **A third-party variant takes the built-ins' path**: configured with the problem

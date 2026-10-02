@@ -149,8 +149,11 @@ Slices, in order (bottom-up within each):
    keeps its own copies of Ackley and Rastrigin (slice 9); the declared optima of
    Schwefel and Styblinski-Tang are off by up to 8.8e-4, absorbed by tolerances that the
    unit and integration slices should look at (7, 8).
-7. [ ] CPU unit tests: `tests/DotNetDifferentialEvolution.UnitTests` and its 13
-   subdirectories.
+7. [x] CPU unit tests: `tests/DotNetDifferentialEvolution.UnitTests` and its 13
+   subdirectories (2026-10-02; 14 nodes; every test node shown red once by a mutation
+   in a scratch clone). Found for slice 8: the builder's and the executor's
+   control-parameter guards each mask the other in the unit suite; whether an
+   integration test holds the executor's alone is to be checked there.
 8. [ ] CPU integration tests: `tests/DotNetDifferentialEvolution.IntegrationTests` and
    its 3 subdirectories.
 9. [ ] Benchmarks: `benchmarks/DotNetDifferentialEvolution.Benchmark` and its 3
