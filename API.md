@@ -20,4 +20,7 @@ The CPU package is added when its slices are described.
 
 ## Test nodes
 
-Filled in as each test slice is described.
+- [DotNetDifferentialEvolution.GPU.Test](tests/DotNetDifferentialEvolution.GPU.Test/API.md)
+  — two end-to-end GPU runs against known optima; local only (needs OpenCL).
+
+The CPU package's test nodes are added when their slices are described.

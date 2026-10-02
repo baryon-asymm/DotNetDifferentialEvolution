@@ -116,8 +116,8 @@ Slices, in order (bottom-up within each):
 
 1. [x] GPU package: `src/DotNetDifferentialEvolution.GPU` and its 14 subdirectories
    (2026-10-02; 15 nodes, all ✅, linter clean for them).
-2. [ ] GPU tests: `tests/DotNetDifferentialEvolution.GPU.Test`, `FitnessFunctions`,
-   `Helpers`.
+2. [x] GPU tests: `tests/DotNetDifferentialEvolution.GPU.Test`, `FitnessFunctions`,
+   `Helpers` (2026-10-02; 3 nodes, the tests shown non-degenerate by two mutations).
 3. [ ] CPU leaves: `RandomProviders`, `Helpers`, `ControlParameterProviders`,
    `PopulationSamplingMaker`, `SelectionStrategies` (+ `Interfaces`),
    `MutationStrategies` (+ `Interfaces`, `Helpers`).
