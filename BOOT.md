@@ -76,8 +76,10 @@ Python 3.8+ (`tools/protocol-lint`).
       slice 8); listed in each test node.
 - [ ] The linter runs in no CI step yet; a red tree is seen only locally.
 - [ ] The reflection checks are written for this stack and each is proven
-      non-degenerate (AGENTS.md §13). ⚠ The installed kit copy has an empty
-      `reference/dotnet/`; the reference implementation has to be obtained first.
+      non-degenerate (AGENTS.md §13). ⚠ Corrected 2026-10-02, slice 10: this item said
+      the kit's `reference/dotnet/` was empty. The skill now carries it (33 files,
+      checked 2026-10-02); `docs/protocol/` in this repository does not copy it. Adding
+      the checks is a new test project, a coding task for the owner to start.
 - [ ] ⚠ The GPU package has no release path: `release.yml` packs only the CPU package
       and both would share the `v*` tags.
 - [ ] ⚠ The GPU package's csproj says 0.0.2 while nuget.org carries 0.1.0, 0.0.2 and
