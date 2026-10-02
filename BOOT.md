@@ -159,8 +159,9 @@ Slices, in order (bottom-up within each):
    mutations). Answer to slice 7's question: no test holds `AlgorithmExecutor`'s
    control-parameter guard alone. Slice 8 also corrected a slice-7 item that named a
    removed member (`SelectTrial`) in `UnitTests/SelectionStrategies`.
-9. [ ] Benchmarks: `benchmarks/DotNetDifferentialEvolution.Benchmark` and its 3
-   subdirectories.
+9. [x] Benchmarks: `benchmarks/DotNetDifferentialEvolution.Benchmark` and its 3
+   subdirectories (2026-10-02; 4 nodes; the convergence mode run once, the
+   BenchmarkDotNet mode not run). The linter is clean for the whole tree from here.
 10. [ ] Root: `## Decomposition`, root `API.md`, removal of this section.
 
 `tools/protocol-lint` came with the kit and already carries its pair.
