@@ -39,9 +39,9 @@ public readonly struct PolynomialApproximationFunction : IFitnessFunctionInvoker
         return result;
     }
 
-    public static double GetFfValueResult() => 2.3295763060466132E-05;
+    public static double ExpectedFitnessValue => 2.3295763060466132E-05;
 
-    public static IEnumerable<double> GetIndividualResult() =>
+    public static IEnumerable<double> ExpectedIndividual =>
     [
         0.38718881229629304,
         -0.1599304697255068,

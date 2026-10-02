@@ -20,9 +20,9 @@ public struct RosenbrockFunction : IFitnessFunctionInvoker
         devicePopulation.FitnessFunctionValues[individualIndex] = result;
     }
 
-    public static double GetFfValueResult() => 0;
+    public static double ExpectedFitnessValue => 0;
 
-    public static IEnumerable<double> GetIndividualResult() => [1, 1];
+    public static IEnumerable<double> ExpectedIndividual => [1, 1];
 
     public static int IndividualSize => 2;
 }

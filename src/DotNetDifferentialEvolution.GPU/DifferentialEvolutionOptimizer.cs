@@ -5,7 +5,7 @@ using ILGPU.Runtime;
 
 namespace DotNetDifferentialEvolution.GPU;
 
-public class DifferentialEvolutionOptimizer : IDifferentialEvolutionOptimizer<OptimizationResult>, IDisposable
+public sealed class DifferentialEvolutionOptimizer : IDifferentialEvolutionOptimizer<OptimizationResult>, IDisposable
 {
     private readonly IKernelController _kernelController;
     
@@ -59,7 +59,7 @@ public class DifferentialEvolutionOptimizer : IDifferentialEvolutionOptimizer<Op
         return bestIndividualIndex;
     }
 
-    private static IEnumerable<double> GetIndividualVector(int index, double[,] individuals)
+    private static double[] GetIndividualVector(int index, double[,] individuals)
     {
         const int vectorDimension = 1;
         var vectorSize = individuals.GetLength(vectorDimension);

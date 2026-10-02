@@ -11,7 +11,7 @@ using ILGPU.Runtime;
 
 namespace DotNetDifferentialEvolution.GPU.Controllers.Kernels;
 
-public class KernelController<TFitnessFunctionInvoker, TRandomGenerator, TMutationStrategy, TSelectionStrategy>(
+public sealed class KernelController<TFitnessFunctionInvoker, TRandomGenerator, TMutationStrategy, TSelectionStrategy>(
     Context context,
     Accelerator device,
     IPopulationSamplingMaker populationSamplingMaker,
@@ -125,7 +125,7 @@ public class KernelController<TFitnessFunctionInvoker, TRandomGenerator, TMutati
             throw new InvalidOperationException("The KernelInit is not compiled.");
 
         var populationSize = populationSamplingMaker.GetPopulationSize();
-        var devicePopulation = _currentPopulation.GetDevicePopulation();
+        var devicePopulation = _currentPopulation.DevicePopulation;
 
         _kernelInit(populationSize, devicePopulation, fitnessFunction);
         device.Synchronize();
@@ -157,9 +157,9 @@ public class KernelController<TFitnessFunctionInvoker, TRandomGenerator, TMutati
         {
             generation++;
 
-            var currentPopulation = _currentPopulation.GetDevicePopulation();
-            var nextPopulation = _nextPopulation.GetDevicePopulation();
-            var trialPopulation = _trialPopulation.GetDevicePopulation();
+            var currentPopulation = _currentPopulation.DevicePopulation;
+            var nextPopulation = _nextPopulation.DevicePopulation;
+            var trialPopulation = _trialPopulation.DevicePopulation;
 
             _kernelRun(
                 populationSize,

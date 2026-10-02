@@ -16,12 +16,7 @@ public class HostPopulation
         Individuals = individuals;
     }
     
-    public DevicePopulation GetDevicePopulation()
-    {
-        var population = new DevicePopulation(
-            FitnessFunctionValues.View,
-            Individuals.View);
-        
-        return population;
-    }
+    public DevicePopulation DevicePopulation => new(
+        FitnessFunctionValues.View,
+        Individuals.View);
 }

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
@@ -11,15 +11,19 @@
         <Authors>Eduard Burachek</Authors>
         <Description>A .NET library for Differential Evolution optimization with GPU acceleration using ILGPU.</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution.GPU</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution.GPU</RepositoryUrl>
-        <Tags>differential-evolution, optimization, gpu, ilgpu, .net</Tags>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageProjectUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution</RepositoryUrl>
         <Title>DotNetDifferentialEvolution.GPU</Title>
         <Copyright>Copyright (c) Eduard Burachek, 2024</Copyright>
         <RepositoryType>git</RepositoryType>
         <PackageTags>differential-evolution optimization gpu ilgpu .net</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
+
+    <!--
+      No GeneratePackageOnBuild, for the same reason as the CPU package: a package is packed
+      explicitly from a tagged commit, never as a side effect of a local build.
+    -->
 
     <ItemGroup>
       <PackageReference Include="ILGPU" Version="1.5.1" />
@@ -27,13 +31,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Builders\" />
-    </ItemGroup>
-
-    <ItemGroup>
         <None Include="../../LICENSE" Pack="true" PackagePath="\" />
-        <None Include="../../ILGPU_LICENSE" Pack="true" PackagePath="\" />
-        <None Include="../../README.md" Pack="true" PackagePath="\" />
+        <None Include="ILGPU_LICENSE" Pack="true" PackagePath="\" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>

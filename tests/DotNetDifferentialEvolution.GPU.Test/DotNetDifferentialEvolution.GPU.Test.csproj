@@ -1,13 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+    <!-- Common settings (TFM, nullable, RollForward, …) come from tests/Directory.Build.props. -->
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-
-        <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,10 +14,13 @@
 
     <ItemGroup>
         <Using Include="Xunit"/>
+        <!-- tests/Directory.Build.props imports the shared abstractions for the CPU test projects.
+             The GPU package does not depend on them (yet), so the namespace does not exist here. -->
+        <Using Remove="DotNetOptimization.Abstractions"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\DotNetDifferentialEvolution.GPU\DotNetDifferentialEvolution.GPU.csproj" />
+        <ProjectReference Include="..\..\src\DotNetDifferentialEvolution.GPU\DotNetDifferentialEvolution.GPU.csproj"/>
     </ItemGroup>
 
 </Project>

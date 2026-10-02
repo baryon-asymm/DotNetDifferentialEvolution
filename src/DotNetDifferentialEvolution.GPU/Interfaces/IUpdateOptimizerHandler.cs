@@ -6,7 +6,7 @@ namespace DotNetDifferentialEvolution.GPU.Interfaces;
 /// <summary>
 /// Represents the different states of the optimizer during its lifecycle.
 /// </summary>
-public enum OptimizerState : byte
+public enum OptimizerState
 {
     /// <summary>
     /// Indicates that the optimizer is starting.

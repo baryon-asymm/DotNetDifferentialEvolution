@@ -17,6 +17,8 @@ using Xunit.Abstractions;
 
 namespace DotNetDifferentialEvolution.GPU.Test;
 
+// Needs a real OpenCL device: CI runners have none, so CI filters this category out.
+[Trait("Category", "Gpu")]
 public class DifferentialEvolutionOptimizerTests
 {
     private readonly ITestOutputHelper _output;
@@ -29,7 +31,10 @@ public class DifferentialEvolutionOptimizerTests
         _output = output;
     }
 
-    private DifferentialEvolutionOptimizer GetOptimizer<TFitnessFunctionInvoker>(
+    // CA2000: ownership is handed on, not dropped. KernelController disposes the context and the
+    // accelerator, and the optimizer disposes the controller; the caller disposes the optimizer.
+#pragma warning disable CA2000
+    private static DifferentialEvolutionOptimizer GetOptimizer<TFitnessFunctionInvoker>(
         double lowerValue,
         double upperValue,
         int individualSize,
@@ -79,6 +84,7 @@ public class DifferentialEvolutionOptimizerTests
 
         return optimizer;
     }
+#pragma warning restore CA2000
 
     [Fact]
     public async Task TestRosenbrockCase()
@@ -94,8 +100,8 @@ public class DifferentialEvolutionOptimizerTests
         _output.WriteLine($"ResultVector is {JsonSerializer.Serialize(optimizationResult.Individual)}");
 
         const double tolerance = 1e-6;
-        Assert.Equal(RosenbrockFunction.GetFfValueResult(), optimizationResult.FitnessFunctionValue, tolerance);
-        Assert.Equal(RosenbrockFunction.GetIndividualResult(), optimizationResult.Individual,
+        Assert.Equal(RosenbrockFunction.ExpectedFitnessValue, optimizationResult.FitnessFunctionValue, tolerance);
+        Assert.Equal(RosenbrockFunction.ExpectedIndividual, optimizationResult.Individual,
             (l, r) => Math.Abs(l - r) <= tolerance);
     }
 
@@ -114,11 +120,11 @@ public class DifferentialEvolutionOptimizerTests
 
         const double tolerance = 1e-8;
         Assert.Equal(
-            PolynomialApproximationFunction.GetFfValueResult(),
+            PolynomialApproximationFunction.ExpectedFitnessValue,
             optimizationResult.FitnessFunctionValue,
             tolerance);
         Assert.Equal(
-            PolynomialApproximationFunction.GetIndividualResult(),
+            PolynomialApproximationFunction.ExpectedIndividual,
             optimizationResult.Individual,
             (l, r) => Math.Abs(l - r) <= tolerance);
     }

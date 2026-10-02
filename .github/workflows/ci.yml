@@ -40,12 +40,13 @@ jobs:
           --filter "Category=Unit"
           --collect:"XPlat Code Coverage"
 
-      # Broader gate: unit + integration, excluding the long-running (Slow) tests.
-      - name: Integration tests (excluding slow)
+      # Broader gate: unit + integration, excluding the long-running (Slow) tests and the GPU
+      # tests, which need an OpenCL device the hosted runners do not have.
+      - name: Integration tests (excluding slow and GPU)
         run: >-
           dotnet test DotNetDifferentialEvolution.sln
           --configuration Release --no-build
-          --filter "Category!=Slow"
+          --filter "Category!=Slow&Category!=Gpu"
 
       # API gate: package validation only runs on pack, so pack here and throw the result away.
       # Without this the public-surface diff against the last release would first be seen by the
