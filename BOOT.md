@@ -109,11 +109,13 @@ Findings of the inventory, for the slices to record in their nodes:
 - ⚠ One cycle, CPU package: `Models` ↔ `GenerationStrategies`, `Interfaces`,
   `LocalSearch`, `TerminationStrategies/Interfaces`.
 - The GPU package has no cycles; its `*/Interfaces` directories each hold one
-  interface and are nodes of their own (owner to decide the boundaries).
+  interface and are nodes of their own. Owner, 2026-10-02: describe them as they are;
+  merging them into their parents is a public break left for the GPU redesign.
 
 Slices, in order (bottom-up within each):
 
-1. [ ] GPU package: `src/DotNetDifferentialEvolution.GPU` and its 14 subdirectories.
+1. [x] GPU package: `src/DotNetDifferentialEvolution.GPU` and its 14 subdirectories
+   (2026-10-02; 15 nodes, all ✅, linter clean for them).
 2. [ ] GPU tests: `tests/DotNetDifferentialEvolution.GPU.Test`, `FitnessFunctions`,
    `Helpers`.
 3. [ ] CPU leaves: `RandomProviders`, `Helpers`, `ControlParameterProviders`,

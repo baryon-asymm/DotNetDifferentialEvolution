@@ -13,7 +13,10 @@ consumer-facing description is `README.md` and `docs/AGENT_GUIDE.md` (CPU packag
 
 ## Children
 
-Filled in as each slice is described: a link per node to its `API.md`.
+- [DotNetDifferentialEvolution.GPU](src/DotNetDifferentialEvolution.GPU/API.md) — the
+  GPU package: `DifferentialEvolutionOptimizer` over an ILGPU kernel controller.
+
+The CPU package is added when its slices are described.
 
 ## Test nodes
 
