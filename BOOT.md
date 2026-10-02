@@ -139,9 +139,11 @@ Slices, in order (bottom-up within each):
    `GenerationStrategies`, `LocalSearch`, `TerminationStrategies` (+ `Interfaces`),
    `MutationStrategies` (+ `Interfaces`, `Helpers`), `PopulationSamplingMaker`
    (2026-10-02; 11 nodes).
-5. [ ] CPU engine: `AlgorithmExecutors` (+ `Interfaces`), `Controllers` (and its two
+5. [x] CPU engine: `AlgorithmExecutors` (+ `Interfaces`), `Controllers` (and its two
    nested levels), `Algorithms/Common`, `Jde`, `Jade`, `Shade`, `Lshade`, `Variants`,
-   then the synthesis of `src/DotNetDifferentialEvolution` itself.
+   then the synthesis of `src/DotNetDifferentialEvolution` itself (2026-10-02; 11 new
+   nodes and the package node rewritten; `src/` linter-clean). `Algorithms/` holds no
+   code of its own and is not a node: its four children take the package as parent.
 6. [ ] CPU test support: `tests/DotNetDifferentialEvolution.Tests.Shared` and its
    subdirectories.
 7. [ ] CPU unit tests: `tests/DotNetDifferentialEvolution.UnitTests` and its 13
