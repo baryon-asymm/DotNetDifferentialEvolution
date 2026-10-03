@@ -96,9 +96,12 @@ Written 2026-10-03, before any v1 code.
 
 ### 5. No per-generation host round trip
 
-- [ ] **5a.** A fact in `Protocol.Tests`: in the package, only the methods of one
+- [x] **5a.** A fact in `Protocol.Tests`: in the package, only the methods of one
       transfer helper call an ILGPU host transfer.
       Red: a `CopyToCPU` added in the generation loop.
+      2026-10-03: `GpuGuardTests.OnlyTheTransferHelperCallsAnIlgpuHostTransfer`, green
+      (three transfers found, all in `PopulationTransfers`); red on a `CopyToCPU` after
+      the swap in `GpuDifferentialEvolution.Run`; fails "found nothing" on an empty scan.
 - [ ] **5b.** That helper counts its calls:
       - a 100-generation run with no observer makes exactly one download, the final
         population;
@@ -117,26 +120,48 @@ Written 2026-10-03, before any v1 code.
 
 ### 7. Ownership
 
-- [ ] **7a.** A forbidden-call rule in `Protocol.Tests`: no `GC.Collect` anywhere in the
+- [x] **7a.** A forbidden-call rule in `Protocol.Tests`: no `GC.Collect` anywhere in the
       package.
       Red: the 0.x `Dispose`.
+      2026-10-03: the rule "no GC.Collect in the GPU package" in
+      `ProtocolConfig.ForbiddenCallRules`, run by `ForbiddenCallTests`; green; red on
+      `GC.Collect()` added to `Dispose`.
 - [ ] **7b.** A caller-owned accelerator still allocates a buffer after the optimizer's
       `Dispose`.
       Red: disposing it.
 
 ### 8. Kernel guards (facts in `Protocol.Tests`, adapted from APT, source cited)
 
-- [ ] **8a.** The IL reachable from each kernel entry point contains no `throw`,
+- [x] **8a.** The IL reachable from each kernel entry point contains no `throw`,
       `newarr`, `newobj` or `box`.
       Red: a `throw` in the DE step.
-- [ ] **8b.** Kernel code calls only allow-listed `Math` members: `Abs`, `Sqrt`, `Exp`,
+      ⚠ 2026-10-03, changed openly: `newobj` is refused for reference types only. A
+      value-type `newobj` is a construction on the stack, which ILGPU compiles; the
+      kernels build `PhiloxBlock` and `GeneView` that way and run on all three backends
+      (the smoke run of HISTORY.md#v1-built-2026-10-03). The literal wording would fail
+      every kernel. APT's guard draws the same line.
+      2026-10-03: `GpuGuardTests.KernelReachableCodeNeitherThrowsNorAllocatesNorBoxes`,
+      green over the five entry points and 39 reached methods; red on a `throw` in
+      `DeStep.BuildTrial`, and on one in `PhiloxDraws.NextIndex`, reached only through
+      `IDrawSource`. Limit: the walk reads IL of the tree only, so a BCL throw helper
+      (`ArgumentOutOfRangeException.ThrowIfNegative`) called from kernel code is not
+      seen.
+- [x] **8b.** Kernel code calls only allow-listed `Math` members: `Abs`, `Sqrt`, `Exp`,
       `Log`, `Pow`, `Floor`, `Min`, `Max`, `IsNaN`.
       Red: `Math.Cbrt` in a kernel.
-- [ ] **8c.** No constant on the left of an ordered floating-point comparison anywhere in
+      2026-10-03: `GpuGuardTests.KernelReachableCodeCallsOnlyTheAllowedMathAndDoubleMembers`,
+      green (Exp, Log, Pow, Sqrt, IsNaN found); red on `Math.Cbrt` in `MathProbe.Probe`.
+      By name, as written: an integer overload of an allowed name passes.
+- [x] **8c.** No constant on the left of an ordered floating-point comparison anywhere in
       the package.
       Red: `0.0 < x`.
-- [ ] **8d.** Host transfers only through the pinning (`Span`/array) overloads.
+      2026-10-03: `GpuGuardTests.GpuSourcesPutNoConstantLeftOfAnOrderedFloatingComparison`
+      (Roslyn semantic model, Microsoft.CodeAnalysis.CSharp 5.0.0), green over 33 sources
+      and 8 ordered floating comparisons; red on `0.0 < inputs[i]` in `MathProbe.Probe`.
+- [x] **8d.** Host transfers only through the pinning (`Span`/array) overloads.
       Red: a `CopyToCPU(ref …)`.
+      2026-10-03: `GpuGuardTests.NoSrcMethodPassesHostMemoryToAnIlgpuTransferByReference`,
+      green; red on `CopyToCPU(ref hostFitness[0], …)` in `PopulationTransfers.Download`.
 
 ### Devices, builder, release
 

@@ -155,8 +155,20 @@ internal static class ProtocolConfig
 
     /// <summary>MSBuild properties the root <c>Directory.Build.props</c> must keep, each with a regular expression its value
     /// must match (for instance <c>["TreatWarningsAsErrors"] = "^true$"</c>, <c>["AnalysisLevel"] = "^latest-all$"</c>):
-    /// the analyzer decision a tree made, held by a fact so it cannot be lost silently. Empty by default.</summary>
-    public static readonly IReadOnlyDictionary<string, string> RequiredRootBuildProperties = new Dictionary<string, string>(StringComparer.Ordinal);
+    /// the analyzer decision a tree made, held by a fact so it cannot be lost silently. Empty by default; this tree
+    /// holds the owner's decision of 2026-10-03, the compiler and every analyzer at their maximum and every diagnostic an
+    /// error (root <c>BOOT.md</c>, Invariants).</summary>
+    public static readonly IReadOnlyDictionary<string, string> RequiredRootBuildProperties = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["TreatWarningsAsErrors"] = "^true$",
+        ["CodeAnalysisTreatWarningsAsErrors"] = "^true$",
+        ["EnableNETAnalyzers"] = "^true$",
+        ["AnalysisLevel"] = "^latest-all$",
+        ["EnforceCodeStyleInBuild"] = "^true$",
+        ["WarningLevel"] = "^9999$",
+        ["Features"] = "^strict$",
+        ["GenerateDocumentationFile"] = "^true$",
+    };
 
     /// <summary>Whether a node falls under <see cref="NumericalNodes"/>: listed itself, or a descendant of a listed node.</summary>
     public static bool IsNumerical(Node node)

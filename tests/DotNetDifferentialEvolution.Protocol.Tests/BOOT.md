@@ -111,12 +111,22 @@ Each one is marked in the code at the place it changes.
   - IL reuses this node's `IlBody`/`Instruction`, which match APT's but resolve more
     defensively. APT's copies are not taken.
 - ⚠ **Omitted kit facts:**
-  - `NoSuppressionGuardTests`: it would flag the repository's current analyzer policy,
-    which is `WarningsNotAsErrors` for NU1901–NU1904 in `Directory.Build.props` and
-    CA5394 and CA1716 relaxed for all of `[*.cs]` in `.editorconfig`. Each relaxation
-    has its reason written beside it. Whether to keep them is the owner's decision.
+  - `NoSuppressionGuardTests` was omitted until 2026-10-03, because the repository then
+    relaxed NU1901–NU1904, CA5394 and CA1716. The owner removed every relaxation that day
+    (the maximum diagnostics, no exceptions), and the fact was adopted: see the next
+    paragraph.
   - `CouplingTests` and `TreeContractSnapshotTests`: both are off by default in the
     kit's configuration, and the tree adopts neither.
+- ⚠ **`NoSuppressionGuardTests` adopted, 2026-10-03,** from the kit's
+  `reference/dotnet/NoSuppressionGuardTests.cs`. Adapted: this namespace, generated regexes
+  (SYSLIB1045), implicit usings; `ProtocolConfig.RequiredRootBuildProperties` holds the
+  eight properties of the maximum; and one fact of this tree's own,
+  `NoTestIsSkippedOrHiddenFromDiscovery` (`Skip =` on a test or data attribute,
+  `DisableDiscoveryEnumeration = true`), with its self-check. Each fact was seen red on one
+  mutation, applied and restored by a script: `#pragma warning disable` and
+  `#nullable disable` in a source; a `SuppressMessage` assembly attribute; `<NoWarn>CA1000`
+  and `<WarningsNotAsErrors>NU1901` in a csproj; `severity = none` in `.editorconfig`; a
+  file named `*.g.cs`; `Features` removed from `Directory.Build.props`; `Skip =` on a fact.
 
 ## Acceptance criteria
 
