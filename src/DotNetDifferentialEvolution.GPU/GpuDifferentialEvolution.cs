@@ -22,7 +22,6 @@ public sealed class GpuDifferentialEvolution : IDisposable
     private readonly KernelLauncher _launcher;
     private PopulationViews _views;
     private int _generations;
-    private long _evaluations;
     private Task<GpuOptimizationResult>? _run;
     private Thread? _runThread;
     private bool _disposed;
@@ -62,7 +61,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
                 currentGenes.View, currentFitness.View, nextGenes.View, nextFitness.View, trial.View, lowerBound.View, upperBound.View);
             _launcher.Initialize(Parameters(0), _views);
             accelerator.Synchronize();
-            _evaluations = settings.PopulationSize;
+            EvaluationCount = settings.PopulationSize;
         }
         catch
         {
@@ -78,7 +77,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
     internal int PopulationDownloadCount => _transfers.DownloadCount;
 
     /// <summary>Gets the number of evaluations so far: N after <c>Build</c> (ACCEPTANCE.md, check 1a).</summary>
-    internal long EvaluationCount => _evaluations;
+    internal long EvaluationCount { get; private set; }
 
     /// <summary>
     /// Starts the run on a thread of its own and returns at once. The token is observed between
@@ -173,13 +172,13 @@ public sealed class GpuDifferentialEvolution : IDisposable
                 _generations++;
                 _launcher.Generation(Parameters(_generations), _views);
                 _views = _views.Swapped();
-                _evaluations += _settings.PopulationSize;
+                EvaluationCount += _settings.PopulationSize;
                 if (_settings.Handler is { } handler && _generations % _settings.EveryNGenerations == 0)
                 {
                     handler.Handle(Snapshot());
                 }
             }
-            while (!_settings.LimitReached(_generations, _evaluations));
+            while (!_settings.LimitReached(_generations, EvaluationCount));
 
             _ = completion.TrySetResult(Result());
         }
@@ -221,7 +220,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
     private GpuPopulationSnapshot Snapshot()
     {
         var (genes, fitness) = DownloadCurrent();
-        return new GpuPopulationSnapshot(_generations, _evaluations, _settings.PopulationSize, _settings.GenomeSize, genes, fitness);
+        return new GpuPopulationSnapshot(_generations, EvaluationCount, _settings.PopulationSize, _settings.GenomeSize, genes, fitness);
     }
 
     private GpuOptimizationResult Result()
@@ -229,7 +228,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
         var (genes, fitness) = DownloadCurrent();
         var best = BestPick.IndexOf(fitness);
         var bestGenes = genes.AsSpan(best * _settings.GenomeSize, _settings.GenomeSize).ToArray();
-        return new GpuOptimizationResult(bestGenes, fitness[best], _generations, _evaluations, Device);
+        return new GpuOptimizationResult(bestGenes, fitness[best], _generations, EvaluationCount, Device);
     }
 
     private MemoryBuffer1D<double, Stride1D.Dense> Allocate(Accelerator accelerator, long length)
