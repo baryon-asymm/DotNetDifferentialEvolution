@@ -22,8 +22,16 @@
 
     <!--
       No GeneratePackageOnBuild, for the same reason as the CPU package: a package is packed
-      explicitly from a tagged commit, never as a side effect of a local build.
+      explicitly from a tagged commit (gpu-v*, release.yml), never as a side effect of a local
+      build. SourceLink as in the CPU package: the PDB embedded, sources resolved from GitHub at
+      the packed commit. No package validation: 1.0.0 replaces every public type of 0.x.
     -->
+    <PropertyGroup>
+        <DebugType>embedded</DebugType>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="ILGPU" Version="1.5.3" />

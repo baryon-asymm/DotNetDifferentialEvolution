@@ -181,7 +181,8 @@ public class WorkerController : IDisposable
         }
         // A worker thread is a failure boundary. Any exception from the user-supplied fitness
         // function must be captured and marshaled to the orchestrator (surfaced as an
-        // AggregateException), never left to crash the thread, so every type is caught.
+        // AggregateException), never left to crash the thread, so every type but
+        // OutOfMemoryException is caught (IsCapturedForTheOrchestrator).
         catch (Exception ex) when (IsCapturedForTheOrchestrator(ex))
         {
             Exception = ex;

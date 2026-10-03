@@ -7,6 +7,51 @@ against the previously released package on every build, and the differences it f
 in `src/DotNetDifferentialEvolution/CompatibilitySuppressions.xml`. Behavioural changes are a
 different matter — nothing can detect those automatically, so they are called out explicitly.
 
+## 6.0.0
+
+A small break, made for the repository's maximum compiler and analyzer settings (every diagnostic
+an error, nothing suppressed; owner's decision, 2026-10-03). No algorithm changed: a seeded run
+of 5.1.0 is reproduced exactly by 6.0.0. Measured 2026-10-03: Rastrigin 10-D, seed 7, 3 workers,
+60 000 evaluations, for DE/rand/1/bin, jDE, JADE, SHADE and L-SHADE, the 5.1.0 package from
+nuget.org and this version give bit-identical best genes and fitness.
+
+The GPU package, `DotNetDifferentialEvolution.GPU`, is versioned and released separately
+(`gpu-v*` tags); its notes are in `src/DotNetDifferentialEvolution.GPU/README.md`.
+
+### Breaking
+
+From `CompatibilitySuppressions.xml`, against 5.1.0:
+
+- **`ISelectionStrategy.Select` is now `SelectSurvivor`**, and so is `SelectionStrategy.Select`.
+  `Select` is a reserved word in Visual Basic (CA1716); the new name also says what is returned.
+  Same parameters, same `SelectionOutcome`. A custom selection strategy renames its method.
+- **`MutationStrategy` keeps only `MutationStrategy(double mutationForce, double crossoverProbability)`.**
+  The two longer constructors are gone: the one marked `[Obsolete]` since 4.1.0 (it took a
+  `BaseRandomProvider` the engine no longer uses), and the one whose `populationSize`,
+  `lowerBound` and `upperBound` arguments were never read. Pass F and CR only.
+
+### Behaviour
+
+Nothing a signature shows; listed because no tool can warn about it.
+
+- **An `OutOfMemoryException` in a worker is no longer handed to the orchestrator.** Every other
+  exception from the objective still surfaces from `RunAsync` as before. A process out of memory
+  cannot be trusted to marshal the failure, so that one exception is left to the runtime's
+  default, which ends the process.
+- **The seed of an unseeded run** is drawn from `RandomNumberGenerator` instead of `Random.Shared`
+  (CA5394). Unseeded runs were never reproducible, so nothing observable changes.
+
+### Inside the repository
+
+- Every project builds with all analyzers at `latest-all`, code style enforced, warnings as
+  errors, and nothing suppressed: no `#pragma`, no `NoWarn` (the SDK's default list included), no
+  `WarningsNotAsErrors`, the NuGet vulnerability audit included.
+- The test projects moved to xUnit 2.9.3, xunit.runner.visualstudio 3.1.4 and
+  Microsoft.NET.Test.Sdk 17.14.1; `Tests.Shared` is now `Tests.Common`; the benchmarks split into a
+  library and a `Benchmark.Runner` executable.
+- `docs/AGENT_GUIDE.md` and the builder's XML examples declare their bounds as local arrays
+  instead of passing array literals; the code they show behaves the same.
+
 ## 5.1.0
 
 Everything that breaks a consumer, plus the performance work. There is no 5.0.0: the breaking
