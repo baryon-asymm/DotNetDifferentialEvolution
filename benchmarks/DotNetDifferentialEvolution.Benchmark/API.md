@@ -1,17 +1,8 @@
 # API.md — DotNetDifferentialEvolution.Benchmark
 
-A console executable; nobody references it. Its interface is the command line.
-
-## Command line ✅
-
-```text
-dotnet run -c Release --project benchmarks/DotNetDifferentialEvolution.Benchmark.Runner
-    → BenchmarkDotNet runs SimpleSumTester (throughput of one generation)
-
-dotnet run -c Release --project benchmarks/DotNetDifferentialEvolution.Benchmark.Runner -- convergence
-    → a table: best objective of each variant on Rastrigin and Ackley, 30-D,
-      300 000 evaluations each
-```
+A library since 2026-10-03, referenced only by
+[Benchmark.Runner](../DotNetDifferentialEvolution.Benchmark.Runner/API.md), whose
+command line starts what is declared here.
 
 ## Convergence comparison ✅
 
@@ -32,3 +23,5 @@ counts, hence other runs.
 ## Children
 
 - [BenchmarkTesters](BenchmarkTesters/API.md) — the BenchmarkDotNet class.
+- [Benchmark.Runner](../DotNetDifferentialEvolution.Benchmark.Runner/API.md) — the
+  executable (a sibling directory, not a subdirectory).

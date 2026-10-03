@@ -44,7 +44,8 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-- [x] Builds, 0 warnings: 2026-10-02, `dotnet build -c Release`.
+- [x] Builds, 0 warnings: 2026-10-02, `dotnet build -c Release`; again under the
+      maximum diagnostics, 2026-10-03.
 - [x] The comparison runs: 2026-10-02, local, 16 logical processors, one unseeded run,
       2 s in all. Rastrigin: DE/rand/1/bin 1.689E+002, jDE, JADE, SHADE and L-SHADE
       0.000E+000. Ackley: 3.997E-015 for all but SHADE (7.550E-015). One run: these
@@ -67,6 +68,9 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 
 ## Decomposition
 
-- This node: `Program.cs` (the mode switch) and `ConvergenceComparison`.
+- This node: `ConvergenceComparison`. The mode switch (`Program.cs`) moved to
+  [Benchmark.Runner](../DotNetDifferentialEvolution.Benchmark.Runner/BOOT.md) on
+  2026-10-03, when this project became a library (CA1515 under the maximum
+  diagnostics; BenchmarkDotNet needs public classes).
 - [BenchmarkTesters](BenchmarkTesters/API.md). `Functions` and `RandomGenerators`
   were removed on 2026-10-03 as dead or duplicated code.
