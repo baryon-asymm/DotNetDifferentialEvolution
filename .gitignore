@@ -260,3 +260,6 @@ ModelManifest.xml
 
 # VSCode
 .vscode/
+# Written by the protocol tests beside an approved snapshot when the two differ (ApprovedSnapshot.cs);
+# read it, then copy it over the approved file or fix the code. Never committed.
+*.actual.txt
