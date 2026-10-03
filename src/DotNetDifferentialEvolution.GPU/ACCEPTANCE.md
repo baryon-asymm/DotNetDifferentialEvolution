@@ -20,11 +20,17 @@ Written 2026-10-03, before any v1 code.
 
 ### 1. Semantics (`docs/ALGORITHMS.md` §§2–3, §9)
 
-- [ ] **1a, initial sampling.** Seeded, N = 1000, D = 3, box [−2, 5]:
+- [x] **1a, initial sampling.** Seeded, N = 1000, D = 3, box [−2, 5]:
       - every gene is in [lower, upper);
       - per gene, a χ² test on 20 bins stays under the 0.999 quantile;
       - the evaluation count after `Build` is N.
       Red: the span written as `upper` instead of `upper − lower`.
+      2026-10-03: `Builder/InitialSamplingTests` (the package's init kernel through
+      `KernelLauncher` on the CPU accelerator), green: χ² 21.52, 19.96, 20.60 against the computed
+      quantile 43.8202 (df 19); the count after `Build` is N. Red with the span written as `upper`
+      (gene 0: χ² 399.92). In [lower, upper) by the sample: `lower + u·(upper − lower)` with
+      u ≤ 1 − 2⁻⁵³ can still round to `upper` for some boxes, as the CPU package's sampler can;
+      not observed in the 3 000 genes.
 - [x] **1b, index draws.** On the CPU accelerator, for N = 4 and N = 50, with 10⁵ draws
       per i:
       - r1, r2 and r3 are mutually distinct and never equal i;
@@ -72,12 +78,17 @@ Written 2026-10-03, before any v1 code.
       2026-10-03: `CpuParityTests`, 100 cases (seed 20261003; N 4–40, D 1–12, F 0.1–2,
       CR 0 and 1 included): draw kinds, ranges and counts equal one to one, trials bit-identical,
       repairs below and above the box both occurring; red with the GPU repair as a clamp.
-- [ ] **1h, convergence to a known optimum** (positive control). Seed 1, on the CPU
+- [x] **1h, convergence to a known optimum** (positive control). Seed 1, on the CPU
       accelerator, and again under **Gpu** on both devices:
       - Sphere 5-D reaches 1e-6;
       - Rosenbrock 2-D reaches 1e-6, with the genes within 1e-3 of (1, 1);
       - Rastrigin 2-D reaches 1e-4.
       Red: selection that never takes the trial (all three red).
+      2026-10-03: `EndToEnd/ConvergenceTests` (N 50, F 0.5, CR 0.9, 1 000 generations,
+      chosen before the first run), green on the CPU accelerator and, under **Gpu**, on CUDA and
+      OpenCL: Sphere ≤ 2e-88, Rosenbrock exactly 0 at (1, 1), Rastrigin exactly 0 (its cosine a
+      series of its own, `Math.Cos` being off the allow-list). Red with `Survives` never true: all
+      nine cases.
 
 ### 2. Race-freedom held by the kernel
 
@@ -122,9 +133,13 @@ Written 2026-10-03, before any v1 code.
 
 ### 4. Reproducibility
 
-- [ ] **4a.** The same seed, run twice on the CPU accelerator, gives bit-identical genes
+- [x] **4a.** The same seed, run twice on the CPU accelerator, gives bit-identical genes
       and fitness, and seeds 1 and 2 differ. Under **Gpu**, the same on each device.
       Red: a seed taken from `Random.Shared` even when one is given.
+      2026-10-03: `EndToEnd/ReproducibilityTests` (population and result compared as bit
+      patterns), green on the CPU accelerator and, under **Gpu**, on CUDA and OpenCL. Red with the
+      seed drawn even when given, on all three. (The code draws an unseeded seed from
+      `RandomNumberGenerator`, not `Random.Shared`: HISTORY.md#v1-built-2026-10-03, item 2.)
 - [x] **4b.** The first 10⁴ draws of a fixed (seed, individual, generation) are
       bit-identical on the CPU accelerator and, under **Gpu**, on CUDA and OpenCL.
       Results across backends are not compared bitwise (`BOOT.md`, invariant 4).
@@ -140,21 +155,29 @@ Written 2026-10-03, before any v1 code.
       2026-10-03: `GpuGuardTests.OnlyTheTransferHelperCallsAnIlgpuHostTransfer`, green
       (three transfers found, all in `PopulationTransfers`); red on a `CopyToCPU` after
       the swap in `GpuDifferentialEvolution.Run`; fails "found nothing" on an empty scan.
-- [ ] **5b.** That helper counts its calls:
+- [x] **5b.** That helper counts its calls:
       - a 100-generation run with no observer makes exactly one download, the final
         population;
       - with an observer every 10 generations, it makes 11.
       Red: a download per generation.
+      2026-10-03: `EndToEnd/TransferCountTests`, green (1 and 11); red with a download per
+      generation.
 
 ### 6. Asynchrony and cancellation
 
-- [ ] **6a.** While an observer is blocked at generation 1 on a gate the test holds,
+- [x] **6a.** While an observer is blocked at generation 1 on a gate the test holds,
       `RunAsync` has already returned an incomplete task. Deterministic, no timing.
       Red: the loop run on the caller's thread.
-- [ ] **6b.** A token cancelled from the observer at generation 3 ends the task as
+      2026-10-03: `EndToEnd/AsynchronyTests.RunAsyncReturnsAnIncompleteTaskWhileTheObserverIsHeld`,
+      green; red with the loop run on the caller's thread.
+- [x] **6b.** A token cancelled from the observer at generation 3 ends the task as
       canceled, after at most 4 generations.
-- [ ] **6c.** After a run, a second `RunAsync` returns the same task; during a run it
+      2026-10-03: `ATokenCancelledAtGenerationThreeEndsTheTaskAsCanceled` (canceled, 3 to 4
+      observer calls), green; red with the token not observed in the loop.
+- [x] **6c.** After a run, a second `RunAsync` returns the same task; during a run it
       throws `InvalidOperationException`.
+      2026-10-03: `ASecondCallAfterTheRunReturnsTheSameTask`, `ACallDuringTheRunThrows`,
+      green; red with the finished task not reused.
 
 ### 7. Ownership
 
@@ -164,9 +187,14 @@ Written 2026-10-03, before any v1 code.
       2026-10-03: the rule "no GC.Collect in the GPU package" in
       `ProtocolConfig.ForbiddenCallRules`, run by `ForbiddenCallTests`; green; red on
       `GC.Collect()` added to `Dispose`.
-- [ ] **7b.** A caller-owned accelerator still allocates a buffer after the optimizer's
+- [x] **7b.** A caller-owned accelerator still allocates a buffer after the optimizer's
       `Dispose`.
       Red: disposing it.
+      2026-10-03: `EndToEnd/OwnershipTests`, the CPU accelerator and, under **Gpu**, CUDA and
+      OpenCL. Stricter than written: ILGPU's CPU accelerator still allocates after its own
+      `Dispose`, so the test also launches a kernel into the buffer and reads it back. Red with the
+      lease always disposing: `ObjectDisposedException` on the CPU accelerator, `CudaException`,
+      `CLException`.
 
 ### 8. Kernel guards (facts in `Protocol.Tests`, adapted from APT, source cited)
 
@@ -203,15 +231,45 @@ Written 2026-10-03, before any v1 code.
 
 ### Devices, builder, release
 
-- [ ] **D1.** On a machine with no GPU (hosted CI):
+- [x] **D1.** On a machine with no GPU (hosted CI):
       - `Auto` gives `Cpu`, with a non-null `FallbackReason`;
       - an explicit `Cuda` throws `InvalidOperationException` naming CUDA.
       Under **Gpu**, an explicit `Cuda` gives the RTX 5070 Ti and `OpenCL` gives
       `gfx1036`.
+      2026-10-03: `Devices/DeviceSelectionTests`, each case asking ILGPU which devices are
+      present and asserting its branch; all branches run here, the no-GPU ones with the GPUs hidden
+      (`CUDA_VISIBLE_DEVICES=-1`, `GPU_DEVICE_ORDINAL`): Auto then gives `Cpu` with "CUDA: no such
+      device is present.; OpenCL: no such device is present." Under **Gpu**: "NVIDIA GeForce RTX
+      5070 Ti" and `gfx1036`. Red: an explicit device falling back, a message without the device's
+      name, a null reason, CUDA mapped to OpenCL. Not yet run on a hosted runner.
 - [ ] **D2.** The CUDA math probe, under **Gpu**: `Exp`, `Log`, `Pow` and `Sqrt` in a
       kernel agree with `System.Math` within 4 ULP on 10⁴ arguments. The tolerance is
       APT's measurement for libdevice, not one chosen here.
-- [ ] **B1.** Every row of `API.md`'s v1 error table has a test that triggers it.
-- [ ] **R1.** CI packs the GPU package from the build, without publishing, like the CPU
+      ⚠ 2026-10-03: **red on CUDA, stopped, the owner's decision.** `Devices/MathProbeTests`,
+      10⁴ arguments log-spaced in [1e-3, 700], RTX 5070 Ti, contexts with `EnableAlgorithms()`:
+      | function | CUDA max ULP (at x) | arguments over 4 ULP | OpenCL `gfx1036` max ULP |
+      |---|---|---|---|
+      | Exp | 195 (652.2457760772028) | 2 618 | 1 |
+      | Log | 9 430 (0.9999920999476787) | 520 | 1 |
+      | Pow(x, 1.37) | 24 (0.0013455021986893204) | 2 807 | 1 |
+      | Sqrt | 0 | 0 | 0 |
+      The 4-ULP bound is APT's measurement for libdevice; ILGPU.Algorithms computes these in
+      software (APT root `BOOT.md`: "Algorithms replaces double math with CORDIC"), and
+      ILGPU 1.5.3's own libdevice path is defective for compute 10.0 and newer, where APT
+      completes it with a post-link of its own and needs a CUDA Toolkit 12.8+ installed. The
+      package's kernels call none of the three; only a caller's objective can.
+- [x] **B1.** Every row of `API.md`'s v1 error table has a test that triggers it.
+      2026-10-03: `Builder/BuilderErrorTests` (every argument row, each with a passing
+      boundary case beside it; the foreign accelerator built by hand, type 99),
+      `EndToEnd/RunErrorTests` (the observer's exception faults the task, same instance),
+      `AsynchronyTests` (a call during the run), `Devices` (an absent device, conditional like D1).
+      An objective with a `throw` fails `Build` with ILGPU's `InternalCompilerException` on all
+      three backends, so that row runs in CI. Red: each guard weakened in turn.
+- [x] **R1.** CI packs the GPU package from the build, without publishing, like the CPU
       "Pack" step. `release.yml` publishes it only from a `gpu-v*` tag; a `v*` tag does
       not pack it.
+
+      2026-10-03, by reading and a local pack: `ci.yml` packs the GPU package after the
+      build without publishing; `release.yml` has a `publish-gpu` job that runs only for
+      `gpu-v*` and a `publish-cpu` job only for `v*`. A local `dotnet pack` gives the DLL, the XML
+      documentation, `README.md`, `LICENSE` and `ILGPU_LICENSE`. Not yet run on GitHub.

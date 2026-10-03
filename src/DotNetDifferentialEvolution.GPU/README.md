@@ -68,8 +68,10 @@ read-only view of one individual's genes and returns its fitness: lower is bette
 
 - value types only; no classes, strings, arrays allocated in the body, exceptions or
   virtual calls;
-- `Math.Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`, `Max` and `double.IsNaN` work
-  on every backend;
+- `Math.Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`, `Max` and `double.IsNaN` compile
+  on every backend. On CUDA, `Exp`, `Log` and `Pow` come from ILGPU.Algorithms and are less
+  accurate than `System.Math`: measured up to 195, 9 430 and 24 units in the last place
+  (OpenCL and the CPU accelerator: at most 1);
 - data the objective needs (fit points, constants) goes in its fields, as value types or
   as ILGPU `ArrayView`s allocated on the same accelerator (pass that accelerator with
   `OnAccelerator`);

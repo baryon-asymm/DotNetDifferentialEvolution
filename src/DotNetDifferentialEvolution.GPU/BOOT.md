@@ -79,8 +79,10 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
   assembly named `ILGPURuntime`: the package grants it `InternalsVisibleTo`, and a
   caller's objective type must be public or do the same (`Objectives/API.md`).
 - **Every context is built with `EnableAlgorithms()`**, so `Exp`, `Log` and `Pow` have an
-  implementation on PTX. Whether that implementation meets APT's 4-ULP bound on CUDA is
-  check D2.
+  implementation on PTX. ⚠ 2026-10-03: that implementation misses APT's 4-ULP bound on CUDA
+  (measured: Exp 195, Log 9 430, Pow 24 ULP at worst; OpenCL 1), so check D2 is red and
+  waits for the owner's decision (ACCEPTANCE.md, D2). The package's own kernels call none
+  of the three.
 - The package ships `README.md` and `ILGPU_LICENSE` from this directory and the
   repository's `LICENSE`. It is packed from a `gpu-v*` tag by `release.yml`; CI packs it
   without publishing.
