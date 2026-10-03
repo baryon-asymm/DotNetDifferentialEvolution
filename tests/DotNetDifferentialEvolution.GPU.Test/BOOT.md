@@ -2,95 +2,61 @@
 
 ## Purpose
 
-What "the GPU package is ready" means today: the levels of verification, what each is
-checked against, and what is not covered. As the code stands there is one level, two
-end-to-end runs on a real OpenCL device against objectives with known optima.
+What "the GPU package is ready" means: the frozen checks of its
+[ACCEPTANCE.md](../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md), each proven on a
+known answer and red on a named mutation. The kernel guards (checks 5a, 7a, 8a–8d) live in
+[Protocol.Tests](../DotNetDifferentialEvolution.Protocol.Tests/API.md); everything else is
+here. The tests of 0.x left with its code → HISTORY.md#tests-of-0x-2026-10-03.
 
-| Level | What it checks | Against what (source of truth) | State |
+| Level | What it checks | Against what | Child |
 |---|---|---|---|
-| L0 | single strategies on the device (donor rule, crossover, bound repair, selection ties and `NaN`) | — | absent |
-| L1 | the controller's lifecycle, cancellation, observer calls, a second run | — | absent |
-| L2 | a full run converges: Rosenbrock 2-D; 6-coefficient polynomial least squares | the analytic minimum; the exact least-squares solution (NumPy, see [FitnessFunctions](FitnessFunctions/BOOT.md)) | ✅ local only |
-| Protocol | tree invariant, documents against code | `AGENTS.md`; `tools/protocol-lint` (textual); no reflection checks yet | partial |
-
-A green L2 over absent L0 and L1 means "converges on these two problems", not "each
-part is correct".
+| G0 | the RNG: known answers, uniformity, index draws, the same words on every backend | Random123's KAT vectors; closed forms; χ² quantiles computed and checked | [Random](Random/API.md) |
+| G1 | one DE step: donors, crossover, repair, survival, best pick, slot discipline | closed forms; the CPU package's step, bit for bit | [Kernels](Kernels/API.md) |
+| G1 | the objective's view cannot write | reflection | [Objectives](Objectives/API.md) |
+| G2 | the builder's argument errors, the device choice, the math probe | the error table of the package's `API.md`; `System.Math` | [Builder](Builder/API.md), [Devices](Devices/API.md) |
+| G3 | whole runs: sampling, convergence, reproducibility, transfers, asynchrony, ownership | known optima; counts | [EndToEnd](EndToEnd/API.md) |
 
 ## Invariants
 
-- **The references are independent of the optimizer.** The analytic Rosenbrock
-  minimum, and a polynomial optimum checked against an exact solver on 2026-10-02.
-- **Both runs use the package's defaults:** population 10 000, 1 000 generations,
-  `MutationStrategy` with F 0.3 and CR 0.8, `SelectionStrategy`,
-  `MaxGenerationStrategy`, box ±2000 in every gene. Held by `GetOptimizer` in
-  `DifferentialEvolutionOptimizerTests.cs`.
-- **The tests carry `Category=Gpu`, and CI excludes that category.** Held by the
-  `[Trait]` on the test class and the filter in `.github/workflows/ci.yml`; a new GPU
-  test class without the mark would run on hosted runners, which have no OpenCL device.
-  What it would do there was not observed, so nothing checks the mark.
+- **Every check runs on ILGPU's CPU accelerator** in hosted CI. A check that needs a real
+  device carries `[Trait("Category", "Gpu")]`, which CI excludes; it runs on a developer
+  machine with CUDA and OpenCL.
+- **No expected value is taken from an optimizer run.** Known answers are published
+  vectors, closed forms, or optima of the objective.
+- **Statistical thresholds are computed, not typed.** `Random/ChiSquared` computes the
+  quantiles and is checked against closed forms itself.
+- **Objectives compiled into kernels are `internal` structs.** The project grants
+  `InternalsVisibleTo("ILGPURuntime")` so ILGPU's launchers can see them.
 
 ## Dependencies
 
-- [DotNetDifferentialEvolution.GPU](../../src/DotNetDifferentialEvolution.GPU/API.md) —
-  `DifferentialEvolutionOptimizer`.
-- [Controllers/Kernels](../../src/DotNetDifferentialEvolution.GPU/Controllers/Kernels/API.md)
-  — `KernelController<…>`.
-- [Interfaces](../../src/DotNetDifferentialEvolution.GPU/Interfaces/API.md) —
-  `IFitnessFunctionInvoker`, the constraint of `GetOptimizer`.
-- [Models](../../src/DotNetDifferentialEvolution.GPU/Models/API.md) —
-  `OptimizationResult`, read through `RunAsync`'s result.
-- [MutationStrategies](../../src/DotNetDifferentialEvolution.GPU/MutationStrategies/API.md)
-  — `MutationStrategy<RandomGenerator>`.
-- [PopulationSamplingMakers](../../src/DotNetDifferentialEvolution.GPU/PopulationSamplingMakers/API.md)
-  — `PopulationSamplingMaker`.
-- [RandomGenerators](../../src/DotNetDifferentialEvolution.GPU/RandomGenerators/API.md)
-  — `RandomGenerator`.
-- [SelectionStrategies](../../src/DotNetDifferentialEvolution.GPU/SelectionStrategies/API.md)
-  — `SelectionStrategy`.
-- [TerminationStrategies](../../src/DotNetDifferentialEvolution.GPU/TerminationStrategies/API.md)
-  — `MaxGenerationStrategy`.
-- [Controllers/Kernels/Interfaces](../../src/DotNetDifferentialEvolution.GPU/Controllers/Kernels/Interfaces/API.md) — `IKernelController`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [PopulationSamplingMakers/Interfaces](../../src/DotNetDifferentialEvolution.GPU/PopulationSamplingMakers/Interfaces/API.md) — `IPopulationSamplingMaker`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [TerminationStrategies/Interfaces](../../src/DotNetDifferentialEvolution.GPU/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [DotNetDifferentialEvolution.GPU](../../src/DotNetDifferentialEvolution.GPU/API.md) — the
+  package under test, its internals included (`InternalsVisibleTo`).
 
-Outside the tree: xUnit 2.5.3, Microsoft.NET.Test.Sdk 17.8.0, coverlet 6.0.0; ILGPU
-and ILGPU.Algorithms 1.5.1 (`Context`, OpenCL, `XorShift32`); an OpenCL device.
+Each child declares the package nodes it checks. Outside the tree: xUnit 2.9.3,
+xunit.runner.visualstudio 3.1.4, Microsoft.NET.Test.Sdk 17.14.1, coverlet.collector 6.0.0;
+ILGPU 1.5.3. The project also references the CPU package, for check 1g only; the GPU package
+does not.
 
 ## Constraints
 
 Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 
-- Settings come from `tests/Directory.Build.props`; the csproj removes its global
-  `using DotNetOptimization.Abstractions`, which this package does not reference.
-- The context is created with OpenCL only; no CUDA and no CPU accelerator.
-- The run time is that of the device: on `gfx1036` about 1 s and 6 s per test.
+- Settings come from `tests/Directory.Build.props`.
+- A red result on a frozen check is not fixed in the test: the check is changed only openly,
+  with ⚠ and the reason, in the package's `ACCEPTANCE.md`.
 
 ## Acceptance criteria
 
-- [x] L2 is green and stable: 2026-10-02, `TestRosenbrockCase` and
-      `TestPolynomialApproximationFunctionCase`, 5 of 5 consecutive runs each, local,
-      OpenCL `gfx1036` (AMD integrated graphics), about 1 s and 6 s per run.
-- [x] L2 is non-degenerate: 2026-10-02, in a scratch clone of `63d3ff1`. Selection
-      keeping the worse individual (`<` turned into `>`) made both tests fail; crossover
-      never taking the mutant (`<= CR` turned into `<= CR - 1`) made both fail; the
-      unmutated clone passed both.
-- [ ] L0 and L1 do not exist (see the table).
-- [ ] The tests run in no CI: hosted runners have no OpenCL device.
-- [ ] ⚠ Runs are not seeded: the population comes from `Random.Shared` and the random
-      states from `(uint)Random.Shared.Next()`. A failure cannot be reproduced.
-- [ ] ⚠ A random state seeded with 0 terminates the test process (ILGPU's assertion).
-      Estimate, not measured: 10 000 states per run, each 0 with probability 1 in
-      2 147 483 647, about 4.7e-6 per run.
-- [ ] ⚠ The tolerances (1e-6 and 1e-8) are local constants in the test bodies.
-- [ ] ⚠ The bound and random-state device buffers allocated in `GetOptimizer` are never
-      disposed by the test.
-- [ ] ⚠ The project is named `.GPU.Test`; its siblings are `.UnitTests`,
-      `.IntegrationTests` and `.Tests.Common`.
+- [x] The project builds with 0 warnings under the maximum diagnostics and every test
+      passes, the `Gpu` ones included: 2026-10-03, local, Windows 11, RTX 5070 Ti (CUDA)
+      and `gfx1036` (OpenCL); counts in the package's `ACCEPTANCE.md`.
+- [x] Every check was seen red on its named mutation, once, then restored: 2026-10-03,
+      listed per check in the package's `ACCEPTANCE.md`.
 
 ## Taboos
 
-- **No looser tolerance for the sake of green.** The polynomial's 1e-8 already leaves
-  only about 7.8e-9 around the exact optimum; loosening it hides a slower search.
+- **No looser tolerance or threshold for the sake of green.**
 - **No expected value taken from an optimizer run.**
-- **No GPU test class without `Category=Gpu`.** CI would run it on runners that have
-  no OpenCL device.
+- **No device test without `Category=Gpu`.** CI would run it on runners without a GPU.
+- **No `Skip`, no hidden theory data.** Held by `NoSuppressionGuardTests` in Protocol.Tests.

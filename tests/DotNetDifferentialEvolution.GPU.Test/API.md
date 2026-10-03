@@ -1,37 +1,31 @@
 # API.md — DotNetDifferentialEvolution.GPU.Test
 
-The node exposes nothing outward: nobody references a test project. Its contract
-points upward: it is what the GPU package may consider proven.
+The node exposes nothing outward: nobody references a test project. Its contract points
+upward: it is what the GPU package may consider proven, check by check of the package's
+[ACCEPTANCE.md](../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md).
 
 ## What this node guarantees
 
-| Claim | Confirmed by | State |
+| Claim | Checks | Child |
 |---|---|---|
-| A default run (10 000 individuals, 1 000 generations, F 0.3, CR 0.8) finds the minimum of 2-D Rosenbrock to ±1e-6 in fitness and in each coordinate | L2, `TestRosenbrockCase`, against the analytic minimum | ✅ local, OpenCL |
-| The same run finds the least-squares coefficients of a degree-5 polynomial over 12 points to ±1e-8 | L2, `TestPolynomialApproximationFunctionCase`, against the exact solution | ✅ local, OpenCL |
-| Each strategy is correct on its own | L0 | absent |
-| The controller's lifecycle and cancellation behave as documented | L1 | absent |
+| Philox4x32-10 matches Random123's known answers, on the host and in a kernel on every backend | 3a | [Random](Random/API.md) |
+| Uniform doubles are uniform and below 1; index draws are Lemire's multiply-shift | 3b, 3c | [Random](Random/API.md) |
+| The draws of a (seed, individual, generation) are the same words on every backend | 4b | [Random](Random/API.md) |
+| One DE step: donors distinct and uniform, crossover with `jrand`, midpoint repair, survival with `NaN`, best pick | 1b–1f | [Kernels](Kernels/API.md) |
+| The GPU step and the CPU package's step build bit-identical trials from the same draws | 1g | [Kernels](Kernels/API.md) |
+| A generation writes slot i from parent i or trial i only; the objective's view cannot write | 2b, 2a | [Kernels](Kernels/API.md), [Objectives](Objectives/API.md) |
+| Every argument error of the package's API is raised where documented | B1 | [Builder](Builder/API.md) |
+| The device choice, the fallback reason and the math probe | D1, D2 | [Devices](Devices/API.md) |
+| Initial sampling, convergence to known optima, reproducibility, one download per run, asynchrony, cancellation, ownership | 1a, 1h, 4a, 5b, 6a–6c, 7b | [EndToEnd](EndToEnd/API.md) |
 
-Claims do not scale up the ladder: a green upper level with a red lower one means not
-"the node is correct" but "matched for an unknown reason".
+Claims do not scale up the ladder: a green whole run over a red step would mean "converges
+for an unknown reason", not "correct".
 
-## What the tests rely on
+## Children
 
-- `GetOptimizer<T>(lowerValue, upperValue, individualSize, fitnessFunction)` in
-  `DifferentialEvolutionOptimizerTests.cs`: builds the whole run with the defaults
-  above, on the preferred OpenCL device. It returns the optimizer, which disposes the
-  context and the device; the bound and random-state buffers are not disposed.
-- The objectives and their expected answers: [FitnessFunctions](FitnessFunctions/API.md).
-- [Helpers](Helpers/API.md): population builders, unused by any test.
-
-## Test ✅
-
-```csharp
-[Trait("Category", "Gpu")]
-public class DifferentialEvolutionOptimizerTests
-{
-    public DifferentialEvolutionOptimizerTests(ITestOutputHelper output);
-    public async Task TestRosenbrockCase();
-    public async Task TestPolynomialApproximationFunctionCase();
-}
-```
+- [Random](Random/API.md) — the RNG checks and the χ² helper.
+- [Kernels](Kernels/API.md) — the DE step's checks, scripted draws, the CPU parity.
+- [Objectives](Objectives/API.md) — the gene view's surface.
+- [Builder](Builder/API.md) — the argument errors.
+- [Devices](Devices/API.md) — device selection and the math probe.
+- [EndToEnd](EndToEnd/API.md) — whole runs.
