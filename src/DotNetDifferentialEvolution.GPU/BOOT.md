@@ -55,25 +55,7 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-- [x] The package builds under the repository's analyzer policy with 0 warnings:
-      2026-10-02, `dotnet build DotNetDifferentialEvolution.sln -c Release`.
-- [x] Two end-to-end runs converge (Rosenbrock 2-D; 6-coefficient polynomial fit):
-      2026-10-02, `DifferentialEvolutionOptimizerTests`, 2 of 2 (local, OpenCL
-      `gfx1036`).
-- [x] `dotnet pack` produces a package with the DLL, `README.md`, `LICENSE` and
-      `ILGPU_LICENSE`: 2026-10-02, local pack into the session scratchpad.
-- [ ] No test runs in CI: hosted runners have no OpenCL device (root `BOOT.md`).
-- [ ] ⚠ `RunAsync` is synchronous: it blocks the caller and returns a completed task.
-- [ ] ⚠ If individual 0's fitness is `NaN`, the result is `NaN`.
-- [ ] ⚠ The constructor compiles kernels and allocates device memory; constructing an
-      optimizer is the expensive and failing step, not running it.
-- [ ] ⚠ `Dispose` forces `GC.Collect()`.
-- [ ] ⚠ Diverges from the CPU package in semantics a user may carry over: ties keep the
-      parent, no `jrand`, out-of-box genes re-drawn, cancellation not reported as such,
-      no seed.
-- [ ] ⚠ `README.md` predates the import: its licence, ILGPU-licence and issue links
-      point to the old repository, and it says the library "automatically detects the
-      suitable device (GPU or CPU)" while its own example opens an OpenCL-only context.
+→ [ACCEPTANCE.md](ACCEPTANCE.md)
 
 ## Taboos
 
@@ -97,108 +79,114 @@ The `*/Interfaces` directories are nodes of their own, each with a single interf
 Owner's decision, 2026-10-02: describe them as they are; merging each into its parent
 would break the public namespaces, and is left for the GPU redesign.
 
-## Redesign proposals ⏳
+## v1 design ⏳
 
-Design mode, 2026-10-03: proposals only, no code. "Agreed in principle" means the owner
-agreed on 2026-10-02 when the import was planned. **Decided 2026-10-03: the owner accepted
-every recommendation below**, items 1–12 (in chat, after PR #13). Their realisation is the
-v1 design; the ⏳ on this heading stays until that design is written and approved.
+Decided by the owner on 2026-10-03: every recommendation of the redesign proposals was
+accepted (full text, sources, the CUDA table → HISTORY.md#redesign-proposals-2026-10-03).
+Design mode: none of this exists yet. The public contract is `API.md`, `## v1 contract
+⏳`; the checks, frozen before any code, are in [ACCEPTANCE.md](ACCEPTANCE.md). Coding
+starts only after the owner approves this design.
 
-1. **Result contract**: agreed in principle. The optimizer returns
-   `DotNetOptimization.Abstractions`' solution type, as the CPU package does, and the
-   package takes that dependency. It still references nothing of the CPU package, so
-   the root taboo holds.
-2. **A fluent builder** shaped like the CPU one: agreed in principle. It replaces
-   constructing `KernelController<…>` with four generic struct arguments by hand. The
-   struct generics stay inside, because they are what keeps virtual calls off the device.
-3. **Classic DE aligned with `docs/ALGORITHMS.md`**: agreed in principle. That means
-   `jrand` (at least one gene from the mutant), ties keep the trial, and a seed. Open:
-   the bound rule. Today an out-of-box gene is re-drawn; the CPU package repairs.
-   Recommendation: the CPU's rule, so one seed-free description fits both packages.
-4. **v1 scope**: open. Recommendation: classic DE only in the first new release, jDE in
-   the next minor. Items 1–3 already make it a breaking release. jDE needs per-individual
-   F and CR buffers on the device and their update between launches, a design of its
-   own.
-5. **Precision**: open. Recommendation: keep `double` for v1 (CPU parity, comparable
-   results). Measure `float` on both reference devices (`gfx1036` over OpenCL, RTX
-   5070 Ti over CUDA) before offering it. Consumer GPUs run FP64 at a fraction of the
-   FP32 rate, so the gain may be large, but nobody has measured it: not here, and not in
-   the two ILGPU projects on the same machine. Both use only `double`, for physics
-   reasons; CPM withdrew its "FP64 at 1/64 on GeForce" figure as unmeasured (CPM
-   `HISTORY.md`, 2026-09-27).
-6. **Objective interface**: open. Today `IFitnessFunctionInvoker.Invoke` writes into the
-   population itself, so a buggy objective can write another individual's slot.
-   Recommendation: a struct method that takes one individual's genes and returns the
-   value, which the kernel writes. Then the race-freedom invariant is held by the
-   kernel, not by every user.
-7. **Release path and version**: open. Recommendation: a separate tag prefix (for
-   example `gpu-v*`) with its own job in `release.yml`, and a first version above 0.2.0
-   (1.0.0, since items 1–6 break the API). That clears the two ⚠ items of the root
-   `BOOT.md`. Then archive the old repository with a pointer here, since nuget.org's
-   project URLs lead to it, and fix `README.md`'s links.
-8. **Known defects to fix in the same release**, all recorded above under acceptance
-   criteria:
-   - `RunAsync` is synchronous;
-   - a `NaN` at individual 0 poisons the result;
-   - `Dispose` calls `GC.Collect()`;
-   - cancellation is not reported as such;
-   - the `*/Interfaces` subnodes stay separate. Merging them into their parents changes
-     public namespaces, which only a breaking release may do (owner's decision of
-     2026-10-02, under `## Decomposition`).
+### Decisions
 
-Items 9–12 were added on 2026-10-03. They come from what two other ILGPU projects on the
-owner's machine established: APT (`C:\Projects\AerospacePropellantThermodynamics`) and
-CPM (`C:\Projects\CompositePropellantMicrostructure`). Both run CUDA plus ILGPU's CPU
-accelerator, and neither uses OpenCL. Their paths are cited from their own documents,
-read 2026-10-03, and not re-measured here.
+- **Version 1.0.0**, a breaking release: every public type of 0.x is removed or
+  replaced. Released from tags `gpu-v*` by its own job in `release.yml`; the CPU job
+  keeps `v*`.
+- **ILGPU 1.5.3.** The figure that decided it (2026-10-03): ILGPU 1.5.1 fails PTX JIT on
+  the RTX 5070 Ti through CUDA; 1.5.3 passes both GPU tests there and on OpenCL.
+- **`double` only; DE/rand/1/bin only.** jDE comes in the next minor version.
+- **The objective returns its value.** A struct implementing `IGpuFitnessFunction`,
+  `double Evaluate(GeneView genes)`. It gets a read-only view of one individual, and the
+  kernel writes the value.
+- **The result is an `ISolution`** from `DotNetOptimization.Abstractions` 1.0.0, a new
+  package dependency (outside the tree, as for the CPU package).
+- **A staged builder**, like the CPU one, carrying the objective's type through the
+  stages.
+- **The device.**
+  - `Auto` tries CUDA, then OpenCL, then ILGPU's CPU accelerator, and records what it
+    chose and why it skipped the others.
+  - An explicit device that is missing makes `Build` throw. It never falls back.
+  - Alternatively, the caller passes in its own ILGPU `Accelerator`, which the optimizer
+    never disposes.
+- **The RNG is Philox4x32-10, counter-based.** Its known-answer vectors are copied from
+  Random123's `kat_vectors` when it is implemented, with the source cited.
+- **F and CR are validated** (F finite and > 0, CR in [0, 1]). This deliberately differs
+  from the CPU package, which accepts any value.
 
-9. **CUDA as a first-class backend**: open, and the owner's machine has an RTX 5070 Ti.
-   The optimizer already takes any `Accelerator`, but only OpenCL (`gfx1036`) was
-   ever run; the tests hard-code `builder.OpenCL()`. Recommendation: test on CUDA
-   before v1, and let the builder choose the device like APT does. `Auto` falls back
-   to the CPU and reports why; an explicit CUDA request never falls back silently. A
-   risk to measure first: APT found that ILGPU 1.5.3 drops libdevice wrappers on
-   compute_100+ (Blackwell, which the 5070 Ti is) and fixes it with a post-link (APT
-   `src/Execution/BOOT.md`). This package pins ILGPU 1.5.1, so the ILGPU version is
-   part of this item.
+### Invariants of v1
 
-   Measured 2026-10-03 with the two `GPU.Test` cases (Rosenbrock with `Math.Pow`, the
-   polynomial fit with `XMath.Pow`) in a scratch copy, on the device the probe asserted:
-   - ILGPU 1.5.1, CUDA, RTX 5070 Ti (compute 12.0, driver 616.92): both fail with
-     `CudaException: a PTX JIT compilation failed`. **The released package cannot run
-     on this GPU through CUDA.**
-   - ILGPU 1.5.3, CUDA, same GPU: 2 of 2 pass (29 s for the run, compile included).
-   - ILGPU 1.5.3, OpenCL, `gfx1036`: 2 of 2 pass (50 s), so the upgrade breaks nothing
-     there.
+Each one is checked by the item of the same number in [ACCEPTANCE.md](ACCEPTANCE.md).
 
-   Consequence for v1: ILGPU 1.5.3. APT's libdevice gap was not seen here. Whether these
-   kernels used libdevice at all was not established, so the probe kernel APT uses (a
-   math kernel that must load before CUDA counts as bound) stays part of the design.
-   The timings are one run each, compile included: not a speed comparison.
-10. **The GPU tests in CI on ILGPU's CPU accelerator**: recommended. APT and CPM run the
-    same kernels on the CPU accelerator in hosted CI and on a GPU only locally or on a
-    self-hosted runner. That would close the root's "GPU tests run in no CI" item. The
-    CPU accelerator needs a device sized from `ProcessorCount` (its default is 16
-    threads). It is an oracle, not a production path: CPM measured it about 10× slower
-    than plain .NET threads (CPM `HISTORY.md`).
-11. **A counter-based device RNG**: recommended. Today each individual keeps its own
-    `XorShift32` state in device memory: 32 bits of state, so at most 2^32 distinct
-    doubles per stream. CPM measured that streams made by jumping one generator are
-    shifts of one sequence, not independent samples (CPM `src/Random/BOOT.md`,
-    2026-09-23). A counter-based generator gives a value as a pure function of (seed,
-    individual, generation, draw): reproducible, independent per individual, and with
-    no state buffer. That also gives item 3 its seed.
-12. **Kernel guard tests from APT**: recommended, in this node's protocol tests or its
-    own.
-    - An IL walk from the kernels that refuses `throw`, `newarr`, `newobj` and `box`,
-      so a kernel that cannot compile fails hosted CI, not the first GPU run.
-    - An allow-list of `Math` members.
-    - No constant on the left of an ordered floating comparison. ILGPU flips its NaN
-      ordering when it swaps the operands, so CUDA and CPU disagree (APT
-      `BOOT.md`, the ILGPU 1.5.3 constraint).
-    - `NaN` handled by explicit `IsNaN` tests, not by `<`. Today a `NaN` parent is
-      never replaced (selection uses `trial < parent`), while the CPU package ranks
-      `NaN` worst.
-    - Host transfers only through the pinning overloads. APT lost downloads through
-      `CopyToCPU(ref T, long)`. This package uses `GetAsArray1D`/`GetAsArray2D`,
-      which pin, so it is safe today; the guard keeps it that way.
+1. **The semantics are those of `docs/ALGORITHMS.md`, §§2–3 and §9.**
+   - The initial population is uniform in the box, and the evaluation count starts at N.
+   - r1, r2 and r3 are mutually distinct and differ from i.
+   - Crossover is binomial and includes `jrand`.
+   - Out-of-box genes are repaired to the midpoint toward the parent.
+   - Survival is `f(u) <= f(x)`; `NaN` is worse than every real value, and two `NaN`s
+     are not a tie.
+   - The best individual: `NaN` is worst, and a tie goes to the lowest index.
+2. **The kernel, not the user, prevents races.** Thread i writes only trial slot i and
+   next slot i, and the objective gets a view it cannot write through.
+3. **A random draw is a pure function of (seed, individual, generation, draw index).**
+   It is the same on every backend: the RNG uses integer arithmetic only.
+4. **Reproducibility.**
+   - The same seed, device and package and ILGPU versions give a bit-identical result.
+   - Across backends the draws are identical, but results may differ: FMA contraction
+     and math-library ULPs are the backend's. This is stated, not hidden.
+5. **No host round trip per generation.** The limits are host counters. The population
+   reaches the host only when the observer is due and once at the end.
+6. **`RunAsync` is asynchronous, as in the CPU package.**
+   - It returns before the run ends.
+   - A token is observed between generations and ends the task as canceled.
+   - A second call after the run returns the same task; a call during the run throws.
+7. **Resource ownership.**
+   - `Dispose` frees what the optimizer allocated, and only that.
+   - There is no `GC.Collect`.
+   - A caller-owned `Accelerator` is never disposed.
+8. **Kernel code compiles on every backend.**
+   - Nothing reachable from a kernel contains `throw`, `newarr`, `newobj` or `box`.
+   - `Math` calls are limited to an allow-list.
+   - No constant sits on the left of an ordered floating-point comparison.
+   - `NaN` is tested with `IsNaN`.
+   - Host transfers use only the pinning overloads.
+
+### Decomposition of v1
+
+| Node | Public | Role |
+|---|---|---|
+| this node | yes | builder, optimizer, result, `GpuDevice`, snapshot for the observer |
+| `Objectives/` | yes | `IGpuFitnessFunction`, `GeneView` |
+| `Devices/` | no | device selection, the CUDA math-probe kernel APT uses |
+| `Kernels/` | no | init and generation kernels, one thread per individual; the DE step as static functions over a draw source, so tests can script the draws; populations individual-major (`N·D` genes, `N` fitness), two buffers swapped per generation plus a trial buffer |
+| `Random/` | no | Philox4x32-10; uniform `[0, 1)` from 53 bits; Lemire index draws |
+
+The dependencies run one way: the root depends on `Objectives`, `Devices` and `Kernels`;
+`Kernels` depends on `Objectives` and `Random`. `Devices` and `Random` depend on nothing.
+
+Every 0.x node goes in v1, each together with its code in the same commit:
+- `Interfaces`, `Models`, `Controllers/Kernels`;
+- `MutationStrategies`, `SelectionStrategies`, `RandomGenerators`,
+  `PopulationSamplingMakers`, `TerminationStrategies`;
+- each of their `Interfaces` children.
+
+That also settles the owner's open question on the `*/Interfaces` nodes (see
+`## Decomposition`).
+
+Tests: `GPU.Test` gets the children `Random/`, `Kernels/`, `Builder/`, `Devices/` and
+`EndToEnd/`. Every test runs on the CPU accelerator in hosted CI. The same cases run on
+a real device locally under `Category=Gpu`. The kernel guards (invariant 8) become facts
+in `Protocol.Tests`, adapted from APT with the source cited.
+
+### Order of work
+
+Each slice is one PR, merged at the owner's word:
+
+1. `Random`
+2. `Objectives` and `Kernels`
+3. `Devices`
+4. the root, with the 0.x nodes deleted and `README.md` rewritten
+5. CI and `release.yml`, plus the guard facts
+6. local runs on CUDA and OpenCL; then 1.0.0, at the owner's word
+
+The child node pairs are written at the start of the slice that codes them, from this
+section. Each must pass the sufficiency check of `prompts/03` before its code.
