@@ -43,9 +43,9 @@ what it should be, the node says so with a ⚠; those are the agenda for design 
 None.
 
 Outside the tree: .NET SDK 8 and 10 (CI installs both); `DotNetOptimization.Abstractions`
-1.0.0 (CPU package); ILGPU and ILGPU.Algorithms 1.5.1 (GPU package); xUnit 2.5.3,
-Microsoft.NET.Test.Sdk 17.8.0, coverlet 6.0.0 (tests; Protocol.Tests: xUnit 2.9.3,
-Microsoft.NET.Test.Sdk 17.14.1); BenchmarkDotNet 0.14.0 (benchmarks);
+1.0.0 (CPU package); ILGPU 1.5.3 (GPU package); xUnit 2.9.3, xunit.runner.visualstudio
+3.1.4, Microsoft.NET.Test.Sdk 17.14.1, coverlet 6.0.0 (every test project, since 2026-10-03:
+the older versions trip CA1515 on public test classes); BenchmarkDotNet 0.14.0 (benchmarks);
 Python 3.8+ (`tools/protocol-lint`).
 
 ## Constraints

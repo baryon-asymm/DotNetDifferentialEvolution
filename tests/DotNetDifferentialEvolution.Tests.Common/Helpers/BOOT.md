@@ -26,6 +26,8 @@ test behind the whole engine. This node builds one from a test objective.
   — `IControlParameterProvider`, the optional provider (2026-10-03).
 - [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md)
   — `ITerminationStrategy`.
+- [RandomProviders](../../../src/DotNetDifferentialEvolution/RandomProviders/API.md)
+  — `SeededRandomProvider`, `BaseRandomProvider`, the sampling generator (2026-10-03).
 
 Outside the tree: `DotNetOptimization.Abstractions` 1.0.0 (`IFitnessFunctionEvaluator`).
 

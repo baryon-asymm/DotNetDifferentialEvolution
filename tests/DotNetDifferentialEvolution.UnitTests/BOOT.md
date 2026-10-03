@@ -42,8 +42,9 @@ A green U2 over a red U0 means the builder wires parts that are themselves wrong
 - [Models](../../src/DotNetDifferentialEvolution/Models/API.md) — `Population`, the
   return type the surface tests pin.
 
-Each child declares the package nodes it checks. Outside the tree: xUnit 2.5.3,
-xunit.runner.visualstudio 2.5.3, Microsoft.NET.Test.Sdk 17.8.0, coverlet.collector 6.0.0.
+Each child declares the package nodes it checks. Outside the tree: xUnit 2.9.3,
+xunit.runner.visualstudio 3.1.4, Microsoft.NET.Test.Sdk 17.14.1 (all since 2026-10-03, for
+the maximum diagnostics), coverlet.collector 6.0.0.
 
 ## Constraints
 

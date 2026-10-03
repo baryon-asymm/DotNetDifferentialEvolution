@@ -15,9 +15,9 @@ performance changes to the executor and the mutation arithmetic.
 
 ## Dependencies
 
-- [AlgorithmExecutors](../../../src/DotNetDifferentialEvolution/AlgorithmExecutors/API.md),
-  [AlgorithmExecutors/Interfaces](../../../src/DotNetDifferentialEvolution/AlgorithmExecutors/Interfaces/API.md)
-  — the executor under measurement.
+- [AlgorithmExecutors](../../../src/DotNetDifferentialEvolution/AlgorithmExecutors/API.md)
+  — the executor under measurement, held as the concrete `AlgorithmExecutor` since
+  2026-10-03 (CA1859), so `AlgorithmExecutors/Interfaces` is no longer a dependency.
 - [Models](../../../src/DotNetDifferentialEvolution/Models/API.md) — `ProblemContext`.
 - [MutationStrategies](../../../src/DotNetDifferentialEvolution/MutationStrategies/API.md),
   [MutationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/MutationStrategies/Interfaces/API.md),

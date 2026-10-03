@@ -54,9 +54,10 @@ orchestrator, the builder end to end, and convergence on functions with known op
 - [AlgorithmExecutors/Interfaces](../../src/DotNetDifferentialEvolution/AlgorithmExecutors/Interfaces/API.md) — `IAlgorithmExecutor`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [Controllers/WorkerControllerEventHandlers/Interfaces](../../src/DotNetDifferentialEvolution/Controllers/WorkerControllerEventHandlers/Interfaces/API.md) — `IWorkerPassLoopDoneHandler`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [FitnessFunctionEvaluators/Interfaces](../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [RandomProviders](../../src/DotNetDifferentialEvolution/RandomProviders/API.md) — `SeededRandomProvider`, the command source of `WorkerControllerTests` (2026-10-03, replacing `System.Random` under CA5394).
 
-Outside the tree: xUnit 2.5.3, xunit.runner.visualstudio 2.5.3, Microsoft.NET.Test.Sdk
-17.8.0, coverlet.collector 6.0.0.
+Outside the tree: xUnit 2.9.3, xunit.runner.visualstudio 3.1.4, Microsoft.NET.Test.Sdk
+17.14.1 (all since 2026-10-03, for the maximum diagnostics), coverlet.collector 6.0.0.
 
 ## Constraints
 
