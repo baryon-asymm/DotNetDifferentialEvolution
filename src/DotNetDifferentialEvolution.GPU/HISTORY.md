@@ -2,6 +2,39 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="libdevice-port-2026-10-03"></a>
+## 2026-10-03 — CUDA math through libdevice, as APThermo does; ILGPU.Algorithms removed
+
+D2 was red on CUDA with `EnableAlgorithms()`: Exp 195, Log 9 430, Pow 24 ULP at worst on
+the RTX 5070 Ti (ACCEPTANCE.md, D2). The owner, the same day, after asking how
+APThermo (`C:\Projects\AerospacePropellantThermodynamics`, commit `5fdd82c`) does it:
+"Давай сделаем также как в APThermo".
+
+What that means here, adapted from APT's `src/Execution/LibDevice` (`LibDeviceLocator`,
+`LibDevicePostLink`, `CudaWslDevices`) and `src/Execution/AcceleratorChoice.cs`:
+
+1. **No ILGPU.Algorithms.** A CUDA context is built with `Math(MathMode.Default)` and
+   `LibDevice(dll, bitcode)`, so ILGPU emits calls to its libdevice wrappers; OpenCL and
+   the CPU accelerator use their own math, as before.
+2. **A post-link completes the wrappers.** ILGPU 1.5.3 calls the `__nv_*` wrappers and,
+   for compute 10.0 and newer, defines none of them (measured here on `sm_120`: four
+   calls, no definition). Every CUDA kernel is compiled, completed from ILGPU's own
+   fragments through libnvvm, trial-loaded and only then loaded.
+3. **CUDA needs a CUDA Toolkit** for libnvvm and `libdevice.10.bc`, found as APT finds
+   them. Without one, an explicit CUDA request fails naming both files and Auto goes on to
+   OpenCL with that reason. A caller-owned CUDA accelerator brings its own context, and
+   its kernels are completed with its own libnvvm when that context has `LibDevice`.
+4. **CUDA counts as opened only after the probe kernel loads** through the post-link, and
+   libnvvm is checked before the accelerator exists, so a bad library never reaches the
+   device.
+5. **The WSL workaround** for a second CUDA context of a process, as APT's.
+
+Not taken from APT: its explicit libnvvm and libdevice paths in the engine options (the
+package has no options object; a caller-owned accelerator covers the case); its all-cores
+CPU device, its launch budget and kernel cache (the package has its own launcher).
+
+Checks frozen for it before its code: ACCEPTANCE.md, L1–L9.
+
 <a id="v1-built-2026-10-03"></a>
 ## 2026-10-03 — v1 built; the 0.x description and the v1 design moved in full
 

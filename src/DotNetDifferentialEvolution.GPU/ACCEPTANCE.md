@@ -273,3 +273,57 @@ Written 2026-10-03, before any v1 code.
       build without publishing; `release.yml` has a `publish-gpu` job that runs only for
       `gpu-v*` and a `publish-cpu` job only for `v*`. A local `dotnet pack` gives the DLL, the XML
       documentation, `README.md`, `LICENSE` and `ILGPU_LICENSE`. Not yet run on GitHub.
+
+
+### CUDA math through libdevice — checks added 2026-10-03, before the port's code ⏳
+
+⚠ 2026-10-03: added on the owner's decision to resolve D2 as APThermo does: libdevice
+completed by a post-link of the package's own, in place of ILGPU.Algorithms →
+HISTORY.md#libdevice-port-2026-10-03. D1, D2 and 7b stay as written; only the contexts
+they open change.
+
+- [ ] **L1, discovery** (CI). Over fake toolkit trees in a temporary directory, through the
+      locator's seam (platform, environment and base directory given, not read):
+      - Windows: `CUDA_PATH` before the versioned directories; `v13.3` before `v9.0` (by
+        parsed version, not by string); both the `nvvm\bin` and the `nvvm\bin\x64` layout; a
+        root with the library and no bitcode passed over for the next; a root named twice
+        tried once; no `CUDA_PATH` and no base directory → nothing tried.
+      - Linux: `CUDA_PATH`, then `CUDA_HOME`, then `<base>/cuda`, then `cuda-*` newest
+        first; a root named twice tried once.
+      - Any other platform: nothing tried.
+      Red: the versions sorted as strings; the bitcode check removed.
+- [ ] **L2, wrapper inventory** (CI). Over two committed PTX texts of `MathProbe.Probe`,
+      their provenance recorded beside them: ILGPU 1.5.3's own for `sm_120` and the same
+      after the post-link. The called set is the same in both and not empty; the first
+      defines none of it; in the second, called = defined; no parameter name is read as a
+      call; LF and CRLF give the same sets. Red: the call pattern without its trailing
+      comma.
+- [ ] **L3, post-link guards** (CI). The check after compilation names exactly the wrappers
+      left without a definition and is not fooled by a call site. Every non-success
+      `NvvmResult` and `CudaError`, read from the enums, throws naming the post-link, the
+      library, the call, the result and the target; a log is carried, trimmed of NUL
+      padding, and a log that trims to nothing leaves no trailing ": ". Red: the
+      definition check run over the whole linked text; the trim without `'\0'`.
+- [ ] **L4, the ILGPU pin** (CI). The assertion of the ILGPU version and of the reflected
+      members passes on the referenced ILGPU and, for another expected version, throws
+      naming both. The WSL workaround's reflection names a member it cannot find. Red: the
+      version comparison removed.
+- [ ] **L5, the post-link on the device** (**Gpu**). On the RTX 5070 Ti the probe kernel's
+      own PTX calls wrappers and defines none; `Link` compiles exactly those, and the
+      result loads. CUDA counts as opened only after the probe kernel has loaded through
+      the post-link. Red: `Link` returning the kernel unchanged → `Open(Cuda)` throws with
+      the driver's result.
+- [ ] **L6, no toolkit** (CI, conditional like D1). With the locator finding nothing, on a
+      machine with a CUDA device: an explicit `Cuda` throws naming CUDA, libnvvm and
+      libdevice; `Auto` skips CUDA with that reason. With no CUDA device the reason is the
+      missing device, as in D1. Red: CUDA opened without libdevice.
+- [ ] **L7, a bad library** (**Gpu**). A file named as libnvvm that is not a library, with
+      the real bitcode: an explicit `Cuda` throws naming its path; 20 `Auto` opens fall
+      back and cost at most 64 MiB of free device memory (APT's bound for the same check).
+      Red: the library checked only after the accelerator is created.
+- [ ] **L8, no ILGPU.Algorithms** (CI, Protocol.Tests). The GPU assembly references no
+      `ILGPU.Algorithms`. Red: the reference and `EnableAlgorithms()` restored.
+- [ ] **L9, every CUDA context of a process binds** (CI and **Gpu**). The WSL resolver
+      failure is recognised by where it was thrown, not by its message. Under **Gpu**,
+      three CUDA optimizers built one after another each bind. Red: recognition by
+      message.
