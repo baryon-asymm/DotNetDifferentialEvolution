@@ -1,0 +1,13 @@
+<Project>
+
+    <!--
+      The SDK ships a default NoWarn (1701;1702 and others) that Directory.Build.props cannot see: it
+      is set by the SDK's own targets, imported after the props. Clearing it here, after that import,
+      is the only way to reach "no diagnostic is suppressed anywhere" for every project (owner's
+      decision, 2026-10-03; root BOOT.md, Invariants).
+    -->
+    <PropertyGroup>
+        <NoWarn></NoWarn>
+    </PropertyGroup>
+
+</Project>

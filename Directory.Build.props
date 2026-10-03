@@ -1,8 +1,9 @@
 <Project>
 
     <!--
-      Repo-wide build strictness: enable the full set of .NET analyzers and code-style checks,
-      and fail the build on ANY warning. Applies to every project (src, benchmarks, tests);
+      Repo-wide build strictness at its maximum (owner's decision, 2026-10-03; root BOOT.md,
+      Invariants): the full set of .NET analyzers and code-style checks, and fail the build on ANY
+      warning. Applies to every project (src, benchmarks, tests);
       the Tests props import this file so the test projects inherit the same rules.
     -->
     <PropertyGroup>
@@ -16,15 +17,22 @@
         <AnalysisLevel>latest-all</AnalysisLevel>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
-        <!-- Surface every warning rather than capping the count. -->
+        <!-- Surface every warning rather than capping the count; every warning wave, present and
+             future. -->
         <WarningLevel>9999</WarningLevel>
 
-        <!-- The NuGet vulnerability audit (NU1901-NU1904) is the one warning family that must not
-             be an error. It fires on advisories published against dependencies, so a build that
-             was green yesterday can fail today with no change in this repository — including the
-             release workflow, mid-tag. The audit still runs and still reports; it just cannot
-             block a release on something outside the tree. -->
-        <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+        <!-- The compiler's own extra strictness checks. -->
+        <Features>strict</Features>
+
+        <!-- XML documentation for every project: CS1591 then holds for every publicly visible
+             member (test methods included), and IDE0005 (unnecessary usings) is only reported in a
+             build that generates the documentation file. -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <!-- No warning is exempt from being an error, the NuGet vulnerability audit (NU1901-NU1904)
+             included: an advisory published against a dependency fails the build until it is dealt
+             with (owner's decision, 2026-10-03: the maximum, with no exceptions). The SDK's default
+             NoWarn is cleared in Directory.Build.targets. -->
 
         <!-- Pin the language version instead of letting it be inferred from the target framework.
              Inferred, it would move on its own the day the TFM moves, and it diverged between the
