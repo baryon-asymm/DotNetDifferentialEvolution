@@ -77,6 +77,9 @@ public sealed class GpuDifferentialEvolution : IDisposable
     /// <summary>Gets the number of population downloads so far (ACCEPTANCE.md, check 5b).</summary>
     internal int PopulationDownloadCount => _transfers.DownloadCount;
 
+    /// <summary>Gets the number of evaluations so far: N after <c>Build</c> (ACCEPTANCE.md, check 1a).</summary>
+    internal long EvaluationCount => _evaluations;
+
     /// <summary>
     /// Starts the run on a thread of its own and returns at once. The token is observed between
     /// generations and ends the task as canceled. After the run, a second call returns the same
