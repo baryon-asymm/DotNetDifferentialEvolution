@@ -133,6 +133,9 @@ Each one is marked in the code at the place it changes.
 - [x] All facts green on the unmutated tree: 2026-10-03, 46 of 46, `dotnet test
       tests/DotNetDifferentialEvolution.Protocol.Tests -c Release` (local, Windows 11,
       .NET SDK 10.0.112).
+      Again after GPU v1 and the guards, 2026-10-03: 37 of 37 (the GPU guards and
+      `NoSuppressionGuardTests` added; the earlier 46 counted a run with different test
+      cases, not re-derived).
 - [x] The first run's findings are resolved in the documents, not in the facts. On
       2026-10-03, 48 dependency findings:
       - 13 were the compiler helpers and 2 were generic constraints (the deviations
