@@ -14,7 +14,7 @@ public sealed class NaNSphereEvaluator(
     int lastNaNEvaluation = int.MaxValue,
     int dimension = 2) : BenchmarkFunctionEvaluator(dimension)
 {
-    private readonly SphereEvaluator _sphere = new SphereEvaluator(dimension);
+    private readonly SphereEvaluator _sphere = new(dimension);
 
     private int _evaluationsCount;
 
@@ -24,6 +24,12 @@ public sealed class NaNSphereEvaluator(
     /// <summary>Gets the last evaluation (1-based) that returns NaN.</summary>
     public int LastNaNEvaluation { get; } = lastNaNEvaluation;
 
+    /// <summary>
+    /// Evaluates the sphere function at <paramref name="genes"/>, or returns NaN when this
+    /// evaluation's 1-based number lies in [<see cref="FirstNaNEvaluation"/>, <see cref="LastNaNEvaluation"/>].
+    /// </summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The sphere value at <paramref name="genes"/>, or <see cref="double.NaN"/> inside the window.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -35,11 +41,15 @@ public sealed class NaNSphereEvaluator(
             : value;
     }
 
+    /// <summary>Returns the lower bound of the sphere domain: -5.12 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => _sphere.GetLowerBounds();
 
+    /// <summary>Returns the upper bound of the sphere domain: 5.12 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => _sphere.GetUpperBounds();
 
+    /// <summary>Returns 0, the sphere global minimum value.</summary>
     public override double GetGlobalMinimumFfValue() => _sphere.GetGlobalMinimumFfValue();
 
+    /// <summary>Returns the sphere global minimizer, the origin.</summary>
     public override ReadOnlyMemory<double> GetGlobalMinimumGenes() => _sphere.GetGlobalMinimumGenes();
 }

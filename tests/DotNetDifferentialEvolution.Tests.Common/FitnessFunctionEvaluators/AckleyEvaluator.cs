@@ -13,6 +13,9 @@ public sealed class AckleyEvaluator(
     private const double B = 0.2;
     private const double C = 2.0 * Math.PI;
 
+    /// <summary>Evaluates the Ackley function at <paramref name="genes"/>.</summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The function value at <paramref name="genes"/>.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -31,11 +34,15 @@ public sealed class AckleyEvaluator(
                + Math.E;
     }
 
+    /// <summary>Returns the lower bound of the Ackley domain: -32.768 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => UniformBounds(-32.768);
 
+    /// <summary>Returns the upper bound of the Ackley domain: 32.768 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => UniformBounds(32.768);
 
+    /// <summary>Returns 0, the Ackley global minimum value.</summary>
     public override double GetGlobalMinimumFfValue() => 0.0;
 
+    /// <summary>Returns the Ackley global minimizer, the origin.</summary>
     public override ReadOnlyMemory<double> GetGlobalMinimumGenes() => UniformMinimizer(0.0);
 }

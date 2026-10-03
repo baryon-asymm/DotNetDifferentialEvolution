@@ -15,6 +15,9 @@ public sealed class StyblinskiTangEvaluator(
     /// <summary>The per-dimension global minimizer coordinate.</summary>
     public const double Minimizer = -2.903534;
 
+    /// <summary>Evaluates the Styblinski-Tang function at <paramref name="genes"/>.</summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The function value at <paramref name="genes"/>.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -28,11 +31,15 @@ public sealed class StyblinskiTangEvaluator(
         return 0.5 * sum;
     }
 
+    /// <summary>Returns the lower bound of the Styblinski-Tang domain: -5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => UniformBounds(-5.0);
 
+    /// <summary>Returns the upper bound of the Styblinski-Tang domain: 5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => UniformBounds(5.0);
 
+    /// <summary>Returns the approximate Styblinski-Tang global minimum value, <see cref="MinimumValuePerDimension"/> times <see cref="BenchmarkFunctionEvaluator.Dimension"/>.</summary>
     public override double GetGlobalMinimumFfValue() => MinimumValuePerDimension * Dimension;
 
+    /// <summary>Returns the approximate Styblinski-Tang global minimizer, <see cref="Minimizer"/> in every dimension.</summary>
     public override ReadOnlyMemory<double> GetGlobalMinimumGenes() => UniformMinimizer(Minimizer);
 }

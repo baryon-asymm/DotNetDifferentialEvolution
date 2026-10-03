@@ -9,6 +9,9 @@ namespace DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 public sealed class ZakharovEvaluator(
     int dimension = 2) : BenchmarkFunctionEvaluator(dimension)
 {
+    /// <summary>Evaluates the Zakharov function at <paramref name="genes"/>.</summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The function value at <paramref name="genes"/>.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -24,11 +27,15 @@ public sealed class ZakharovEvaluator(
         return sumSquares + sumHalf2 + sumHalf2 * sumHalf2;
     }
 
+    /// <summary>Returns the lower bound of the Zakharov domain: -5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => UniformBounds(-5.0);
 
+    /// <summary>Returns the upper bound of the Zakharov domain: 10 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => UniformBounds(10.0);
 
+    /// <summary>Returns 0, the Zakharov global minimum value.</summary>
     public override double GetGlobalMinimumFfValue() => 0.0;
 
+    /// <summary>Returns the Zakharov global minimizer, the origin.</summary>
     public override ReadOnlyMemory<double> GetGlobalMinimumGenes() => UniformMinimizer(0.0);
 }

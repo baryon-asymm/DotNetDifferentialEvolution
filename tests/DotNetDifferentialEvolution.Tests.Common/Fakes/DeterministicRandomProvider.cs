@@ -1,10 +1,12 @@
+using DotNetDifferentialEvolution.RandomProviders;
+
 namespace DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 /// <summary>
-/// A <see cref="BaseRandomProvider"/> backed by a seeded <see cref="Random"/>. Unlike the
-/// production provider (which uses <see cref="Random.Shared"/>), this yields a fully
-/// reproducible stream, so integration and end-to-end runs can be repeated bit-for-bit and
-/// any failure can be reproduced from its seed.
+/// A <see cref="BaseRandomProvider"/> backed by the library's own seeded generator,
+/// <see cref="SeededRandomProvider"/>. Unlike the production provider (which uses
+/// <see cref="Random.Shared"/>), this yields a fully reproducible stream, so integration and
+/// end-to-end runs can be repeated bit-for-bit and any failure can be reproduced from its seed.
 /// </summary>
 /// <remarks>
 /// Initializes a new instance seeded with <paramref name="seed"/>.
@@ -13,7 +15,7 @@ namespace DotNetDifferentialEvolution.Tests.Common.Fakes;
 public sealed class DeterministicRandomProvider(
     int seed = 0) : BaseRandomProvider
 {
-    private readonly Random _random = new Random(seed);
+    private readonly SeededRandomProvider _random = new(seed);
 
     /// <inheritdoc />
     public override int Next(

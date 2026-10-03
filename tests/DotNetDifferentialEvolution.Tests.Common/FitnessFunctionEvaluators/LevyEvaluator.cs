@@ -7,6 +7,9 @@ namespace DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 public sealed class LevyEvaluator(
     int dimension = 2) : BenchmarkFunctionEvaluator(dimension)
 {
+    /// <summary>Evaluates the Levy function at <paramref name="genes"/>.</summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The function value at <paramref name="genes"/>.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -30,11 +33,15 @@ public sealed class LevyEvaluator(
         return result;
     }
 
+    /// <summary>Returns the lower bound of the Levy domain: -10 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => UniformBounds(-10.0);
 
+    /// <summary>Returns the upper bound of the Levy domain: 10 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => UniformBounds(10.0);
 
+    /// <summary>Returns 0, the Levy global minimum value.</summary>
     public override double GetGlobalMinimumFfValue() => 0.0;
 
+    /// <summary>Returns the Levy global minimizer, <c>(1, …, 1)</c>.</summary>
     public override ReadOnlyMemory<double> GetGlobalMinimumGenes() => UniformMinimizer(1.0);
 }

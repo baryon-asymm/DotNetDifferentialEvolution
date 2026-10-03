@@ -8,13 +8,18 @@ namespace DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 /// </summary>
 public sealed class HimmelblauEvaluator : BenchmarkFunctionEvaluator
 {
+    /// <summary>Initializes a new instance of the two-dimensional Himmelblau function.</summary>
     public HimmelblauEvaluator()
         : base(dimension: 2)
     {
     }
 
+    /// <summary>Gets 2: the Himmelblau function is defined in two dimensions only.</summary>
     protected override int MinimumDimension => 2;
 
+    /// <summary>Evaluates the Himmelblau function at <paramref name="genes"/>.</summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The function value at <paramref name="genes"/>.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -26,9 +31,12 @@ public sealed class HimmelblauEvaluator : BenchmarkFunctionEvaluator
         return a * a + b * b;
     }
 
+    /// <summary>Returns the lower bound of the Himmelblau domain: -5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => UniformBounds(-5.0);
 
+    /// <summary>Returns the upper bound of the Himmelblau domain: 5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => UniformBounds(5.0);
 
+    /// <summary>Returns 0, the value of each of the four Himmelblau global minima.</summary>
     public override double GetGlobalMinimumFfValue() => 0.0;
 }

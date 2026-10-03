@@ -19,7 +19,8 @@ or a repeatable stream (`DeterministicRandomProvider`). This node supplies both.
 
 ## Dependencies
 
-None.
+- [RandomProviders](../../../src/DotNetDifferentialEvolution/RandomProviders/API.md)
+  — `SeededRandomProvider`, the stream behind `DeterministicRandomProvider` (2026-10-03).
 
 Outside the tree: `DotNetOptimization.Abstractions` 1.0.0 (`BaseRandomProvider`).
 

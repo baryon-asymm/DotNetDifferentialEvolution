@@ -50,8 +50,11 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       in `tests/` or `benchmarks/` (searched 2026-10-02), and the build of the solution
       confirmed it. `PopulationHelper` itself is used only by `ProblemContextHelper`; the
       GPU test project has its own unrelated class of the same name.
-- [ ] ⚠ The only XML documentation in this node is the remarks on `CreateContext`; the
-      two classes and their other members have none.
+- [x] Every public type and member has XML documentation: 2026-10-03, by a build of
+      the project with no CS1591.
+- [ ] ⚠ `PopulationHelper.InitializePopulationWithRandomValues` draws from `System.Random`
+      (CA5394). Its `Random? random` parameter is public API, so the warning stays until
+      that signature may change.
 
 ## Taboos
 
