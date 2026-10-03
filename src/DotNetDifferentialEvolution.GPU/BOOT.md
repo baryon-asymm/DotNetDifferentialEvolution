@@ -99,10 +99,10 @@ would break the public namespaces, and is left for the GPU redesign.
 
 ## Redesign proposals ⏳
 
-Design mode, 2026-10-03: proposals only, no code. Nothing below is decided until the
-owner says so. "Agreed in principle" means the owner agreed on 2026-10-02 when the import
-was planned; "open" means it needs an answer. Each item says what it would change and
-what this document recommends.
+Design mode, 2026-10-03: proposals only, no code. "Agreed in principle" means the owner
+agreed on 2026-10-02 when the import was planned. **Decided 2026-10-03: the owner accepted
+every recommendation below**, items 1–12 (in chat, after PR #13). Their realisation is the
+v1 design; the ⏳ on this heading stays until that design is written and approved.
 
 1. **Result contract**: agreed in principle. The optimizer returns
    `DotNetOptimization.Abstractions`' solution type, as the CPU package does, and the
@@ -161,6 +161,20 @@ read 2026-10-03, and not re-measured here.
    compute_100+ (Blackwell, which the 5070 Ti is) and fixes it with a post-link (APT
    `src/Execution/BOOT.md`). This package pins ILGPU 1.5.1, so the ILGPU version is
    part of this item.
+
+   Measured 2026-10-03 with the two `GPU.Test` cases (Rosenbrock with `Math.Pow`, the
+   polynomial fit with `XMath.Pow`) in a scratch copy, on the device the probe asserted:
+   - ILGPU 1.5.1, CUDA, RTX 5070 Ti (compute 12.0, driver 616.92): both fail with
+     `CudaException: a PTX JIT compilation failed`. **The released package cannot run
+     on this GPU through CUDA.**
+   - ILGPU 1.5.3, CUDA, same GPU: 2 of 2 pass (29 s for the run, compile included).
+   - ILGPU 1.5.3, OpenCL, `gfx1036`: 2 of 2 pass (50 s), so the upgrade breaks nothing
+     there.
+
+   Consequence for v1: ILGPU 1.5.3. APT's libdevice gap was not seen here. Whether these
+   kernels used libdevice at all was not established, so the probe kernel APT uses (a
+   math kernel that must load before CUDA counts as bound) stays part of the design.
+   The timings are one run each, compile included: not a speed comparison.
 10. **The GPU tests in CI on ILGPU's CPU accelerator**: recommended. APT and CPM run the
     same kernels on the CPU accelerator in hosted CI and on a GPU only locally or on a
     self-hosted runner. That would close the root's "GPU tests run in no CI" item. The
