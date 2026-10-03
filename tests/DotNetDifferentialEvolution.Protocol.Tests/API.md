@@ -16,7 +16,12 @@ fact was seen red on a mutation (this node's `BOOT.md`, acceptance criteria).
 | `## Dependencies` equals the real crossings: signatures, generic constraints and IL bodies | `DependencyTests` |
 | Every source the compiler read lies in a directory with `BOOT.md` and `API.md` | `CompiledSourceTests` |
 | The protocol linter passes with `--strict` | `LintTests` |
-| No node under `src/` calls `System.Console` | `ForbiddenCallTests` |
+| No node under `src/` calls `System.Console`; the GPU package never calls `GC.Collect` (GPU check 7a) | `ForbiddenCallTests` |
+| In the GPU package only `PopulationTransfers` calls an ILGPU host transfer (GPU check 5a) | `GpuGuardTests.OnlyTheTransferHelperCallsAnIlgpuHostTransfer` |
+| The IL reachable from every GPU kernel entry point holds no `throw`, `newarr`, `newobj` of a reference type or `box` (GPU check 8a) | `GpuGuardTests.KernelReachableCodeNeitherThrowsNorAllocatesNorBoxes` |
+| GPU kernel-reachable code calls only `Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`, `Max`, `IsNaN` of `Math` and `Double` (GPU check 8b) | `GpuGuardTests.KernelReachableCodeCallsOnlyTheAllowedMathAndDoubleMembers` |
+| No constant left of an ordered floating-point comparison in the GPU package's sources (GPU check 8c) | `GpuGuardTests.GpuSourcesPutNoConstantLeftOfAnOrderedFloatingComparison` |
+| No `src` method passes host memory to an ILGPU transfer as a raw `ref T` (GPU check 8d) | `GpuGuardTests.NoSrcMethodPassesHostMemoryToAnIlgpuTransferByReference` |
 | Every node path named in `ProtocolConfig` is a node; no library type in the global namespace | `ConfigTests` |
 
 The self-checks of the parsers (`ApiDeclarationsTests`, the helper cases in

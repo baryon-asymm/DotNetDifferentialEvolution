@@ -81,6 +81,22 @@ internal static class ProtocolConfig
     /// (<see cref="ConfigTests"/>). Empty by default.</summary>
     public static readonly IReadOnlyList<string> NumericalNodes = [];
 
+    /// <summary>The GPU package's node, read by the guards of its ACCEPTANCE.md (v1 checks 5a, 7a, 8a–8d) through
+    /// <see cref="GpuPackage"/>: its assembly and its sources, every child node included. Must be a node
+    /// (<see cref="ConfigTests"/>). This tree's addition to the kit (the node's BOOT.md, Deviations from the kit).</summary>
+    public const string GpuPackagePath = "src/DotNetDifferentialEvolution.GPU";
+
+    /// <summary>The one type of the GPU package whose methods may call an ILGPU host transfer, by full name (check 5a,
+    /// <see cref="GpuGuardTests"/>).</summary>
+    public const string GpuTransferHelper = "DotNetDifferentialEvolution.GPU.PopulationTransfers";
+
+    /// <summary>The members of <c>System.Math</c> and <c>System.Double</c> that code reachable from a GPU kernel may call,
+    /// by name (check 8b, <see cref="GpuGuardTests"/>): the frozen list of the GPU package's ACCEPTANCE.md.</summary>
+    public static readonly IReadOnlySet<string> KernelMathAllowList = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "Abs", "Sqrt", "Exp", "Log", "Pow", "Floor", "Min", "Max", "IsNaN",
+    };
+
     /// <summary>A node whose code lives in a namespace other than the one its path gives, keyed by the node's path, with
     /// the namespace it uses: a declared deviation of AGENTS.md §1 (§12). The node itself must say so in its own BOOT.md;
     /// the namespace fact skips the listed namespace in that node's own assembly and fails once no type uses it any
@@ -110,6 +126,15 @@ internal static class ProtocolConfig
             Name: "no console output in library nodes",
             Scope: node => node.IsSource,
             Callee: callee => callee.DeclaringType == typeof(Console),
+            Signature: _ => true,
+            AllowList: new HashSet<string>(StringComparer.Ordinal)),
+
+        // The GPU package never forces a collection (its ACCEPTANCE.md, v1 check 7a): the 0.x Dispose called GC.Collect.
+        // The scope covers the package's node and every child node below it. No caller is allowed.
+        new ForbiddenCallRule(
+            Name: "no GC.Collect in the GPU package",
+            Scope: GpuPackage.Covers,
+            Callee: callee => callee.DeclaringType == typeof(GC) && callee.Name == nameof(GC.Collect),
             Signature: _ => true,
             AllowList: new HashSet<string>(StringComparer.Ordinal)),
     ];

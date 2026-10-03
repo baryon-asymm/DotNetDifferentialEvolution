@@ -16,7 +16,8 @@ public sealed class ConfigTests
         Assert.True(Tree.Nodes.Count > 1, $"found nothing: the walk from {Tree.Root} found {Tree.Nodes.Count} node(s), so it proves nothing");
         var paths = Tree.Nodes.Select(node => node.RelativePath).ToHashSet(StringComparer.Ordinal);
         var named = ProtocolConfig.NumericalNodes.Select(path => ("NumericalNodes", path))
-            .Concat(ProtocolConfig.NamespaceExceptions.Keys.Select(path => ("NamespaceExceptions", path)));
+            .Concat(ProtocolConfig.NamespaceExceptions.Keys.Select(path => ("NamespaceExceptions", path)))
+            .Append(("GpuPackagePath", path: ProtocolConfig.GpuPackagePath));
         var problems = named.Where(entry => !paths.Contains(entry.path))
             .Select(entry => $"ProtocolConfig.{entry.Item1} names {entry.path}, which is not a node of the tree")
             .ToList();
