@@ -14,6 +14,10 @@ public class ResourceUsageTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// Fifty build/run/dispose cycles after a warmup grow the settled managed heap by no more than
+    /// 32 MB.
+    /// </summary>
     [Fact]
     public async Task RepeatedRunsDoNotGrowManagedHeapUnbounded()
     {

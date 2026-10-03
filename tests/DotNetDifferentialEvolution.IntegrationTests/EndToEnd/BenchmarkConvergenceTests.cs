@@ -17,6 +17,12 @@ public class BenchmarkConvergenceTests
 
     // ---- Unimodal: classic DE/rand/1/bin should reach a tight tolerance. ----
 
+    /// <summary>
+    /// Classic DE/rand/1/bin with constant F and CR reaches each unimodal benchmark's global
+    /// minimum to within 1e-6.
+    /// </summary>
+    /// <param name="functionName">The benchmark's catalog name.</param>
+    /// <param name="dimension">The number of genes.</param>
     [Theory]
     [InlineData("Sphere", 5)]
     [InlineData("Rosenbrock", 2)]
@@ -46,6 +52,12 @@ public class BenchmarkConvergenceTests
 
     // ---- Multimodal: SHADE should reach the global basin (value-based). ----
 
+    /// <summary>
+    /// SHADE reaches the global basin of each multimodal benchmark, ending within 1e-4 of the
+    /// global minimum after 3000 generations.
+    /// </summary>
+    /// <param name="functionName">The benchmark's catalog name.</param>
+    /// <param name="dimension">The number of genes.</param>
     [Theory]
     [InlineData("Rastrigin", 2)]
     [InlineData("Ackley", 2)]
@@ -76,6 +88,12 @@ public class BenchmarkConvergenceTests
 
     // ---- Deceptive / harder multimodal: give L-SHADE a real evaluation budget. ----
 
+    /// <summary>
+    /// L-SHADE with a 300 000-evaluation budget ends within 1% of the global minimum (1e-2 absolute
+    /// near zero) on deceptive and higher-dimensional multimodal benchmarks.
+    /// </summary>
+    /// <param name="functionName">The benchmark's catalog name.</param>
+    /// <param name="dimension">The number of genes.</param>
     [Theory]
     [Trait("Category", "Slow")]
     [InlineData("Schwefel", 2)]

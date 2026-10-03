@@ -16,6 +16,11 @@ public class MutationStrategyConvergenceTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
 
+    /// <summary>
+    /// Each constant-parameter mutation strategy the builder exposes, seeded and single-threaded,
+    /// reaches the 5-D Sphere optimum to within 1e-3.
+    /// </summary>
+    /// <param name="strategy">The mutation strategy in DE notation.</param>
     [Theory]
     [InlineData("best/1")]
     [InlineData("current-to-best/1")]
@@ -41,7 +46,7 @@ public class MutationStrategyConvergenceTests
             .WithPopulationSize(60)
             .WithUniformPopulationSampling();
 
-        ISelectionStrategyRequired afterMutation = strategy switch
+        var afterMutation = strategy switch
         {
             "best/1" => withSampling.WithBestMutationStrategy(0.5, 0.9),
             "current-to-best/1" => withSampling.WithCurrentToBestMutationStrategy(0.5, 0.9),

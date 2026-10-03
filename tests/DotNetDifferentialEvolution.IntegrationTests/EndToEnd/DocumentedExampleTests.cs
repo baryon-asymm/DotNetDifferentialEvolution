@@ -19,6 +19,9 @@ namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 [Trait("Category", "Integration")]
 public class DocumentedExampleTests
 {
+    private static readonly double[] ExampleLowerBounds = [-5.0, -5.0, -5.0];
+    private static readonly double[] ExampleUpperBounds = [5.0, 5.0, 5.0];
+
     /// <summary>
     /// The objective from the guide's §1 and §2 — pure, so the worker overload delegates to the
     /// single-argument one.
@@ -45,7 +48,7 @@ public class DocumentedExampleTests
     {
         using var de = DifferentialEvolutionBuilder
             .ForFunction(new Sphere())
-            .WithBounds(new[] { -5.0, -5.0, -5.0 }, new[] { 5.0, 5.0, 5.0 })
+            .WithBounds(ExampleLowerBounds, ExampleUpperBounds)
             .WithPopulationSize(50)
             .WithUniformPopulationSampling()
             .WithDefaultMutationStrategy(mutationForce: 0.5, crossoverProbability: 0.9)
@@ -74,11 +77,11 @@ public class DocumentedExampleTests
     [Fact]
     public async Task TheLShadeExampleBuildsAndSpendsItsBudget()
     {
-        const long Budget = 300_000;
-        const int Dimensions = 30;
+        const long budget = 300_000;
+        const int dimensions = 30;
 
-        var lowerBound = new double[Dimensions];
-        var upperBound = new double[Dimensions];
+        var lowerBound = new double[dimensions];
+        var upperBound = new double[dimensions];
         Array.Fill(lowerBound, -100.0);
         Array.Fill(upperBound, 100.0);
 
@@ -87,18 +90,18 @@ public class DocumentedExampleTests
         using var de = DifferentialEvolutionBuilder
             .ForFunction(objective)
             .WithBounds(lowerBound, upperBound)
-            .WithPopulationSize(18 * Dimensions)   // r_N^init = 18 from the paper's Table II
+            .WithPopulationSize(18 * dimensions)   // r_N^init = 18 from the paper's Table II
             .WithUniformPopulationSampling()
-            .WithLShade(maxEvaluationNumber: Budget)
-            .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(Budget))
+            .WithLShade(maxEvaluationNumber: budget)
+            .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(budget))
             .UseAllProcessors()
             .Build();
 
         var population = await de.RunAsync().ConfigureAwait(true);
 
         Assert.True(
-            population.EvaluationCount >= Budget,
-            $"the run stopped after {population.EvaluationCount} of {Budget} evaluations");
+            population.EvaluationCount >= budget,
+            $"the run stopped after {population.EvaluationCount} of {budget} evaluations");
 
         // §7: the live population is what PopulationSize reports, and LPSR has taken it to the
         // floor by the time the budget is exhausted.
@@ -115,7 +118,7 @@ public class DocumentedExampleTests
     {
         using var de = DifferentialEvolutionBuilder
             .ForFunction(new Sphere())
-            .WithBounds(new[] { -5.0, -5.0, -5.0 }, new[] { 5.0, 5.0, 5.0 })
+            .WithBounds(ExampleLowerBounds, ExampleUpperBounds)
             .WithPopulationSize(20)
             .WithUniformPopulationSampling()
             .WithShade()

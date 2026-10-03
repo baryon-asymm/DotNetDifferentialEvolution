@@ -21,6 +21,10 @@ public class ParallelDeterminismTests
 
     private const double ValueTolerance = 1e-3;
 
+    /// <summary>
+    /// The same Sphere problem reaches the optimum with one worker and with one per processor, so
+    /// striping the population across workers does not break the search.
+    /// </summary>
     [Fact]
     public async Task SingleWorkerAndMultiWorkerBothConverge()
     {
@@ -33,6 +37,10 @@ public class ParallelDeterminismTests
         ConvergenceAssert.ReachedOptimum(evaluator, multi, ValueTolerance);
     }
 
+    /// <summary>
+    /// Twenty-five consecutive multi-worker runs all reach the optimum; a data race on the shared
+    /// buffers would make at least one of them miss it.
+    /// </summary>
     [Fact]
     public async Task RepeatedParallelRunsAllConvergeNoDataRaceCorruption()
     {

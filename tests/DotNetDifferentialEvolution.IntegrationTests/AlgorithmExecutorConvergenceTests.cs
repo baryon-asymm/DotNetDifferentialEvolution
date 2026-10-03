@@ -12,6 +12,10 @@ namespace DotNetDifferentialEvolution.IntegrationTests;
 [Trait("Category", "Integration")]
 public class AlgorithmExecutorConvergenceTests
 {
+    /// <summary>
+    /// A seeded, single-threaded run of the classic loop reaches the 5-D Sphere optimum within 2000
+    /// generations.
+    /// </summary>
     [Fact]
     public void ConvergesOnSphere()
     {
@@ -24,6 +28,10 @@ public class AlgorithmExecutorConvergenceTests
         ConvergenceAssert.ReachedOptimum(evaluator, result, valueTolerance: 1e-6, geneTolerance: 1e-3);
     }
 
+    /// <summary>
+    /// A seeded, single-threaded run of the classic loop follows the 2-D Rosenbrock valley to its
+    /// optimum, stopping after a 2000-generation stagnation streak.
+    /// </summary>
     [Fact]
     public void ConvergesOnRosenbrock()
     {

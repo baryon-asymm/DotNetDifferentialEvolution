@@ -23,6 +23,11 @@ public class PopulationSizeReportingTests
     private const int InitialPopulationSize = 50;
     private const long EvaluationBudget = 4000;
 
+    /// <summary>
+    /// Across an L-SHADE run the reported population size never increases, is already below the
+    /// initial size after the first generation, and ends at
+    /// <see cref="LShadeStrategy.MinimumPopulationSize"/>.
+    /// </summary>
     [Fact]
     public async Task AnLShadeRunReportsTheActivePopulationShrinkingToItsMinimum()
     {
@@ -45,6 +50,10 @@ public class PopulationSizeReportingTests
         Assert.Equal(LShadeStrategy.MinimumPopulationSize, observer.ReportedSizes[^1]);
     }
 
+    /// <summary>
+    /// Every individual reachable through the reported population size at the end of the run is a
+    /// live, converged one, not a stale leftover of the larger initial population.
+    /// </summary>
     [Fact]
     public async Task TheReportedIndividualsAreAllLive()
     {
@@ -60,6 +69,10 @@ public class PopulationSizeReportingTests
         Assert.All(ffValues, ffValue => Assert.True(ffValue < 1E-6, $"stale-looking individual at {ffValue}"));
     }
 
+    /// <summary>
+    /// <see cref="Population.Capacity"/> keeps reporting the initial buffer length while the active
+    /// population shrinks.
+    /// </summary>
     [Fact]
     public async Task CapacityKeepsReportingTheAllocatedLength()
     {
@@ -68,6 +81,10 @@ public class PopulationSizeReportingTests
         Assert.All(observer.ReportedCapacities, capacity => Assert.Equal(InitialPopulationSize, capacity));
     }
 
+    /// <summary>
+    /// <see cref="Population.GenomeSize"/> stays at the problem's dimension in every generation
+    /// while the population shrinks.
+    /// </summary>
     [Fact]
     public async Task TheGenomeSizeDoesNotDriftWithTheShrinkingPopulation()
     {

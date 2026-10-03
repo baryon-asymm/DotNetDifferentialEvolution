@@ -15,6 +15,10 @@ public class WorkersOrchestratorTests
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
     private static readonly int WorkersCount = Math.Max(2, Environment.ProcessorCount);
 
+    /// <summary>
+    /// One worker per processor, sharing one population, together reach the 2-D Rosenbrock optimum,
+    /// and every worker is stopped once the result is in.
+    /// </summary>
     [Fact]
     public async Task AllWorkersCooperateToConverge()
     {
@@ -33,6 +37,10 @@ public class WorkersOrchestratorTests
         Assert.False(harness.AnyRunning);
     }
 
+    /// <summary>
+    /// A fitness-function exception thrown in any worker fails the result task with one to
+    /// one-per-worker inner exceptions, all of the thrown type, and every worker stops.
+    /// </summary>
     [Fact]
     public async Task FitnessFunctionExceptionPropagatesFromAnyWorkerAndStopsAll()
     {

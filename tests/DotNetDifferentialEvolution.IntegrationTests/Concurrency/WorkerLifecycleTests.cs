@@ -18,6 +18,10 @@ public class WorkerLifecycleTests
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
     private const int Iterations = 25;
 
+    /// <summary>
+    /// After 25 build/run/dispose cycles <see cref="WorkerController.GlobalWorkerCounter"/> is back
+    /// at its starting value: every controller that was created was disposed.
+    /// </summary>
     [Fact]
     public async Task RepeatedBuildRunDisposeDoesNotLeakWorkerControllers()
     {
@@ -33,6 +37,10 @@ public class WorkerLifecycleTests
         Assert.Equal(baseline, WorkerController.GlobalWorkerCounter);
     }
 
+    /// <summary>
+    /// After 25 build/run/dispose cycles the process has gained at most one run's worth of threads
+    /// plus slack, where a leak would add a full set of workers per cycle.
+    /// </summary>
     [Fact]
     public async Task RepeatedBuildRunDisposeDoesNotLeakThreads()
     {

@@ -29,6 +29,11 @@ public class FitnessRankingMaintenanceTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// A current-to-pbest run wired by hand, with no generation strategy, sees a correct ranking at
+    /// the end of every generation, and the ranking moves on from the one computed for the initial
+    /// population.
+    /// </summary>
     [Fact]
     public async Task AHandWiredCurrentToPBestRunKeepsTheRankingCurrent()
     {
@@ -44,6 +49,10 @@ public class FitnessRankingMaintenanceTests
             "the ranking never changed, so it was still the one computed at generation 0");
     }
 
+    /// <summary>
+    /// With a third-party generation strategy that only counts generations, the engine still keeps
+    /// the ranking correct and current, and the strategy still runs once per generation.
+    /// </summary>
     [Fact]
     public async Task AThirdPartyGenerationStrategyDoesNotHaveToMaintainTheRankingItself()
     {
@@ -59,6 +68,11 @@ public class FitnessRankingMaintenanceTests
         Assert.Equal(spy.Snapshots.Count, generationStrategy.Generations);
     }
 
+    /// <summary>
+    /// JADE and SHADE, whose generation strategies used to maintain the ranking themselves, still
+    /// see a correct and changing ranking every generation.
+    /// </summary>
+    /// <param name="variant">The variant to run: <c>jade</c> or <c>shade</c>.</param>
     [Theory]
     [InlineData("jade")]
     [InlineData("shade")]
@@ -73,6 +87,10 @@ public class FitnessRankingMaintenanceTests
         Assert.True(spy.RankingEverChanged, $"{variant} produced a frozen ranking");
     }
 
+    /// <summary>
+    /// End to end, a hand-wired current-to-pbest run on the 5-D Sphere gets below 1E-10 in 300
+    /// generations instead of stalling on a frozen ranking.
+    /// </summary>
     [Fact]
     public async Task AHandWiredCurrentToPBestRunConvergesLikeTheAdaptiveOnes()
     {
@@ -130,7 +148,8 @@ public class FitnessRankingMaintenanceTests
         foreach (var (generationNumber, ranking, ffValues) in spy.Snapshots)
         {
             int[] sortedRanking = [.. ranking.Order()];
-            Assert.Equal(Enumerable.Range(0, ranking.Length).ToArray(), sortedRanking);
+            int[] everyIndex = [.. Enumerable.Range(0, ranking.Length)];
+            Assert.Equal(everyIndex, sortedRanking);
 
             var ranked = ranking.Select(index => ffValues[index]).ToArray();
             for (var k = 1; k < ranked.Length; k++)
