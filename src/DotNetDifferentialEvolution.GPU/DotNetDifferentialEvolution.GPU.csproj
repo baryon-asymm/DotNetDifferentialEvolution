@@ -7,9 +7,9 @@
         <RootNamespace>DotNetDifferentialEvolution.GPU</RootNamespace>
         <AssemblyName>DotNetDifferentialEvolution.GPU</AssemblyName>
         <PackageId>DotNetDifferentialEvolution.GPU</PackageId>
-        <Version>0.0.2</Version>
+        <Version>1.0.0</Version>
         <Authors>Eduard Burachek</Authors>
-        <Description>A .NET library for Differential Evolution optimization with GPU acceleration using ILGPU.</Description>
+        <Description>Differential Evolution (DE/rand/1/bin) with the whole population on a GPU through ILGPU: CUDA, OpenCL or the CPU accelerator, seeded and reproducible, with a staged builder and an ISolution result.</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution</PackageProjectUrl>
         <RepositoryUrl>https://github.com/baryon-asymm/DotNetDifferentialEvolution</RepositoryUrl>
@@ -27,7 +27,20 @@
 
     <ItemGroup>
       <PackageReference Include="ILGPU" Version="1.5.3" />
+      <!-- EnableAlgorithms: the math functions PTX has no instruction for (Exp, Log, Pow) compile
+           on CUDA from ILGPU.Algorithms' implementations (BOOT.md, Constraints). -->
       <PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
+      <!-- ISolution, the result contract shared with the CPU package (BOOT.md, v1 decisions). -->
+      <PackageReference Include="DotNetOptimization.Abstractions" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The DE step, the draw source and the transfer counter are internal; the tests drive
+             them directly (ACCEPTANCE.md, checks 1b-1g, 2b, 3a-3c, 5b). -->
+        <InternalsVisibleTo Include="DotNetDifferentialEvolution.GPU.Test" />
+        <!-- ILGPU emits its kernel launchers into a dynamic assembly named ILGPURuntime, which must
+             see every type a kernel touches; the kernel structs here are internal. -->
+        <InternalsVisibleTo Include="ILGPURuntime" />
     </ItemGroup>
 
     <ItemGroup>

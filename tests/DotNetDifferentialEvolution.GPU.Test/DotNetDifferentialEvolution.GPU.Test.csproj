@@ -14,13 +14,19 @@
 
     <ItemGroup>
         <Using Include="Xunit"/>
-        <!-- tests/Directory.Build.props imports the shared abstractions for the CPU test projects.
-             The GPU package does not depend on them (yet), so the namespace does not exist here. -->
-        <Using Remove="DotNetOptimization.Abstractions"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- ILGPU emits its kernel launchers into a dynamic assembly named ILGPURuntime, which must
+             see the tests' objective structs; they are internal (CA1515). -->
+        <InternalsVisibleTo Include="ILGPURuntime" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\DotNetDifferentialEvolution.GPU\DotNetDifferentialEvolution.GPU.csproj"/>
+        <!-- The CPU package, for the parity check of the DE step (GPU ACCEPTANCE.md, check 1g):
+             the test project references both packages, neither package the other. -->
+        <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj"/>
     </ItemGroup>
 
 </Project>
