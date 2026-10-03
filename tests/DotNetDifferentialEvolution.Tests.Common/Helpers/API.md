@@ -20,8 +20,8 @@ public static class ProblemContextHelper
 }
 ```
 
-Samples the population uniformly in the evaluator's bounds — from `new Random(seed)`
-when seeded, `Random.Shared` otherwise — evaluates it once with `Evaluate(genes)`, and
+Samples the population uniformly in the evaluator's bounds — from
+`new SeededRandomProvider(seed)` when seeded, a new unseeded `RandomProvider` otherwise — evaluates it once with `Evaluate(genes)`, and
 returns a context carrying the seed as `RandomSeed`, the generation strategy and the
 control-parameter provider (both init-only on the context, hence the parameters). Without
 a provider the context is one the builder would refuse for a strategy that reads F and
@@ -38,7 +38,7 @@ public class PopulationHelper
     public Memory<double> PopulationFfValues { get; }
     public Memory<double> TrialPopulationFfValues { get; }
     public void InitializePopulationWithRandomValues(ReadOnlySpan<double> lowerBounds,
-        ReadOnlySpan<double> upperBounds, Random? random = null);
+        ReadOnlySpan<double> upperBounds, BaseRandomProvider? random = null);
     public void EvaluatePopulationFfValues(IFitnessFunctionEvaluator evaluator);
 }
 ```

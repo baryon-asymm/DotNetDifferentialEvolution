@@ -1,3 +1,5 @@
+using DotNetDifferentialEvolution.RandomProviders;
+
 namespace DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 /// <summary>
@@ -48,15 +50,15 @@ public class PopulationHelper
     /// <param name="lowerBounds">The lower bound of each gene; <c>genomeSize</c> long.</param>
     /// <param name="upperBounds">The upper bound of each gene; <c>genomeSize</c> long.</param>
     /// <param name="random">
-    /// The generator to draw from; a seeded one makes the population reproducible. Defaults to
-    /// <see cref="Random.Shared"/>.
+    /// The generator to draw from; a <see cref="SeededRandomProvider"/> makes the population
+    /// reproducible. Defaults to a new unseeded <see cref="RandomProvider"/>.
     /// </param>
     public void InitializePopulationWithRandomValues(
         ReadOnlySpan<double> lowerBounds,
         ReadOnlySpan<double> upperBounds,
-        Random? random = null)
+        BaseRandomProvider? random = null)
     {
-        random ??= Random.Shared;
+        random ??= new RandomProvider();
         for (var i = 0; i < _populationSize * _genomeSize; i++)
         {
             var j = i % _genomeSize;

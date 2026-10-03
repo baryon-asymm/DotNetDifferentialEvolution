@@ -1,6 +1,7 @@
 using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.Interfaces;
 
@@ -67,7 +68,7 @@ public static class ProblemContextHelper
 
         // A seed makes both the initial population and the search reproducible: the context
         // carries it, and the executor derives one generator per worker from it.
-        var random = seed.HasValue ? new Random(seed.Value) : null;
+        var random = seed.HasValue ? new SeededRandomProvider(seed.Value) : null;
         populationHelper.InitializePopulationWithRandomValues(lowerBound.Span, upperBound.Span, random);
         populationHelper.EvaluatePopulationFfValues(testFitnessFunctionEvaluator);
 

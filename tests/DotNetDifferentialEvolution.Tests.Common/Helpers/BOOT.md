@@ -43,8 +43,8 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       `PopulationViewTests`, `ProblemContextTests` and the benchmark project's
       `SimpleSumTester`: 2026-10-02, by searching `tests/` and `benchmarks/`.
 - [ ] ⚠ A seed here does not reproduce a builder run with the same seed: the helper
-      samples with `System.Random(seed)`, the builder with `SeededRandomProvider(seed +
-      W + 1)`.
+      samples with `SeededRandomProvider(seed)` (`System.Random(seed)` before
+      2026-10-03), the builder with `SeededRandomProvider(seed + W + 1)`.
 - [x] No dead code: 2026-10-03, `GenerateBoundsHelper` and the parameterless
       `PopulationHelper.InitializePopulationWithRandomValues` removed. Both had no caller
       in `tests/` or `benchmarks/` (searched 2026-10-02), and the build of the solution
@@ -52,9 +52,11 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       GPU test project has its own unrelated class of the same name.
 - [x] Every public type and member has XML documentation: 2026-10-03, by a build of
       the project with no CS1591.
-- [ ] ⚠ `PopulationHelper.InitializePopulationWithRandomValues` draws from `System.Random`
-      (CA5394). Its `Random? random` parameter is public API, so the warning stays until
-      that signature may change.
+- [x] ⚠ `PopulationHelper.InitializePopulationWithRandomValues` drew from `System.Random`
+      (CA5394) through a public `Random? random` parameter. Closed 2026-10-03 by the
+      orchestrator: the parameter is `BaseRandomProvider?` and `ProblemContextHelper`
+      passes `SeededRandomProvider(seed)`. Every seeded initial population changed with
+      it; the consumer suites were re-run on the new populations, nothing loosened.
 
 ## Taboos
 
