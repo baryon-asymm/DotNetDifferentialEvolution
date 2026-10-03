@@ -1,0 +1,76 @@
+# API.md — GPU.Test/EndToEnd
+
+Nothing outward. What this node proves about whole runs of the GPU package: convergence,
+reproducibility, host transfers, asynchrony and cancellation, ownership of a caller's
+accelerator, and the run errors of the v1 contract.
+
+## What this node guarantees
+
+| Claim | Confirmed by | State |
+|---|---|---|
+| 1h: seed 1, N = 50, F = 0.5, CR = 0.9, 1000 generations: Sphere 5-D reaches 1e-6; Rosenbrock 2-D reaches 1e-6 with genes within 1e-3 of (1, 1); Rastrigin 2-D reaches 1e-4 | `ConvergenceTests`, CPU accelerator; CUDA and OpenCL under `Gpu` | ✅ |
+| The series cosine of Rastrigin matches `Math.Cos` to 1e-13 and is exactly 1 at integers | `TheRastriginCosineMatchesSystemMath` | ✅ |
+| 4a: the same seed twice gives a bit-identical final population and result; seeds 1 and 2 differ | `ReproducibilityTests`, CPU accelerator; CUDA and OpenCL under `Gpu` | ✅ |
+| 5b: 100 generations with no observer download the population once; with an observer every 10 generations, 11 times | `TransferCountTests` | ✅ |
+| 6a: while the observer is held at generation 1, `RunAsync` has returned an incomplete task | `RunAsyncReturnsAnIncompleteTaskWhileTheObserverIsHeld` | ✅ |
+| 6b: a token cancelled from the observer at generation 3 ends the task as canceled after at most 4 generations | `ATokenCancelledAtGenerationThreeEndsTheTaskAsCanceled` | ✅ |
+| 6c: after the run a second `RunAsync` returns the same task; during it, `InvalidOperationException` (also B1's row) | `ASecondCallAfterTheRunReturnsTheSameTask`, `ACallDuringTheRunThrows` | ✅ |
+| 7b: a caller-owned accelerator still allocates, runs a kernel into and reads back a buffer after the optimizer's `Dispose` | `OwnershipTests`, CPU accelerator; CUDA and OpenCL under `Gpu` | ✅ |
+| B1: an observer that throws faults the task with that same exception | `AThrowingObserverFaultsTheTaskWithItsException` | ✅ |
+
+## Tests ✅
+
+```csharp
+public class ConvergenceTests
+{
+    public ConvergenceTests(ITestOutputHelper output);
+    public Task SphereReachesItsMinimumOnTheCpuAccelerator();
+    public Task RosenbrockReachesItsMinimumOnTheCpuAccelerator();
+    public Task RastriginReachesItsMinimumOnTheCpuAccelerator();
+    [Trait("Category", "Gpu")]
+    public Task SphereReachesItsMinimumOnTheGpu(GpuDevice device);
+    [Trait("Category", "Gpu")]
+    public Task RosenbrockReachesItsMinimumOnTheGpu(GpuDevice device);
+    [Trait("Category", "Gpu")]
+    public Task RastriginReachesItsMinimumOnTheGpu(GpuDevice device);
+}
+public class ObjectiveTests
+{
+    public void TheRastriginCosineMatchesSystemMath();
+}
+public class ReproducibilityTests
+{
+    public Task TheSameSeedTwiceIsBitIdenticalOnTheCpuAccelerator();
+    public Task SeedsOneAndTwoDifferOnTheCpuAccelerator();
+    [Trait("Category", "Gpu")]
+    public Task TheSameSeedTwiceIsBitIdenticalOnTheGpu(GpuDevice device);
+    [Trait("Category", "Gpu")]
+    public Task SeedsOneAndTwoDifferOnTheGpu(GpuDevice device);
+}
+public class TransferCountTests
+{
+    public async Task ARunWithoutAnObserverDownloadsThePopulationOnce();
+    public async Task ARunWithAnObserverEveryTenGenerationsDownloadsElevenTimes();
+}
+public class AsynchronyTests
+{
+    public async Task RunAsyncReturnsAnIncompleteTaskWhileTheObserverIsHeld();
+    public async Task ATokenCancelledAtGenerationThreeEndsTheTaskAsCanceled();
+    public async Task ASecondCallAfterTheRunReturnsTheSameTask();
+    public async Task ACallDuringTheRunThrows();
+}
+public class OwnershipTests
+{
+    public async Task ACallerOwnedCpuAcceleratorOutlivesTheOptimizer();
+    [Trait("Category", "Gpu")]
+    public async Task ACallerOwnedGpuAcceleratorOutlivesTheOptimizer(GpuDevice device);
+}
+public class RunErrorTests
+{
+    public async Task AThrowingObserverFaultsTheTaskWithItsException();
+}
+```
+
+Internal helpers: the objectives `Sphere`, `Rosenbrock`, `Rastrigin`; the observers
+`RecordingObserver`, `GateObserver`, `CancellingObserver`, `ThrowingObserver`; and
+`HangGuard`, the bound on every wait.
