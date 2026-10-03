@@ -49,6 +49,9 @@ part is correct".
   — `SelectionStrategy`.
 - [TerminationStrategies](../../src/DotNetDifferentialEvolution.GPU/TerminationStrategies/API.md)
   — `MaxGenerationStrategy`.
+- [Controllers/Kernels/Interfaces](../../src/DotNetDifferentialEvolution.GPU/Controllers/Kernels/Interfaces/API.md) — `IKernelController`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [PopulationSamplingMakers/Interfaces](../../src/DotNetDifferentialEvolution.GPU/PopulationSamplingMakers/Interfaces/API.md) — `IPopulationSamplingMaker`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [TerminationStrategies/Interfaces](../../src/DotNetDifferentialEvolution.GPU/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 Outside the tree: xUnit 2.5.3, Microsoft.NET.Test.Sdk 17.8.0, coverlet 6.0.0; ILGPU
 and ILGPU.Algorithms 1.5.1 (`Context`, OpenCL, `XorShift32`); an OpenCL device.

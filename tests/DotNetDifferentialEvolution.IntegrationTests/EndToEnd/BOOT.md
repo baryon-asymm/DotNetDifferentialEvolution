@@ -26,12 +26,9 @@ documented examples are code that builds.
 
 - [DotNetDifferentialEvolution](../../../src/DotNetDifferentialEvolution/API.md) — the
   builder.
-- [Algorithms/Lshade](../../../src/DotNetDifferentialEvolution/Algorithms/Lshade/API.md)
-  — `LShadeStrategy.MinimumPopulationSize`.
 - [ControlParameterProviders](../../../src/DotNetDifferentialEvolution/ControlParameterProviders/API.md),
   [MutationStrategies](../../../src/DotNetDifferentialEvolution/MutationStrategies/API.md),
   [MutationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/MutationStrategies/Interfaces/API.md),
-  [SelectionStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/SelectionStrategies/Interfaces/API.md),
   [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md),
   [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md)
   — the parts configured.
@@ -41,6 +38,13 @@ documented examples are code that builds.
   refiner, the result.
 - [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
   — the benchmarks.
+- [TestSupport](../TestSupport/API.md) — `BuilderOptimizer`, `ConvergenceAssert`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+
+⚠ Corrected 2026-10-03 by the reflection check: this list named `Algorithms/Lshade`
+(for `LShadeStrategy.MinimumPopulationSize`, which no source here mentions) and
+`SelectionStrategies/Interfaces` (the tests only call `WithDefaultSelectionStrategy()` on
+the builder); both removed.
 
 Outside the tree: `DotNetOptimization.Abstractions` 1.0.0 (`IFitnessFunctionEvaluator`
 in the guide's own `Sphere`).

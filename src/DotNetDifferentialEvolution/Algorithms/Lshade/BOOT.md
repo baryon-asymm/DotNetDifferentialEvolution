@@ -31,6 +31,7 @@ spent.
 - [Models](../../Models/API.md) — `TrialRecord`.
 - [MutationStrategies/Interfaces](../../MutationStrategies/Interfaces/API.md) —
   `MutationRequirements`.
+- [ControlParameterProviders](../../ControlParameterProviders/API.md) — `IControlParameterProvider`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ## Constraints
 

@@ -51,6 +51,9 @@ orchestrator, the builder end to end, and convergence on functions with known op
   and observed.
 - [FitnessFunctionEvaluators](../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
   — the objectives, including the `NaN` and throwing ones.
+- [AlgorithmExecutors/Interfaces](../../src/DotNetDifferentialEvolution/AlgorithmExecutors/Interfaces/API.md) — `IAlgorithmExecutor`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [Controllers/WorkerControllerEventHandlers/Interfaces](../../src/DotNetDifferentialEvolution/Controllers/WorkerControllerEventHandlers/Interfaces/API.md) — `IWorkerPassLoopDoneHandler`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 Outside the tree: xUnit 2.5.3, xunit.runner.visualstudio 2.5.3, Microsoft.NET.Test.Sdk
 17.8.0, coverlet.collector 6.0.0.

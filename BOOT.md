@@ -34,8 +34,9 @@ what it should be, the node says so with a ⚠; those are the agenda for design 
 - **The CPU package's public surface is diffed against its last release on every CI
   run.** Held by package validation (`EnablePackageValidation`, baseline 4.0.0) and the
   CI "Pack" step; deliberate breaks are listed in `CompatibilitySuppressions.xml`.
-- **Namespaces follow directory paths.** Checked in every directory on 2026-10-02;
-  held by convention, not by a check.
+- **Namespaces follow directory paths.** Held by `NamespaceTests`
+  ([Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/API.md)) since
+  2026-10-03; before that, checked by hand on 2026-10-02.
 
 ## Dependencies
 
@@ -43,7 +44,8 @@ None.
 
 Outside the tree: .NET SDK 8 and 10 (CI installs both); `DotNetOptimization.Abstractions`
 1.0.0 (CPU package); ILGPU and ILGPU.Algorithms 1.5.1 (GPU package); xUnit 2.5.3,
-Microsoft.NET.Test.Sdk 17.8.0, coverlet 6.0.0 (tests); BenchmarkDotNet 0.14.0 (benchmarks);
+Microsoft.NET.Test.Sdk 17.8.0, coverlet 6.0.0 (tests; Protocol.Tests: xUnit 2.9.3,
+Microsoft.NET.Test.Sdk 17.14.1); BenchmarkDotNet 0.14.0 (benchmarks);
 Python 3.8+ (`tools/protocol-lint`).
 
 ## Constraints
@@ -51,8 +53,9 @@ Python 3.8+ (`tools/protocol-lint`).
 - Shipping code targets `net8.0` with C# 12 pinned (`LangVersion` 12); test projects
   use `latest` and `RollForward=Major` (`tests/Directory.Build.props`).
 - CI (`.github/workflows/ci.yml`) runs on `ubuntu-latest`: documentation references,
-  build, `Category=Unit`, then everything except `Category=Slow` and `Category=Gpu`,
-  then a throw-away pack of the CPU package for the API check. Hosted runners have no
+  the protocol linter and its self-tests, build, `Category=Unit`, then everything except
+  `Category=Slow` and `Category=Gpu` (the reflection checks included), then a
+  throw-away pack of the CPU package for the API check. Hosted runners have no
   OpenCL device, so the GPU tests run only on a developer machine.
 - Releases: `.github/workflows/release.yml` publishes on a `v*` tag and packs the CPU
   package only.
@@ -69,17 +72,21 @@ Python 3.8+ (`tools/protocol-lint`).
       232 passed; `Category!=Slow&Category!=Gpu` 232 + 70 passed, exit code 0 for both.
 - [x] The GPU tests pass on a machine with an OpenCL device: 2026-10-02,
       `tests/DotNetDifferentialEvolution.GPU.Test`, 2 of 2 passed (local).
-- [x] The tree passes `protocol_lint` without errors or warnings: 2026-10-02, 75 nodes,
+- [x] The tree passes `protocol_lint` without errors or warnings: 2026-10-03, 76 nodes,
       `python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates`.
 - [x] Every test node of the repository was shown red once: 2026-10-02, mutations in
       scratch clones (GPU tests in slice 2, unit tests in slice 7, integration tests in
       slice 8); listed in each test node.
-- [ ] The linter runs in no CI step yet; a red tree is seen only locally.
-- [ ] The reflection checks are written for this stack and each is proven
-      non-degenerate (AGENTS.md §13). ⚠ Corrected 2026-10-02, slice 10: this item said
-      the kit's `reference/dotnet/` was empty. The skill now carries it (33 files,
-      checked 2026-10-02); `docs/protocol/` in this repository does not copy it. Adding
-      the checks is a new test project, a coding task for the owner to start.
+- [ ] The linter and its self-tests run in CI (steps "Protocol lint" and "Protocol
+      linter self-tests" in `ci.yml`, added 2026-10-03); a first green run on GitHub
+      Actions has not been seen.
+- [x] The reflection checks are written for this stack and each is proven
+      non-degenerate (AGENTS.md §13): 2026-10-03,
+      [Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/BOOT.md), 46 of
+      46 green, every fact red once on a mutation (listed there). Its first run found
+      31 missing and 2 stale `## Dependencies` links in twelve nodes, now corrected.
+      ⚠ Corrected 2026-10-02, slice 10: this item said the kit's `reference/dotnet/` was
+      empty.
 - [ ] ⚠ The GPU package has no release path: `release.yml` packs only the CPU package
       and both would share the `v*` tags.
 - [ ] ⚠ The GPU package's csproj says 0.0.2 while nuget.org carries 0.1.0, 0.0.2 and
@@ -99,7 +106,7 @@ Python 3.8+ (`tools/protocol-lint`).
 
 ## Decomposition
 
-75 nodes. `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
+76 nodes. `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
 nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 
 | Node | Role | Nodes | Readiness defined by |
@@ -112,6 +119,7 @@ nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 | [GPU.Test](tests/DotNetDifferentialEvolution.GPU.Test/API.md) | two end-to-end GPU runs | 3 | — |
 | [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/API.md) | throughput and convergence measurement, no assertions | 4 | — |
 | [protocol-lint](tools/protocol-lint/API.md) | the tree's file-level checks | 1 | its own tests |
+| [Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/API.md) | the reflection checks (§13): documents against compiled code | 1 | mutations, once |
 
 Dependencies run one way: test projects and benchmarks depend on a package and on
 Tests.Shared; Tests.Shared on the CPU package; the packages on nothing in the tree. The

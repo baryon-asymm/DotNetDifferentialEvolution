@@ -25,6 +25,9 @@ consumer-facing size to the live count.
 - [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md),
   [Helpers](../../DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) — Sphere,
   `ProblemContextHelper`.
+- [GenerationStrategies](../../../src/DotNetDifferentialEvolution/GenerationStrategies/API.md) — `IGenerationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ## Constraints
 

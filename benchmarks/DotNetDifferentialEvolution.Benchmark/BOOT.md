@@ -24,6 +24,7 @@ are the test projects' ([UnitTests](../../tests/DotNetDifferentialEvolution.Unit
   each run.
 - [TerminationStrategies](../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — the evaluation limit.
+- [TerminationStrategies/Interfaces](../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 Outside the tree: BenchmarkDotNet 0.14.0; `DotNetOptimization.Abstractions` 1.0.0
 (global using from `benchmarks/Directory.Build.props`).

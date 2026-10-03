@@ -35,6 +35,9 @@ cancellation, and the result. It is the one place where the run is quiescent.
 - [Models](../../Models/API.md) — `ProblemContext`, `Population`.
 - [MutationStrategies/Interfaces](../../MutationStrategies/Interfaces/API.md) —
   `MutationRequirements`.
+- [Interfaces](../../Interfaces/API.md) — `IPopulationUpdatedHandler`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [LocalSearch](../../LocalSearch/API.md) — `ILocalSearchRefiner`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [TerminationStrategies/Interfaces](../../TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ## Constraints
 

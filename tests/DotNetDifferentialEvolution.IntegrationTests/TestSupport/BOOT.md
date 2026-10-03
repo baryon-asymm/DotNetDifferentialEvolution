@@ -29,6 +29,11 @@ of convergence. It holds no tests.
 - [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md),
   [Helpers](../../DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) — the test
   objective contract, `ProblemContextHelper`.
+- [DotNetDifferentialEvolution](../../../src/DotNetDifferentialEvolution/API.md) — `DifferentialEvolution`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [AlgorithmExecutors/Interfaces](../../../src/DotNetDifferentialEvolution/AlgorithmExecutors/Interfaces/API.md) — `IAlgorithmExecutor`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [Controllers/WorkerControllerEventHandlers/Interfaces](../../../src/DotNetDifferentialEvolution/Controllers/WorkerControllerEventHandlers/Interfaces/API.md) — `IWorkerPassLoopDoneHandler`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [MutationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/MutationStrategies/Interfaces/API.md) — `IMutationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [SelectionStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/SelectionStrategies/Interfaces/API.md) — `ISelectionStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ## Constraints
 

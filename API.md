@@ -38,3 +38,5 @@ type.
   runs against known optima; local only (needs OpenCL).
 - [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/API.md) — measurement
   only; asserts nothing.
+- [Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/API.md) — what the
+  tree may consider machine-checked about its documents against the compiled code.

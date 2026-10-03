@@ -28,6 +28,9 @@ performance changes to the executor and the mutation arithmetic.
 - [FitnessFunctionEvaluators](../../../tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md),
   [Helpers](../../../tests/DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) —
   `SimpleSumEvaluator`, `ProblemContextHelper`.
+- [GenerationStrategies](../../../src/DotNetDifferentialEvolution/GenerationStrategies/API.md) — `IGenerationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../../tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 Outside the tree: BenchmarkDotNet 0.14.0.
 

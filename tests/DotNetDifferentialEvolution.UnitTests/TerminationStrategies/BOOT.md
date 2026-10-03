@@ -16,6 +16,7 @@ counting across calls.
 - [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — under test.
 - [TestSupport](../TestSupport/API.md) — `PopulationFactory`.
+- [Models](../../../src/DotNetDifferentialEvolution/Models/API.md) — `Population`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ## Constraints
 
