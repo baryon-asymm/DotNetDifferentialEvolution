@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Coverage (AGENTS.md §7, §13): every type a library assembly exports is named in the ✅ text of its own node's

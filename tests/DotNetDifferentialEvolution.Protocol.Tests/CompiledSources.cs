@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The C# sources the tree's assemblies were actually compiled from, read from each assembly's portable PDB document
@@ -44,11 +44,6 @@ internal static class CompiledSources
         return paths;
     }
 
-    /// <summary>Whether a compiled source belongs to a restored NuGet package rather than to the tree: an ancestor
-    /// directory below the root holds the <c>*.nupkg.metadata</c> sentinel NuGet writes into every package folder (a
-    /// package cache kept inside the workspace, as CI often does). A sentinel at the root itself never claims a source.</summary>
-    /// <param name="path">The full path of a compiled source under <paramref name="root"/>.</param>
-    /// <param name="root">The tree root with a trailing separator; the upward search stops below it.</param>
     /// <summary>The assembly's portable PDB: the file beside the DLL (the SDK default), or, failing that, the one embedded
     /// in the DLL (<c>DebugType embedded</c>, which a package shipping SourceLink uses). Adapted in this tree: the kit
     /// read only the file beside the DLL.</summary>
@@ -77,6 +72,11 @@ internal static class CompiledSources
                                             "the compiled-source fact reads a node's sources from it (DebugType portable or embedded)");
     }
 
+    /// <summary>Whether a compiled source belongs to a restored NuGet package rather than to the tree: an ancestor
+    /// directory below the root holds the <c>*.nupkg.metadata</c> sentinel NuGet writes into every package folder (a
+    /// package cache kept inside the workspace, as CI often does). A sentinel at the root itself never claims a source.</summary>
+    /// <param name="path">The full path of a compiled source under <paramref name="root"/>.</param>
+    /// <param name="root">The tree root with a trailing separator; the upward search stops below it.</param>
     internal static bool IsPackageOwned(string path, string root)
     {
         ArgumentNullException.ThrowIfNull(root);

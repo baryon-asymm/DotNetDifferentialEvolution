@@ -1,16 +1,17 @@
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Where the tree is and what its nodes are: the root found upward from this source file (AGENTS.md §13: from the
 /// source, never from the binary), the nodes found by directory path (a directory holding both documents), the
 /// skipped directories taken from <see cref="ProtocolConfig"/>, and paths relative to the root.
 /// </summary>
-internal static class Tree
+internal static partial class Tree
 {
-    private static readonly Regex AssemblyNameRegex = new(@"<AssemblyName>\s*([^<]+?)\s*</AssemblyName>", RegexOptions.Compiled);
+    [GeneratedRegex(@"<AssemblyName>\s*([^<]+?)\s*</AssemblyName>", RegexOptions.Compiled)]
+    private static partial Regex AssemblyNameRegex();
 
     private static readonly Lazy<string> RootLazy = new(FindRoot);
 
@@ -71,7 +72,7 @@ internal static class Tree
     internal static string AssemblyNameOf(string projectFile)
     {
         var fileName = Path.GetFileNameWithoutExtension(projectFile);
-        var overridden = AssemblyNameRegex.Match(File.ReadAllText(projectFile));
+        var overridden = AssemblyNameRegex().Match(File.ReadAllText(projectFile));
         if (!overridden.Success)
         {
             return fileName;

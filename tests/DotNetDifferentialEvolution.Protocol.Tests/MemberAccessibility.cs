@@ -1,13 +1,14 @@
 using System.Reflection;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The declared accessibility of a member or a nested type, read the same way for every kind reflection reports one for: a
 /// field or a method/constructor directly, a nested type through its own <c>IsNested*</c> flags, and a property or event
 /// through the most visible of its own accessors. The public-surface snapshot (<see cref="SurfaceText"/>) and the
-/// tree-contract snapshot (<see cref="TreeContractSnapshotTests"/>) share this one reading and differ only in which levels
-/// they keep (the tree contract also lists <c>internal</c> and <c>protected internal</c> members).
+/// tree-contract snapshot (<c>TreeContractSnapshotTests</c>, a kit fact this tree omits) share this one reading and
+/// differ only in which levels they keep (the tree contract also lists <c>internal</c> and <c>protected internal</c>
+/// members).
 /// </summary>
 internal static class MemberAccessibility
 {

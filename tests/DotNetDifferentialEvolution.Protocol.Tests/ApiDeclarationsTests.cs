@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The grammar <see cref="ApiDeclarations"/> reads, on documents written here rather than read from the tree, so each
