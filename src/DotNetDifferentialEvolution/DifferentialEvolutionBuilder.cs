@@ -87,9 +87,12 @@ public class DifferentialEvolutionBuilder
     /// <example>
     /// A complete run, from objective to answer:
     /// <code>
+    /// double[] lowerBound = [-5.0, -5.0, -5.0];
+    /// double[] upperBound = [5.0, 5.0, 5.0];
+    ///
     /// using var de = DifferentialEvolutionBuilder
     ///     .ForFunction(new Sphere())
-    ///     .WithBounds(new[] { -5.0, -5.0, -5.0 }, new[] { 5.0, 5.0, 5.0 })
+    ///     .WithBounds(lowerBound, upperBound)
     ///     .WithPopulationSize(50)
     ///     .WithUniformPopulationSampling()
     ///     .WithDefaultMutationStrategy(mutationForce: 0.5, crossoverProbability: 0.9)
@@ -868,16 +871,16 @@ public interface IMutationStrategyRequired
     /// <example>
     /// Pass one constant to both, so the schedule reaches its minimum exactly as the run ends:
     /// <code>
-    /// const long Budget = 300_000;
-    /// const int Dimensions = 30;
+    /// const long budget = 300_000;
+    /// const int dimensions = 30;
     ///
     /// using var de = DifferentialEvolutionBuilder
     ///     .ForFunction(objective)
     ///     .WithBounds(lowerBound, upperBound)
-    ///     .WithPopulationSize(18 * Dimensions)   // r_N^init = 18 from the paper's Table II
+    ///     .WithPopulationSize(18 * dimensions)   // r_N^init = 18 from the paper's Table II
     ///     .WithUniformPopulationSampling()
-    ///     .WithLShade(maxEvaluationNumber: Budget)
-    ///     .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(Budget))
+    ///     .WithLShade(maxEvaluationNumber: budget)
+    ///     .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(budget))
     ///     .UseAllProcessors()
     ///     .Build();
     /// </code>
