@@ -20,7 +20,7 @@ public class SelectionStrategyTests
         var strategy = new SelectionStrategy(GenomeSize);
 
         // Individual 1: parent fitness 9.0, trial fitness 1.0 → accept, and credit the improvement.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: 1.0,
             trialIndividual: trial,
@@ -30,7 +30,7 @@ public class SelectionStrategyTests
             nextPopulation: next);
 
         Assert.Equal(SelectionOutcome.TrialImproved, outcome);
-        Assert.Equal(new[] { 70.0, 80.0 }, next[2..4]); // trial genes copied to individual 1's slot
+        Assert.Equal([70.0, 80.0], next[2..4]); // trial genes copied to individual 1's slot
         Assert.Equal(1.0, nextFf[1]);
     }
 
@@ -41,7 +41,7 @@ public class SelectionStrategyTests
         var strategy = new SelectionStrategy(GenomeSize);
 
         // Individual 1: parent fitness 9.0, trial fitness 50.0 → reject.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: 50.0,
             trialIndividual: trial,
@@ -51,7 +51,7 @@ public class SelectionStrategyTests
             nextPopulation: next);
 
         Assert.Equal(SelectionOutcome.ParentKept, outcome);
-        Assert.Equal(new[] { 30.0, 40.0 }, next[2..4]); // parent genes retained
+        Assert.Equal([30.0, 40.0], next[2..4]); // parent genes retained
         Assert.Equal(9.0, nextFf[1]);
     }
 
@@ -65,7 +65,7 @@ public class SelectionStrategyTests
         // drift sideways across a plateau instead of freezing on it. It fails the strict test the
         // archive and the parameter adaptation are keyed on, so it is TrialAccepted, not
         // TrialImproved — a zero-gain replacement has taught the search nothing.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: 9.0,
             trialIndividual: trial,
@@ -75,7 +75,7 @@ public class SelectionStrategyTests
             nextPopulation: next);
 
         Assert.Equal(SelectionOutcome.TrialAccepted, outcome);
-        Assert.Equal(new[] { 70.0, 80.0 }, next[2..4]); // the trial's genes, not the parent's
+        Assert.Equal([70.0, 80.0], next[2..4]); // the trial's genes, not the parent's
         Assert.Equal(9.0, nextFf[1]);
     }
 
@@ -88,7 +88,7 @@ public class SelectionStrategyTests
         // JADE Table I line 20 keeps the parent when f(x) <= f(u). The threshold is the variant's,
         // not the engine's: SHADE and L-SHADE take the tie, JADE does not, and both are pinned so
         // neither can drift into the other's rule.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: 9.0,
             trialIndividual: trial,
@@ -98,7 +98,7 @@ public class SelectionStrategyTests
             nextPopulation: next);
 
         Assert.Equal(SelectionOutcome.ParentKept, outcome);
-        Assert.Equal(new[] { 30.0, 40.0 }, next[2..4]); // the parent's genes survived
+        Assert.Equal([30.0, 40.0], next[2..4]); // the parent's genes survived
         Assert.Equal(9.0, nextFf[1]);
     }
 
@@ -110,7 +110,7 @@ public class SelectionStrategyTests
 
         // Only the tie changes. Improvement is still improvement, and it is still reported as one,
         // so the archive and the parameter adaptation see exactly what they saw before.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: 1.0,
             trialIndividual: trial,
@@ -120,7 +120,7 @@ public class SelectionStrategyTests
             nextPopulation: next);
 
         Assert.Equal(SelectionOutcome.TrialImproved, outcome);
-        Assert.Equal(new[] { 70.0, 80.0 }, next[2..4]);
+        Assert.Equal([70.0, 80.0], next[2..4]);
         Assert.Equal(1.0, nextFf[1]);
     }
 
@@ -133,7 +133,7 @@ public class SelectionStrategyTests
 
         // Two NaNs were never a tie, so rejecting ties must not resurrect the absorbing-NaN defect:
         // NaN is worse than every real value, which makes this an improvement on either setting.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: 9.0,
             trialIndividual: trial,
@@ -156,7 +156,7 @@ public class SelectionStrategyTests
         // NaN loses every comparison, so an arithmetic rule alone would keep this individual
         // forever. NaN counts as worse than any real value → the real-valued trial wins, and it is
         // a genuine improvement rather than a tie.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: 50.0,
             trialIndividual: trial,
@@ -166,7 +166,7 @@ public class SelectionStrategyTests
             nextPopulation: next);
 
         Assert.Equal(SelectionOutcome.TrialImproved, outcome);
-        Assert.Equal(new[] { 70.0, 80.0 }, next[2..4]); // trial genes replaced the NaN individual
+        Assert.Equal([70.0, 80.0], next[2..4]); // trial genes replaced the NaN individual
         Assert.Equal(50.0, nextFf[1]);
     }
 
@@ -178,7 +178,7 @@ public class SelectionStrategyTests
 
         // A NaN trial is worse than the real-valued parent → reject. It must not slip through the
         // `<=` survival test either: NaN compares false against everything, including itself.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: double.NaN,
             trialIndividual: trial,
@@ -188,7 +188,7 @@ public class SelectionStrategyTests
             nextPopulation: next);
 
         Assert.Equal(SelectionOutcome.ParentKept, outcome);
-        Assert.Equal(new[] { 30.0, 40.0 }, next[2..4]);
+        Assert.Equal([30.0, 40.0], next[2..4]);
         Assert.Equal(9.0, nextFf[1]);
     }
 
@@ -201,7 +201,7 @@ public class SelectionStrategyTests
 
         // Two NaNs are not a tie. Nothing is gained by swapping one unusable value for another,
         // and treating it as an acceptance would churn a NaN individual's genes every generation.
-        var outcome = strategy.Select(
+        var outcome = strategy.SelectSurvivor(
             individualIndex: 1,
             trialIndividualFfValue: double.NaN,
             trialIndividual: trial,
@@ -211,7 +211,7 @@ public class SelectionStrategyTests
             nextPopulation: next);
 
         Assert.Equal(SelectionOutcome.ParentKept, outcome);
-        Assert.Equal(new[] { 30.0, 40.0 }, next[2..4]);
+        Assert.Equal([30.0, 40.0], next[2..4]);
         Assert.True(double.IsNaN(nextFf[1]));
     }
 

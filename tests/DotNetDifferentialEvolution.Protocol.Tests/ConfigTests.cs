@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Xunit;
 
 namespace ProtocolChecks;
@@ -20,8 +17,8 @@ public sealed class ConfigTests
         var paths = Tree.Nodes.Select(node => node.RelativePath).ToHashSet(StringComparer.Ordinal);
         var named = ProtocolConfig.NumericalNodes.Select(path => ("NumericalNodes", path))
             .Concat(ProtocolConfig.NamespaceExceptions.Keys.Select(path => ("NamespaceExceptions", path)));
-        var problems = named.Where(entry => !paths.Contains(entry.Item2))
-            .Select(entry => $"ProtocolConfig.{entry.Item1} names {entry.Item2}, which is not a node of the tree")
+        var problems = named.Where(entry => !paths.Contains(entry.path))
+            .Select(entry => $"ProtocolConfig.{entry.Item1} names {entry.path}, which is not a node of the tree")
             .ToList();
         Assert.True(problems.Count == 0, string.Join("\n", problems));
     }

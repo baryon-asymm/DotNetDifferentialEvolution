@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -223,19 +220,16 @@ internal static class SurfaceText
             return "null";
         }
 
-        if (type.IsEnum)
-        {
-            return Enum.ToObject(type, value).ToString()!;
-        }
-
-        return value switch
-        {
-            string text => "\"" + text + "\"",
-            bool flag => flag ? "true" : "false",
-            double number => number.ToString("R", CultureInfo.InvariantCulture),
-            float number => number.ToString("R", CultureInfo.InvariantCulture) + "f",
-            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => value.ToString() ?? "null",
-        };
+        return type.IsEnum
+            ? Enum.ToObject(type, value).ToString()!
+            : value switch
+            {
+                string text => "\"" + text + "\"",
+                bool flag => flag ? "true" : "false",
+                double number => number.ToString("R", CultureInfo.InvariantCulture),
+                float number => number.ToString("R", CultureInfo.InvariantCulture) + "f",
+                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+                _ => value.ToString() ?? "null",
+            };
     }
 }

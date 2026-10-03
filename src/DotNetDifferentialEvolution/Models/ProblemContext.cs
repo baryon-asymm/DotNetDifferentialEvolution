@@ -10,46 +10,75 @@ namespace DotNetDifferentialEvolution.Models;
 /// <summary>
 /// Represents the context of a problem to be solved using Differential Evolution.
 /// </summary>
-public class ProblemContext
+/// <remarks>
+/// Initializes a new instance of the <see cref="ProblemContext"/> class.
+/// </remarks>
+/// <param name="populationSize">The size of the population.</param>
+/// <param name="genomeSize">The size of the genome.</param>
+/// <param name="workersCount">The number of workers.</param>
+/// <param name="genesLowerBound">The lower bound of the genes.</param>
+/// <param name="genesUpperBound">The upper bound of the genes.</param>
+/// <param name="fitnessFunctionEvaluator">The fitness function evaluator.</param>
+/// <param name="terminationStrategy">The termination strategy.</param>
+/// <param name="population">The current population.</param>
+/// <param name="populationFfValues">The fitness function values of the current population.</param>
+/// <param name="trialPopulation">The trial population.</param>
+/// <param name="trialPopulationFfValues">The fitness function values of the trial population.</param>
+public class ProblemContext(
+    int populationSize,
+    int genomeSize,
+    int workersCount,
+    ReadOnlyMemory<double> genesLowerBound,
+    ReadOnlyMemory<double> genesUpperBound,
+    IFitnessFunctionEvaluator fitnessFunctionEvaluator,
+    ITerminationStrategy terminationStrategy,
+    Memory<double> population,
+    Memory<double> populationFfValues,
+    Memory<double> trialPopulation,
+    Memory<double> trialPopulationFfValues)
 {
-    private Population _population;
-    private Population _trialPopulation;
-    
+    private Population _population = new Population(
+            population,
+            populationFfValues);
+    private Population _trialPopulation = new Population(
+            trialPopulation,
+            trialPopulationFfValues);
+
     /// <summary>
     /// Gets the size of the population.
     /// </summary>
-    public int PopulationSize { get; init; }
+    public int PopulationSize { get; init; } = populationSize;
 
     /// <summary>
     /// Gets the size of the genome.
     /// </summary>
-    public int GenomeSize { get; init; }
+    public int GenomeSize { get; init; } = genomeSize;
 
     /// <summary>
     /// Gets the number of workers.
     /// </summary>
-    public int WorkersCount { get; init; }
+    public int WorkersCount { get; init; } = workersCount;
 
     /// <summary>
     /// Gets the lower bound of the genes.
     /// </summary>
-    public ReadOnlyMemory<double> GenesLowerBound { get; init; }
+    public ReadOnlyMemory<double> GenesLowerBound { get; init; } = genesLowerBound;
 
     /// <summary>
     /// Gets the upper bound of the genes.
     /// </summary>
-    public ReadOnlyMemory<double> GenesUpperBound { get; init; }
+    public ReadOnlyMemory<double> GenesUpperBound { get; init; } = genesUpperBound;
 
     /// <summary>
     /// Gets the fitness function evaluator.
     /// </summary>
-    public IFitnessFunctionEvaluator FitnessFunctionEvaluator { get; init; }
-    
+    public IFitnessFunctionEvaluator FitnessFunctionEvaluator { get; init; } = fitnessFunctionEvaluator;
+
     /// <summary>
     /// Gets the termination strategy.
     /// </summary>
-    public ITerminationStrategy TerminationStrategy { get; init; }
-    
+    public ITerminationStrategy TerminationStrategy { get; init; } = terminationStrategy;
+
     /// <summary>
     /// Gets the handler for population updates.
     /// </summary>
@@ -97,7 +126,7 @@ public class ProblemContext
     /// Gets the per-individual trial outcomes for the current generation. Workers write
     /// disjoint indices; the generation strategy reads the aggregated buffer.
     /// </summary>
-    public Memory<TrialRecord> TrialRecords { get; private set; }
+    public Memory<TrialRecord> TrialRecords { get; private set; } = new TrialRecord[populationSize];
 
     /// <summary>
     /// Gets or sets the number of live individuals. This equals <see cref="PopulationSize"/> unless
@@ -146,69 +175,19 @@ public class ProblemContext
     /// Gets the population indices sorted ascending by fitness (best first), maintained by
     /// p-best strategies for the upcoming generation. Empty until populated.
     /// </summary>
-    public Memory<int> FitnessSortedIndices { get; private set; }
+    public Memory<int> FitnessSortedIndices { get; private set; } = new int[populationSize];
 
     /// <summary>
     /// Gets the population the current generation was produced into — the one being read from.
     /// </summary>
-    public PopulationView CurrentPopulation { get; private set; }
+    public PopulationView CurrentPopulation { get; private set; } = new PopulationView(population, populationFfValues, populationSize, genomeSize);
 
     /// <summary>
     /// Gets the buffer the next generation is written into. Between
     /// <see cref="SwapPopulations"/> and the next generation it holds the parents that were just
     /// discarded, which is what the external archive stores.
     /// </summary>
-    public PopulationView TrialPopulation { get; private set; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ProblemContext"/> class.
-    /// </summary>
-    /// <param name="populationSize">The size of the population.</param>
-    /// <param name="genomeSize">The size of the genome.</param>
-    /// <param name="workersCount">The number of workers.</param>
-    /// <param name="genesLowerBound">The lower bound of the genes.</param>
-    /// <param name="genesUpperBound">The upper bound of the genes.</param>
-    /// <param name="fitnessFunctionEvaluator">The fitness function evaluator.</param>
-    /// <param name="terminationStrategy">The termination strategy.</param>
-    /// <param name="population">The current population.</param>
-    /// <param name="populationFfValues">The fitness function values of the current population.</param>
-    /// <param name="trialPopulation">The trial population.</param>
-    /// <param name="trialPopulationFfValues">The fitness function values of the trial population.</param>
-    public ProblemContext(
-        int populationSize,
-        int genomeSize,
-        int workersCount,
-        ReadOnlyMemory<double> genesLowerBound,
-        ReadOnlyMemory<double> genesUpperBound,
-        IFitnessFunctionEvaluator fitnessFunctionEvaluator,
-        ITerminationStrategy terminationStrategy,
-        Memory<double> population,
-        Memory<double> populationFfValues,
-        Memory<double> trialPopulation,
-        Memory<double> trialPopulationFfValues)
-    {
-        PopulationSize = populationSize;
-        GenomeSize = genomeSize;
-        WorkersCount = workersCount;
-        GenesLowerBound = genesLowerBound;
-        GenesUpperBound = genesUpperBound;
-        FitnessFunctionEvaluator = fitnessFunctionEvaluator;
-        TerminationStrategy = terminationStrategy;
-
-        CurrentPopulation = new PopulationView(population, populationFfValues, populationSize, genomeSize);
-        TrialPopulation = new PopulationView(trialPopulation, trialPopulationFfValues, populationSize, genomeSize);
-
-        TrialRecords = new TrialRecord[populationSize];
-        FitnessSortedIndices = new int[populationSize];
-
-        _population = new Population(
-            population,
-            populationFfValues);
-        
-        _trialPopulation = new Population(
-            trialPopulation,
-            trialPopulationFfValues);
-    }
+    public PopulationView TrialPopulation { get; private set; } = new PopulationView(trialPopulation, trialPopulationFfValues, populationSize, genomeSize);
 
     /// <summary>
     /// Swaps the current population with the trial population.
@@ -219,7 +198,7 @@ public class ProblemContext
 
         (_population, _trialPopulation) = (_trialPopulation, _population);
     }
-    
+
     /// <summary>
     /// Gets the representative population for a given generation.
     /// </summary>

@@ -25,7 +25,7 @@ are the test projects' ([UnitTests](../../tests/DotNetDifferentialEvolution.Unit
   each run.
 - [TerminationStrategies](../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — the evaluation limit.
-- [FitnessFunctionEvaluators](../../tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
+- [FitnessFunctionEvaluators](../../tests/DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md)
   — `RastriginEvaluator`, `AckleyEvaluator`, the comparison's objectives (2026-10-03;
   before, the node's own copies in `Benchmark/Functions`).
 - [TerminationStrategies/Interfaces](../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).

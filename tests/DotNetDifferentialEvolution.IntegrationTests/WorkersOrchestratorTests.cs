@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests;
 
@@ -27,7 +27,7 @@ public class WorkersOrchestratorTests
         using var harness = new MultiWorkerHarness(context, executor, WorkersCount);
 
         harness.StartAll();
-        var result = await harness.Handler.GetResultPopulationTask().WaitAsync(Timeout);
+        var result = await harness.Handler.GetResultPopulationTask().WaitAsync(Timeout).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, result, valueTolerance: 1e-5, geneTolerance: 1e-2);
         Assert.False(harness.AnyRunning);
@@ -48,7 +48,7 @@ public class WorkersOrchestratorTests
         harness.StartAll();
 
         var aggregate = await Assert.ThrowsAsync<AggregateException>(
-            () => harness.Handler.GetResultPopulationTask().WaitAsync(Timeout));
+            () => harness.Handler.GetResultPopulationTask().WaitAsync(Timeout)).ConfigureAwait(true);
 
         Assert.NotEmpty(aggregate.InnerExceptions);
         Assert.InRange(aggregate.InnerExceptions.Count, 1, WorkersCount);

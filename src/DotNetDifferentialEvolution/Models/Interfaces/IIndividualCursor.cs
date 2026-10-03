@@ -10,7 +10,7 @@ public interface IIndividualCursor
     /// </summary>
     /// <param name="individualIndex">The index of the individual to be updated.</param>
     /// <param name="updater">The updater to be applied to the individual.</param>
-    public void AcceptUpdater(
+    void AcceptUpdater(
         int individualIndex,
         IIndividualCursorUpdater updater);
 }

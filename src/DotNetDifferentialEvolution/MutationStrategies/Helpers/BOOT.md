@@ -10,7 +10,7 @@ crossover or repair.
 ## Invariants
 
 - **Binomial crossover always takes one gene (`jrand`) from the mutant.** A trial never
-  equals its parent. Held by `CrossoverHelperTests.GuaranteedGeneAlwaysComesFromMutant_EvenWhenCrossoverNeverFires`
+  equals its parent. Held by `CrossoverHelperTests.GuaranteedGeneAlwaysComesFromMutantEvenWhenCrossoverNeverFires`
   and `TheGuaranteedGeneIsUniformlyDistributedOverTheGenome`.
 - **The inheritance rate matches CR.** Held by
   `CrossoverHelperTests.GeneInheritanceRateMatchesTheClosedForm`.
@@ -21,7 +21,7 @@ crossover or repair.
   `RandomIndexSelectorTests.ProducesDistinctInRangeIndicesNeverEqualToExcluded`,
   `ShiftsCandidatesPastExcludedIndex`, `RetriesUntilCandidateIsDistinct`.
 - **The SIMD path equals the scalar one.** Held by
-  `MutationMathTests.AssignBasePlusScaledDifference_MatchesScalarReference`.
+  `MutationMathTests.AssignBasePlusScaledDifferenceMatchesScalarReference`.
 - **The per-gene draw is an integer comparison against a threshold scaled once per
   call, through a struct random source.** That keeps the draw inlined (`ec0fa8f`). Held
   by the shape of the code.

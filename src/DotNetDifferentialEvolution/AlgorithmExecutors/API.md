@@ -26,7 +26,7 @@ one draw of `Random.Shared`.
 2. a `MutationContext` over the current population, built on the stack;
 3. `Mutate` into a per-call `stackalloc` trial buffer;
 4. `Evaluate(workerIndex: k, genes: trial)`;
-5. `Select` into the next population at `i`; the outcome, F, CR and both fitness values
+5. `SelectSurvivor` into the next population at `i`; the outcome, F, CR and both fitness values
    go into `TrialRecords[i]`;
 6. track the best written individual by the engine's comparison rule.
 

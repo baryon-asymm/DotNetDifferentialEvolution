@@ -25,12 +25,12 @@ performance changes to the executor and the mutation arithmetic.
   [SelectionStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/SelectionStrategies/Interfaces/API.md),
   [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — the parts it is built from.
-- [FitnessFunctionEvaluators](../../../tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md),
-  [Helpers](../../../tests/DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) —
+- [FitnessFunctionEvaluators](../../../tests/DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md),
+  [Helpers](../../../tests/DotNetDifferentialEvolution.Tests.Common/Helpers/API.md) —
   `SimpleSumEvaluator`, `ProblemContextHelper`.
 - [GenerationStrategies](../../../src/DotNetDifferentialEvolution/GenerationStrategies/API.md) — `IGenerationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [FitnessFunctionEvaluators/Interfaces](../../../tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../../tests/DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 Outside the tree: BenchmarkDotNet 0.14.0.
 

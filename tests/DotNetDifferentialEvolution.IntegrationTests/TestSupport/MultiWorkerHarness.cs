@@ -8,7 +8,7 @@ namespace DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 /// <summary>
 /// Wires up a master + N−1 slave <see cref="WorkerController"/>s around a single
 /// <see cref="OrchestratorWorkerHandler"/>, mirroring how
-/// <see cref="DotNetDifferentialEvolution.DifferentialEvolution"/> arranges its workers, so the
+/// <see cref="DifferentialEvolution"/> arranges its workers, so the
 /// orchestration and concurrency tests can drive a genuine multi-threaded run and dispose every
 /// worker cleanly.
 /// </summary>
@@ -24,8 +24,10 @@ internal sealed class MultiWorkerHarness : IDisposable
     {
         var slaveCount = workersCount - 1;
         _slaves = new WorkerController[slaveCount];
-        for (int i = 0; i < slaveCount; i++)
+        for (var i = 0; i < slaveCount; i++)
+        {
             _slaves[i] = new WorkerController(workerId: i, executor);
+        }
 
         Handler = new OrchestratorWorkerHandler(_slaves.ToArray(), context);
         _master = new WorkerController(workerId: workersCount - 1, executor, Handler);
@@ -39,7 +41,10 @@ internal sealed class MultiWorkerHarness : IDisposable
     public void StartAll()
     {
         foreach (var slave in _slaves)
+        {
             slave.Start();
+        }
+
         _master.Start();
     }
 
@@ -50,6 +55,8 @@ internal sealed class MultiWorkerHarness : IDisposable
     {
         _master.Dispose();
         foreach (var slave in _slaves)
+        {
             slave.Dispose();
+        }
     }
 }

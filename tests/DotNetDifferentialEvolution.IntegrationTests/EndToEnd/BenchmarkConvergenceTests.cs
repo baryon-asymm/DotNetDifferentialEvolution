@@ -1,7 +1,6 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -24,7 +23,7 @@ public class BenchmarkConvergenceTests
     [InlineData("Zakharov", 5)]
     [InlineData("SumOfDifferentPowers", 5)]
     [InlineData("DixonPrice", 2)]
-    public async Task ClassicDe_ConvergesOnUnimodalFunctions(
+    public async Task ClassicDeConvergesOnUnimodalFunctions(
         string functionName,
         int dimension)
     {
@@ -40,7 +39,7 @@ public class BenchmarkConvergenceTests
                 .WithTerminationCondition(new StagnationStreakTerminationStrategy(2500, 1e-12))
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
-                .Build());
+                .Build()).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-6);
     }
@@ -55,7 +54,7 @@ public class BenchmarkConvergenceTests
     [InlineData("Himmelblau", 2)]
     [InlineData("Booth", 2)]
     [InlineData("Beale", 2)]
-    public async Task Shade_ConvergesOnMultimodalFunctions(
+    public async Task ShadeConvergesOnMultimodalFunctions(
         string functionName,
         int dimension)
     {
@@ -70,7 +69,7 @@ public class BenchmarkConvergenceTests
                 .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(3000))
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
-                .Build());
+                .Build()).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-4);
     }
@@ -83,7 +82,7 @@ public class BenchmarkConvergenceTests
     [InlineData("StyblinskiTang", 2)]
     [InlineData("Rastrigin", 5)]
     [InlineData("Ackley", 5)]
-    public async Task LShade_ConvergesOnHarderMultimodalFunctions(
+    public async Task LShadeConvergesOnHarderMultimodalFunctions(
         string functionName,
         int dimension)
     {
@@ -99,7 +98,7 @@ public class BenchmarkConvergenceTests
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(maxEvaluations))
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
-                .Build());
+                .Build()).ConfigureAwait(true);
 
         // Looser tolerance: these landscapes are deceptive / dimension-scaled.
         var tolerance = 1e-2 * Math.Max(1.0, Math.Abs(evaluator.GetGlobalMinimumFfValue()));

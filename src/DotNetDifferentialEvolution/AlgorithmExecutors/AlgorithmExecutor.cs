@@ -55,9 +55,11 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         // optimum — is silent enough to be worth a second guard.
         if (mutationStrategy.Requirements.HasFlag(MutationRequirements.ControlParameters)
             && context.ControlParameterProvider is null)
+        {
             throw new InvalidOperationException(
                 $"The mutation strategy {mutationStrategy.GetType().Name} requires per-individual " +
                 "control parameters, but the problem context has no control-parameter provider.");
+        }
 
         _individualHandlerStepSize = context.WorkersCount;
 
@@ -73,8 +75,10 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         var rootSeed = context.RandomSeed ?? Random.Shared.Next();
 
         _randomProviders = new SeededRandomProvider[context.WorkersCount];
-        for (int workerId = 0; workerId < _randomProviders.Length; workerId++)
+        for (var workerId = 0; workerId < _randomProviders.Length; workerId++)
+        {
             _randomProviders[workerId] = new SeededRandomProvider(rootSeed + workerId);
+        }
     }
 
     /// <summary>
@@ -110,7 +114,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
 
         var archive = _context.Archive.Span;
         var archiveSize = _context.ArchiveSize;
-        var fitnessSortedIndices = _context.FitnessSortedIndices.Span.Slice(0, populationSize);
+        var fitnessSortedIndices = _context.FitnessSortedIndices.Span[..populationSize];
 
         bestHandledIndividualIndex = workerId < populationSize ? workerId : 0;
         for (var i = workerId; i < populationSize; i += _individualHandlerStepSize)
@@ -158,7 +162,7 @@ public class AlgorithmExecutor : IAlgorithmExecutor
             // The selection strategy reports its own decision: what happened to the trial is its
             // rule to apply, and the archive and parameter adaptation downstream need the outcome
             // that actually happened, not the greedy rule assumed here.
-            var outcome = _selectionStrategy.Select(
+            var outcome = _selectionStrategy.SelectSurvivor(
                 individualIndex: i,
                 trialIndividualFfValue: trialIndividualFfValue,
                 trialIndividual: trialIndividual,
@@ -178,7 +182,9 @@ public class AlgorithmExecutor : IAlgorithmExecutor
 
             if (FitnessComparisonHelper.IsBetter(
                     nextPopulationFfValues[i], nextPopulationFfValues[bestHandledIndividualIndex]))
+            {
                 bestHandledIndividualIndex = i;
+            }
         }
     }
 }

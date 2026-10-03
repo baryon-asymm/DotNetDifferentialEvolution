@@ -4,8 +4,8 @@ using DotNetDifferentialEvolution.Algorithms.Jade;
 using DotNetDifferentialEvolution.Algorithms.Jde;
 using DotNetDifferentialEvolution.Algorithms.Lshade;
 using DotNetDifferentialEvolution.Algorithms.Shade;
-using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.Controllers;
+using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
@@ -14,7 +14,7 @@ using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 using DotNetDifferentialEvolution.Variants;
 
 namespace DotNetDifferentialEvolution.UnitTests.Builder;
@@ -38,9 +38,9 @@ public class DeVariantTests
 
         var context = ContextOf(de);
 
-        Assert.IsType<RandMutationStrategy>(MutationStrategyOf(de));
-        Assert.IsType<SelectionStrategy>(SelectionStrategyOf(de));
-        Assert.IsType<JdeStrategy>(context.ControlParameterProvider);
+        _ = Assert.IsType<RandMutationStrategy>(MutationStrategyOf(de));
+        _ = Assert.IsType<SelectionStrategy>(SelectionStrategyOf(de));
+        _ = Assert.IsType<JdeStrategy>(context.ControlParameterProvider);
         Assert.Same(context.ControlParameterProvider, context.GenerationStrategy);
         Assert.Equal(0, context.ArchiveCapacity);
     }
@@ -52,9 +52,9 @@ public class DeVariantTests
 
         var context = ContextOf(de);
 
-        Assert.IsType<CurrentToPBestMutationStrategy>(MutationStrategyOf(de));
-        Assert.IsType<SelectionStrategy>(SelectionStrategyOf(de));
-        Assert.IsType<JadeStrategy>(context.ControlParameterProvider);
+        _ = Assert.IsType<CurrentToPBestMutationStrategy>(MutationStrategyOf(de));
+        _ = Assert.IsType<SelectionStrategy>(SelectionStrategyOf(de));
+        _ = Assert.IsType<JadeStrategy>(context.ControlParameterProvider);
         Assert.Same(context.ControlParameterProvider, context.GenerationStrategy);
         Assert.Equal(PopulationSize, context.ArchiveCapacity);
     }
@@ -89,7 +89,7 @@ public class DeVariantTests
         var next = new double[2];
         var nextFf = new double[1];
 
-        var outcome = SelectionStrategyOf(de).Select(
+        var outcome = SelectionStrategyOf(de).SelectSurvivor(
             individualIndex: 0,
             trialIndividualFfValue: 5.0,
             trialIndividual: trial,
@@ -108,8 +108,8 @@ public class DeVariantTests
 
         var context = ContextOf(de);
 
-        Assert.IsType<CurrentToPBestMutationStrategy>(MutationStrategyOf(de));
-        Assert.IsType<ShadeStrategy>(context.ControlParameterProvider);
+        _ = Assert.IsType<CurrentToPBestMutationStrategy>(MutationStrategyOf(de));
+        _ = Assert.IsType<ShadeStrategy>(context.ControlParameterProvider);
         Assert.Same(context.ControlParameterProvider, context.GenerationStrategy);
         Assert.Equal(PopulationSize, context.ArchiveCapacity);
     }
@@ -123,8 +123,8 @@ public class DeVariantTests
 
         var context = ContextOf(de);
 
-        Assert.IsType<CurrentToPBestMutationStrategy>(MutationStrategyOf(de));
-        Assert.IsType<LShadeStrategy>(context.ControlParameterProvider);
+        _ = Assert.IsType<CurrentToPBestMutationStrategy>(MutationStrategyOf(de));
+        _ = Assert.IsType<LShadeStrategy>(context.ControlParameterProvider);
         Assert.Same(context.ControlParameterProvider, context.GenerationStrategy);
         // round(2.6 * 20) = 52, rounded half away from zero.
         Assert.Equal(52, context.ArchiveCapacity);
@@ -155,7 +155,9 @@ public class DeVariantTests
 
         Assert.Equal(requirements, context.MutationRequirements);
         if (requirements.HasFlag(MutationRequirements.ControlParameters))
+        {
             Assert.NotNull(context.ControlParameterProvider);
+        }
     }
 
     [Fact]
@@ -178,7 +180,7 @@ public class DeVariantTests
         using var de = BuildPreset(builder => builder.WithVariant(variant));
 
         Assert.NotNull(variant.SeenTerminationStrategy);
-        Assert.IsType<LimitGenerationNumberTerminationStrategy>(variant.SeenTerminationStrategy);
+        _ = Assert.IsType<LimitGenerationNumberTerminationStrategy>(variant.SeenTerminationStrategy);
     }
 
     [Fact]
@@ -229,13 +231,13 @@ public class DeVariantTests
         using var de = BuildPreset(builder => builder.WithVariant(new StubVariant(
             new RandMutationStrategy(), new ConstantControlParameterProvider(0.5, 0.9))));
 
-        Assert.IsType<SelectionStrategy>(SelectionStrategyOf(de));
+        _ = Assert.IsType<SelectionStrategy>(SelectionStrategyOf(de));
     }
 
     [Fact]
     public void WithVariantRejectsNull()
     {
-        Assert.Throws<ArgumentNullException>(
+        _ = Assert.Throws<ArgumentNullException>(
             () => BuildPreset(builder => builder.WithVariant(null!)));
     }
 
@@ -294,21 +296,14 @@ public class DeVariantTests
            ?? throw new InvalidOperationException($"{declaringType.Name}.{name} was renamed; update this test.");
 
     /// <summary>A variant that installs whatever it is handed, so a test can install a mismatch.</summary>
-    private sealed class StubVariant : IDeVariant
+    private sealed class StubVariant(
+        IMutationStrategy mutationStrategy,
+        IControlParameterProvider? controlParameterProvider,
+        IGenerationStrategy? generationStrategy = null) : IDeVariant
     {
-        private readonly IMutationStrategy _mutationStrategy;
-        private readonly IControlParameterProvider? _controlParameterProvider;
-        private readonly IGenerationStrategy? _generationStrategy;
-
-        public StubVariant(
-            IMutationStrategy mutationStrategy,
-            IControlParameterProvider? controlParameterProvider,
-            IGenerationStrategy? generationStrategy = null)
-        {
-            _mutationStrategy = mutationStrategy;
-            _controlParameterProvider = controlParameterProvider;
-            _generationStrategy = generationStrategy;
-        }
+        private readonly IMutationStrategy _mutationStrategy = mutationStrategy;
+        private readonly IControlParameterProvider? _controlParameterProvider = controlParameterProvider;
+        private readonly IGenerationStrategy? _generationStrategy = generationStrategy;
 
         public DeVariantSetup Configure(
             in DeVariantConfiguration configuration)

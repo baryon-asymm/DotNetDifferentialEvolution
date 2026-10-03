@@ -51,20 +51,30 @@ public class LShadeStrategy : ShadeStrategy
         : base(initialPopulationSize, memorySize)
     {
         if (minPopulationSize < 4)
+        {
             throw new ArgumentOutOfRangeException(nameof(minPopulationSize), "Minimum population size must be at least 4.");
+        }
+
         if (initialPopulationSize < minPopulationSize)
+        {
             throw new ArgumentException("Initial population size must be at least the minimum population size.");
+        }
         // LShadeVariant validates both of these, but this class is public and constructible on its
         // own, and neither failure announces itself: a budget of zero divides to a non-finite
         // progress and collapses the population to its minimum in the first generation, and a
         // negative rate produces a negative archive capacity that only surfaces later, from inside
         // a running generation.
         if (maxEvaluationNumber <= 0)
+        {
             throw new ArgumentOutOfRangeException(
                 nameof(maxEvaluationNumber), "Evaluation budget must be greater than 0.");
+        }
+
         if (archiveSizeRate < 0.0)
+        {
             throw new ArgumentOutOfRangeException(
                 nameof(archiveSizeRate), "Archive size rate must be non-negative.");
+        }
 
         _initialPopulationSize = initialPopulationSize;
         _minPopulationSize = minPopulationSize;
@@ -99,14 +109,18 @@ public class LShadeStrategy : ShadeStrategy
         // current-to-pbest strategy does and which is what WithLShade configures. Pairing this
         // strategy by hand with one that declares no ranking is still legal, and then nobody has
         // ranked the population and L-SHADE has to do it itself.
-        if (context.MutationRequirements.HasFlag(MutationRequirements.FitnessRanking) == false)
+        if (!context.MutationRequirements.HasFlag(MutationRequirements.FitnessRanking))
+        {
             RebuildSortedIndices(context, currentPopulationSize);
+        }
 
         var newPopulationSize = Math.Clamp(
             ComputePlannedPopulationSize(context.EvaluationCount), _minPopulationSize, currentPopulationSize);
 
         if (newPopulationSize >= currentPopulationSize)
+        {
             return;
+        }
 
         var current = context.CurrentPopulation;
         var genomeSize = current.GenomeSize;
@@ -119,7 +133,7 @@ public class LShadeStrategy : ShadeStrategy
         var scratch = context.DiscardedParents.Genes.Span;
         var scratchFfValues = context.DiscardedParents.FfValues.Span;
 
-        for (int k = 0; k < newPopulationSize; k++)
+        for (var k = 0; k < newPopulationSize; k++)
         {
             var sourceIndex = sortedIndices[k];
             population.Slice(sourceIndex * genomeSize, genomeSize)
@@ -127,21 +141,25 @@ public class LShadeStrategy : ShadeStrategy
             scratchFfValues[k] = populationFfValues[sourceIndex];
         }
 
-        scratch.Slice(0, newPopulationSize * genomeSize).CopyTo(population);
-        scratchFfValues.Slice(0, newPopulationSize).CopyTo(populationFfValues);
+        scratch[..(newPopulationSize * genomeSize)].CopyTo(population);
+        scratchFfValues[..newPopulationSize].CopyTo(populationFfValues);
 
         context.ActivePopulationSize = newPopulationSize;
 
         // The survivors are now stored in ascending-fitness order, so the ranking is identity.
-        for (int k = 0; k < newPopulationSize; k++)
+        for (var k = 0; k < newPopulationSize; k++)
+        {
             sortedIndices[k] = k;
+        }
 
         // Scale the archive capacity down and drop any overflow entries.
         var newArchiveCapacity = (int)Math.Round(
             _archiveSizeRate * newPopulationSize, MidpointRounding.AwayFromZero);
         context.ArchiveCapacity = newArchiveCapacity;
         if (context.ArchiveSize > newArchiveCapacity)
+        {
             context.ArchiveSize = newArchiveCapacity;
+        }
     }
 
     /// <summary>

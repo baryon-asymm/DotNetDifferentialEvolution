@@ -21,7 +21,7 @@ draw is the pool size (`f7887ab`).
 
 - [MutationStrategies](../../../src/DotNetDifferentialEvolution/MutationStrategies/API.md)
   — `CurrentToPBestMutationStrategy`, `MutationContext`; under test.
-- [Fakes](../../DotNetDifferentialEvolution.Tests.Shared/Fakes/API.md) —
+- [Fakes](../../DotNetDifferentialEvolution.Tests.Common/Fakes/API.md) —
   `ScriptedRandomProvider`.
 
 ## Constraints
@@ -32,8 +32,8 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 
 - [x] Green: 2026-10-02, 20 cases in 1 class.
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. A floor of 1 instead of
-      2 turned 6 cases red, in `Mutate_NeverDrawsPBestFromAPoolSmallerThanTwo` and
-      `Mutate_AddressesThePBestPoolThroughTheFitnessRanking`.
+      2 turned 6 cases red, in `MutateNeverDrawsPBestFromAPoolSmallerThanTwo` and
+      `MutateAddressesThePBestPoolThroughTheFitnessRanking`.
 - [ ] ⚠ The other six schemes (`Rand`, `Best`, `CurrentToBest`, `RandTwo`, `BestTwo`,
       the legacy `MutationStrategy`) have no unit tests of their own; their arithmetic
       is covered through [Helpers](Helpers/BOOT.md), their wiring by the integration

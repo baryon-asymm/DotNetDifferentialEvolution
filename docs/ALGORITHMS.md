@@ -98,7 +98,7 @@ lifetime of the run. For each individual $i$ in its stripe, in
 2. build $v_i$ — `IMutationStrategy.Mutate`;
 3. crossover and bound repair into $u_i$ — `CrossoverHelper.BinomialCrossoverAndRepair`;
 4. evaluate $f(u_i)$;
-5. select — `ISelectionStrategy.Select`, writing the winner into the *trial* population buffer;
+5. select — `ISelectionStrategy.SelectSurvivor`, writing the winner into the *trial* population buffer;
 6. record the outcome in `TrialRecord[i]`.
 
 Then, once, on the orchestrator thread — in
@@ -491,7 +491,7 @@ the permanent $CR = 0$ lock more likely.
 The two halves of SHADE 1.1's memory update are kept as two separate virtuals rather than one
 "SHADE 1.1" flag, so each can be enabled and tested alone.
 
-*Pinned by* `LShadeStrategyTests.AfterGeneration_UpdatesMemoryCrWithTheWeightedLehmerMean`, which
+*Pinned by* `LShadeStrategyTests.AfterGenerationUpdatesMemoryCrWithTheWeightedLehmerMean`, which
 asserts the Lehmer value on scripted draws **and** that it differs from the arithmetic value the
 sibling test in `ShadeStrategyTests` pins. The two tests are meant to be read as a pair: they are
 what stops the two variants from silently converging again.

@@ -23,7 +23,7 @@ public class UniformRandomSamplingMakerTests
 
         maker.SamplePopulation(population);
 
-        for (int i = 0; i < population.Length; i++)
+        for (var i = 0; i < population.Length; i++)
         {
             var gene = i % genomeSize;
             Assert.InRange(population[i], lower[gene], upper[gene]);

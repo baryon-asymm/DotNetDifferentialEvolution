@@ -20,7 +20,7 @@ orchestrator, the builder end to end, and convergence on functions with known op
 - **Every class carries `Category=Integration`; long ones add `Category=Slow`.** CI's
   second gate runs `Category!=Slow&Category!=Gpu`, so a `Slow` case runs only
   locally. Checked 2026-10-02: 6 cases are `Slow` (`ResourceUsageTests`, four
-  `LShade_ConvergesOnHarderMultimodalFunctions` cases, one `WorkerControllerTests`
+  `LShadeConvergesOnHarderMultimodalFunctions` cases, one `WorkerControllerTests`
   case). Nothing enforces either mark.
 - **The assembly runs its tests one at a time** (`AssemblyInfo.cs`,
   `DisableTestParallelization`): several tests read process-wide counters, thread
@@ -49,11 +49,11 @@ orchestrator, the builder end to end, and convergence on functions with known op
   [TerminationStrategies/Interfaces](../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md),
   [Variants](../../src/DotNetDifferentialEvolution/Variants/API.md) — parts configured
   and observed.
-- [FitnessFunctionEvaluators](../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
+- [FitnessFunctionEvaluators](../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md)
   — the objectives, including the `NaN` and throwing ones.
 - [AlgorithmExecutors/Interfaces](../../src/DotNetDifferentialEvolution/AlgorithmExecutors/Interfaces/API.md) — `IAlgorithmExecutor`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [Controllers/WorkerControllerEventHandlers/Interfaces](../../src/DotNetDifferentialEvolution/Controllers/WorkerControllerEventHandlers/Interfaces/API.md) — `IWorkerPassLoopDoneHandler`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [FitnessFunctionEvaluators/Interfaces](../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 Outside the tree: xUnit 2.5.3, xunit.runner.visualstudio 2.5.3, Microsoft.NET.Test.Sdk
 17.8.0, coverlet.collector 6.0.0.
@@ -63,7 +63,7 @@ Outside the tree: xUnit 2.5.3, xunit.runner.visualstudio 2.5.3, Microsoft.NET.Te
 Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 
 - Settings from `tests/Directory.Build.props`; references the package and
-  [Tests.Shared](../DotNetDifferentialEvolution.Tests.Shared/API.md) as projects.
+  [Tests.Common](../DotNetDifferentialEvolution.Tests.Common/API.md) as projects.
 - `Environment.ProcessorCount` decides several worker counts, so what runs depends on
   the machine (here 2026-10-02 the multi-worker tests ran with the local core count).
 
@@ -77,7 +77,7 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - [x] This node's I1 is non-degenerate: 2026-10-02, same clone. Not rebuilding the
       fitness ranking turned all 5 `FitnessRankingMaintenanceTests` cases red; reducing
       the workers' best values with `<` instead of the `NaN` rule turned
-      `NaNFitnessTests.CrossWorkerReduction_DoesNotReportANaNIndividualAsTheBest` red.
+      `NaNFitnessTests.CrossWorkerReductionDoesNotReportANaNIndividualAsTheBest` red.
 - [ ] ⚠ No test here holds `AlgorithmExecutor`'s own control-parameter guard for a
       hand-built context: `ExecutorFactory` and `ManualAlgorithmRunner` always use the
       legacy `MutationStrategy`, which declares no requirements (searched 2026-10-02).

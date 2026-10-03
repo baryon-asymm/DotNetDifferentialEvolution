@@ -1,11 +1,11 @@
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests;
 
 /// <summary>
-/// Integration tests for the classic <see cref="DotNetDifferentialEvolution.AlgorithmExecutors.AlgorithmExecutor"/>
+/// Integration tests for the classic <see cref="AlgorithmExecutors.AlgorithmExecutor"/>
 /// generation loop (mutation + selection + termination), driven single-threaded and seeded so
 /// the runs are reproducible. Replaces the old random-genome-size AlgorithmExecutionTester.
 /// </summary>

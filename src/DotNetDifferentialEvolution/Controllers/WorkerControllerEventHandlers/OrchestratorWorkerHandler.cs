@@ -12,9 +12,9 @@ namespace DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers;
 public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
 {
     private int _passLoopCounter;
-    
+
     private readonly ReadOnlyMemory<WorkerController> _slaveWorkers;
-    
+
     private readonly ProblemContext _context;
 
     /// <summary>
@@ -36,7 +36,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// own, only a reference to the context it projects.
     /// </summary>
     private readonly GenerationContext _generationContext;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OrchestratorWorkerHandler"/> class.
     /// </summary>
@@ -57,7 +57,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             ? new double[context.PopulationSize]
             : null;
     }
-    
+
     /// <summary>
     /// Handles the event when a worker pass loop is done.
     /// </summary>
@@ -72,14 +72,14 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         WaitAllWorkersOrThemExceptions(
             masterWorker,
             out var hasException);
-        
+
         if (hasException)
         {
             StopAllWorkers();
-            
+
             var aggregateException = GetAggregateException(masterWorker);
             _resultPopulationTcs.SetException(aggregateException);
-            
+
             shouldTerminate = true;
         }
         else
@@ -113,12 +113,14 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             // observer and evaluation-budget termination both see the refined state.
             var localSearchRefiner = _context.LocalSearchRefiner;
             if (localSearchRefiner is not null && generationNumber % _context.LocalSearchInterval == 0)
+            {
                 localSearchRefiner.Refine(_context, generationNumber);
+            }
 
             var population = _context.GetRepresentativePopulation(generationNumber, bestIndividualIndex);
-        
+
             _context.PopulationUpdatedHandler?.Handle(population);
-            
+
             shouldTerminate = _context.TerminationStrategy.ShouldTerminate(population);
             if (shouldTerminate)
             {
@@ -143,7 +145,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             }
         }
     }
-    
+
     /// <summary>
     /// Re-ranks the active population into <see cref="ProblemContext.FitnessSortedIndices"/>, or
     /// does nothing when no configured strategy reads a ranking.
@@ -151,7 +153,9 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     private void RebuildFitnessRanking()
     {
         if (_fitnessSortKeys is null)
+        {
             return;
+        }
 
         PopulationSortHelper.SortIndicesByFitness(
             _context.FitnessSortedIndices.Span,
@@ -171,21 +175,15 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     internal void UseCancellationToken(
-        CancellationToken cancellationToken)
-    {
-        _cancellationToken = cancellationToken;
-    }
+        CancellationToken cancellationToken) => _cancellationToken = cancellationToken;
 
     /// <summary>
     /// Completes the result task as canceled without a generation having run.
     /// </summary>
     /// <param name="cancellationToken">The already-canceled token.</param>
     internal void CancelBeforeStart(
-        CancellationToken cancellationToken)
-    {
-        _resultPopulationTcs.TrySetCanceled(cancellationToken);
-    }
-    
+        CancellationToken cancellationToken) => _ = _resultPopulationTcs.TrySetCanceled(cancellationToken);
+
     /// <summary>
     /// Waits for all workers to complete their pass loops or encounter exceptions.
     /// </summary>
@@ -206,13 +204,15 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             // IsPassLoopCompleted read is what makes the following HasException read fresh, and
             // HasException still breaks the wait promptly when a worker throws.
             var spinWait = new SpinWait();
-            while (slaveWorker.IsPassLoopCompleted == false
-                   && slaveWorker.HasException == false)
+            while (!slaveWorker.IsPassLoopCompleted && !slaveWorker.HasException)
+            {
                 spinWait.SpinOnce(sleep1Threshold: -1);
+            }
+
             hasException |= slaveWorker.HasException;
         }
     }
-    
+
     /// <summary>
     /// Gets the aggregate exception from all workers.
     /// </summary>
@@ -223,16 +223,21 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     {
         var exceptions = new List<Exception>();
         if (masterWorker.HasException)
+        {
             exceptions.Add(masterWorker.Exception!);
+        }
+
         foreach (var slaveWorker in _slaveWorkers.Span)
         {
             if (slaveWorker.HasException)
+            {
                 exceptions.Add(slaveWorker.Exception!);
+            }
         }
-        
+
         return new AggregateException(exceptions);
     }
-    
+
     /// <summary>
     /// Gets the index of the best individual in the population.
     /// </summary>
@@ -244,11 +249,11 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         Span<double> populationFfValues)
     {
         var slaveWorkers = _slaveWorkers.Span;
-        
+
         var bestIndividualIndex = masterWorker.BestHandledIndividualIndex;
         var bestIndividualFfValue = populationFfValues[bestIndividualIndex];
 
-        for (int i = 0; i < slaveWorkers.Length; i++)
+        for (var i = 0; i < slaveWorkers.Length; i++)
         {
             var slaveBestHandledIndividualIndex = slaveWorkers[i].BestHandledIndividualIndex;
             var slaveBestHandledIndividualFfValue = populationFfValues[slaveBestHandledIndividualIndex];
@@ -258,10 +263,10 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
                 bestIndividualFfValue = slaveBestHandledIndividualFfValue;
             }
         }
-        
+
         return bestIndividualIndex;
     }
-    
+
     /// <summary>
     /// Finds the index of the best (lowest fitness) individual by scanning the active
     /// population. Used when a generation strategy may have reordered or resized the population.
@@ -273,10 +278,12 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
         ReadOnlySpan<double> populationFfValues)
     {
         var bestIndividualIndex = 0;
-        for (int i = 1; i < populationFfValues.Length; i++)
+        for (var i = 1; i < populationFfValues.Length; i++)
         {
             if (FitnessComparisonHelper.IsBetter(populationFfValues[i], populationFfValues[bestIndividualIndex]))
+            {
                 bestIndividualIndex = i;
+            }
         }
 
         return bestIndividualIndex;
@@ -291,15 +298,19 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     {
         masterWorker.PermitToPassLoop();
         foreach (var slaveWorker in _slaveWorkers.Span)
+        {
             slaveWorker.PermitToPassLoop();
+        }
     }
-    
+
     /// <summary>
     /// Stops all workers.
     /// </summary>
     private void StopAllWorkers()
     {
         foreach (var slaveWorker in _slaveWorkers.Span)
+        {
             slaveWorker.Stop();
+        }
     }
 }

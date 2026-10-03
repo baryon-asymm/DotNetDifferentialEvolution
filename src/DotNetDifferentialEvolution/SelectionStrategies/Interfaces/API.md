@@ -9,7 +9,7 @@ may change.
 ```csharp
 public interface ISelectionStrategy
 {
-    SelectionOutcome Select(
+    SelectionOutcome SelectSurvivor(
         int individualIndex,
         double trialIndividualFfValue,
         Span<double> trialIndividual,

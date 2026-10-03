@@ -99,13 +99,15 @@ public class JdeStrategy : IControlParameterProvider, IGenerationStrategy
         ArgumentNullException.ThrowIfNull(context);
 
         var currentPopulationSize = context.ActivePopulationSize;
-        for (int i = 0; i < currentPopulationSize; i++)
+        for (var i = 0; i < currentPopulationSize; i++)
         {
             // Survival, not improvement. jDE attaches the parameters to the individual, and the
             // individual carried into the next generation is the trial whenever the trial was
             // taken — including on a tie, where the parent it replaced is simply gone.
-            if (trialRecords[i].Replaced == false)
+            if (!trialRecords[i].Replaced)
+            {
                 continue;
+            }
 
             _mutationForces[i] = trialRecords[i].UsedF;
             _crossoverProbabilities[i] = trialRecords[i].UsedCr;

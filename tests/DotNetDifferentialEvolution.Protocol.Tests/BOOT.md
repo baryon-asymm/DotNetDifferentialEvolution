@@ -96,7 +96,7 @@ Each one is marked in the code at the place it changes.
       | a `Reset()` member under ✅ that the type lacks | `DeclarationTests` |
       | Lshade's link to ControlParameterProviders removed | `DependencyTests` |
       | GPU MutationStrategies/Interfaces' constraint-only link removed | `DependencyTests` (proves the constraint deviation) |
-      | `IsCompilerHelper` skip removed | `DependencyTests`, on GPU.Test/FitnessFunctions, EndToEnd, Tests.Shared/FitnessFunctionEvaluators (proves the helper deviation) |
+      | `IsCompilerHelper` skip removed | `DependencyTests`, on GPU.Test/FitnessFunctions, EndToEnd, Tests.Common/FitnessFunctionEvaluators (proves the helper deviation) |
       | an unused link declared (GPU TerminationStrategies) | `DependencyTests` |
       | `internal` type in `…GPU/Nowhere/`, no documents | `NamespaceTests`, `CompiledSourceTests`, `LintTests` |
       | public `Limit` property on `MaxGenerationStrategy` | `SurfaceTests`, `.actual.txt` written |

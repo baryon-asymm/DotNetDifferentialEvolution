@@ -16,7 +16,7 @@ public class RandomThresholdTests
     {
         var random = new Random(4242);
 
-        for (int i = 0; i < 200_000; i++)
+        for (var i = 0; i < 200_000; i++)
         {
             var draw = random.NextDouble();
             var probability = random.NextDouble();

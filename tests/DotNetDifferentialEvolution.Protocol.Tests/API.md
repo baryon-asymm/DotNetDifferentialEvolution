@@ -9,7 +9,7 @@ fact was seen red on a mutation (this node's `BOOT.md`, acceptance criteria).
 
 | Claim | Fact |
 |---|---|
-| The public surface of every library assembly (CPU, GPU, Tests.Shared, Benchmark) equals `PublicSurface.approved.txt` | `SurfaceTests` |
+| The public surface of every library assembly (CPU, GPU, Tests.Common, Benchmark) equals `PublicSurface.approved.txt` | `SurfaceTests` |
 | Every exported type is named under ✅ in its node's `API.md` | `CoverageTests` |
 | Every type's namespace is exactly its node's | `NamespaceTests` |
 | Every declaration in a C# block under ✅ exists, type and member | `DeclarationTests` |

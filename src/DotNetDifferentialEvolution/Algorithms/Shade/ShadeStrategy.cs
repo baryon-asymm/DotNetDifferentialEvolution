@@ -84,7 +84,9 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
         : base(populationSize)
     {
         if (memorySize <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(memorySize), "Memory size must be greater than 0.");
+        }
 
         _memorySize = memorySize;
         _memoryCr = new double[memorySize];
@@ -116,7 +118,9 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
         } while (mutationForce <= 0.0);
 
         if (mutationForce > 1.0)
+        {
             mutationForce = 1.0;
+        }
     }
 
     /// <inheritdoc />
@@ -149,13 +153,15 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
         var weightedFSquaredSum = 0.0;
         var maxSuccessfulCr = 0.0;
 
-        for (int i = 0; i < currentPopulationSize; i++)
+        for (var i = 0; i < currentPopulationSize; i++)
         {
             // S_CR and S_F take improving trials only (both papers, Algorithm 2 line 16). A trial
             // accepted on a tie has an improvement of exactly zero, so it would enter the weighted
             // means with weight zero and contribute nothing but the risk of an empty weight sum.
-            if (trialRecords[i].Improved == false)
+            if (!trialRecords[i].Improved)
+            {
                 continue;
+            }
 
             // Weight by the fitness improvement. A success does not always come with a finite,
             // strictly positive one: replacing a parent the objective scored NaN — or an infinite
@@ -164,8 +170,10 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
             // weightSum <= 0.0 guard below does not catch (every comparison against NaN is false),
             // permanently poisoning M_F and M_CR for the rest of the run.
             var weight = trialRecords[i].ParentFfValue - trialRecords[i].TrialFfValue;
-            if (double.IsFinite(weight) == false)
+            if (!double.IsFinite(weight))
+            {
                 continue;
+            }
 
             var cr = trialRecords[i].UsedCr;
             var f = trialRecords[i].UsedF;
@@ -176,27 +184,35 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
             weightedFSum += weight * f;
             weightedFSquaredSum += weight * f * f;
             if (cr > maxSuccessfulCr)
+            {
                 maxSuccessfulCr = cr;
+            }
         }
 
         if (weightSum <= 0.0)
+        {
             return;
+        }
 
         // L-SHADE terminal rule: once a slot's successful CR values are all 0 (or it is already
         // terminal), it stays terminal and forever samples CR = 0.
         if (UseTerminalCr && (_memoryCr[_memoryIndex] < 0.0 || maxSuccessfulCr <= 0.0))
+        {
             _memoryCr[_memoryIndex] = TerminalCrValue;
+        }
         // The Lehmer branch divides by the weighted sum of CR, which is zero only when every
         // successful CR is zero. Under L-SHADE that case is the terminal rule above, so this is
         // unreachable there; the guard is what keeps the mean well defined for a subclass that
         // takes SHADE 1.1's mean without its terminal rule.
-        else if (UseLehmerCrMean && weightedCrSum > 0.0)
-            _memoryCr[_memoryIndex] = weightedCrSquaredSum / weightedCrSum;
         else
-            _memoryCr[_memoryIndex] = weightedCrSum / weightSum;
+        {
+            _memoryCr[_memoryIndex] = UseLehmerCrMean && weightedCrSum > 0.0 ? weightedCrSquaredSum / weightedCrSum : weightedCrSum / weightSum;
+        }
 
         if (weightedFSum > 0.0)
+        {
             _memoryF[_memoryIndex] = weightedFSquaredSum / weightedFSum;
+        }
 
         _memoryIndex = (_memoryIndex + 1) % _memorySize;
     }

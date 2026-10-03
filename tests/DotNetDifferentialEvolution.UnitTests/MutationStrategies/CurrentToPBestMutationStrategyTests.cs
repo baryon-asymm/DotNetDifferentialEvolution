@@ -1,5 +1,5 @@
 using DotNetDifferentialEvolution.MutationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.MutationStrategies;
 
@@ -14,17 +14,14 @@ public class CurrentToPBestMutationStrategyTests
     [InlineData(0.0)]
     [InlineData(-0.1)]
     [InlineData(1.1)]
-    public void Constructor_ThrowsWhenPBestRateIsOutOfRange(
-        double pBestRate)
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new CurrentToPBestMutationStrategy(pBestRate));
-    }
+    public void ConstructorThrowsWhenPBestRateIsOutOfRange(
+        double pBestRate) => _ = Assert.Throws<ArgumentOutOfRangeException>(() => new CurrentToPBestMutationStrategy(pBestRate));
 
     [Theory]
     [InlineData(0.05)]
     [InlineData(0.5)]
     [InlineData(1.0)]
-    public void Constructor_AcceptsRatesInTheHalfOpenInterval(
+    public void ConstructorAcceptsRatesInTheHalfOpenInterval(
         double pBestRate)
     {
         var strategy = new CurrentToPBestMutationStrategy(pBestRate);
@@ -36,23 +33,23 @@ public class CurrentToPBestMutationStrategyTests
     [InlineData(0.0, 0.2)]    // min must be > 0
     [InlineData(-0.1, 0.2)]   // min out of range
     [InlineData(0.05, 1.1)]   // max out of range
-    public void RangeConstructor_ThrowsWhenRatesAreOutOfRange(
+    public void RangeConstructorThrowsWhenRatesAreOutOfRange(
         double pBestRateMin,
         double pBestRateMax)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(
             () => new CurrentToPBestMutationStrategy(pBestRateMin, pBestRateMax));
     }
 
     [Fact]
-    public void RangeConstructor_ThrowsWhenMinExceedsMax()
+    public void RangeConstructorThrowsWhenMinExceedsMax()
     {
-        Assert.Throws<ArgumentException>(
+        _ = Assert.Throws<ArgumentException>(
             () => new CurrentToPBestMutationStrategy(pBestRateMin: 0.3, pBestRateMax: 0.2));
     }
 
     [Fact]
-    public void RangeConstructor_AcceptsAValidPerIndividualRange()
+    public void RangeConstructorAcceptsAValidPerIndividualRange()
     {
         var strategy = new CurrentToPBestMutationStrategy(pBestRateMin: 0.05, pBestRateMax: 0.2);
 
@@ -72,7 +69,7 @@ public class CurrentToPBestMutationStrategyTests
     [InlineData(14, 2)]     // round(1.54) = 2 → the schedule already meets the floor
     [InlineData(20, 2)]     // round(2.20) = 2
     [InlineData(100, 11)]   // round(11.0) = 11 → large populations are untouched by the floor
-    public void Mutate_NeverDrawsPBestFromAPoolSmallerThanTwo(
+    public void MutateNeverDrawsPBestFromAPoolSmallerThanTwo(
         int populationSize,
         int expectedPoolSize)
     {
@@ -82,7 +79,7 @@ public class CurrentToPBestMutationStrategyTests
     }
 
     [Fact]
-    public void Mutate_AddressesThePBestPoolThroughTheFitnessRanking()
+    public void MutateAddressesThePBestPoolThroughTheFitnessRanking()
     {
         // A deliberately non-identity ranking, so the produced trial reveals which ranked slot
         // the draw addressed rather than which raw population index it happened to match.
@@ -103,10 +100,12 @@ public class CurrentToPBestMutationStrategyTests
         int populationSize,
         double pBestRate)
     {
-        for (int draw = 0; draw < populationSize; draw++)
+        for (var draw = 0; draw < populationSize; draw++)
         {
-            if (IsInsideThePBestPool(populationSize, pBestRate, draw) == false)
+            if (!IsInsideThePBestPool(populationSize, pBestRate, draw))
+            {
                 return draw;
+            }
         }
 
         return populationSize;
@@ -119,7 +118,7 @@ public class CurrentToPBestMutationStrategyTests
     {
         try
         {
-            RunMutation(populationSize, pBestRate, pBestDraw);
+            _ = RunMutation(populationSize, pBestRate, pBestDraw);
             return true;
         }
         catch (InvalidOperationException)
@@ -143,8 +142,10 @@ public class CurrentToPBestMutationStrategyTests
         int[]? ranking = null)
     {
         var population = new double[populationSize];
-        for (int i = 0; i < populationSize; i++)
+        for (var i = 0; i < populationSize; i++)
+        {
             population[i] = i;
+        }
 
         var trialIndividual = new double[1];
         double[] lowerBound = [-1_000.0];
@@ -167,7 +168,7 @@ public class CurrentToPBestMutationStrategyTests
             LowerBound = lowerBound,
             UpperBound = upperBound,
             RandomProvider = random,
-            FitnessSortedIndices = ranking ?? Enumerable.Range(0, populationSize).ToArray()
+            FitnessSortedIndices = ranking ?? [.. Enumerable.Range(0, populationSize)]
         };
 
         new CurrentToPBestMutationStrategy(pBestRate).Mutate(context);

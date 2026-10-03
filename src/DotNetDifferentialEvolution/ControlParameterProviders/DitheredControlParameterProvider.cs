@@ -24,7 +24,9 @@ public class DitheredControlParameterProvider : IControlParameterProvider
         double crossoverProbability)
     {
         if (minMutationForce > maxMutationForce)
+        {
             throw new ArgumentException("Minimum mutation force must be less than or equal to the maximum.");
+        }
 
         _minMutationForce = minMutationForce;
         _mutationForceRange = maxMutationForce - minMutationForce;

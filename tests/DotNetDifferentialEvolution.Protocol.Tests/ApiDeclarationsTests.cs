@@ -1,4 +1,3 @@
-using System.Linq;
 using Xunit;
 
 namespace ProtocolChecks;
@@ -21,8 +20,8 @@ public sealed class ApiDeclarationsTests
             "## Planned ⏳", Fence + "csharp", "public sealed class Planned;", Fence);
         var blocks = ApiDeclarations.ImplementedCsharpBlocks(document).ToList();
         var single = Assert.Single(blocks);
-        Assert.Contains("Done", single, System.StringComparison.Ordinal);
-        Assert.Single(ApiDeclarations.ImplementedCsharpBlocks(Fence + "csharp\npublic class Unmarked;\n" + Fence));
+        Assert.Contains("Done", single, StringComparison.Ordinal);
+        _ = Assert.Single(ApiDeclarations.ImplementedCsharpBlocks(Fence + "csharp\npublic class Unmarked;\n" + Fence));
         Assert.True(ApiDeclarations.NamesType(document, "Done"));
         Assert.False(ApiDeclarations.NamesType(document, "Planned"));
     }

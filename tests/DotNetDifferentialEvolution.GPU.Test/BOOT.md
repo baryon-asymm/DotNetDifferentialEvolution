@@ -85,7 +85,7 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - [ ] ⚠ The bound and random-state device buffers allocated in `GetOptimizer` are never
       disposed by the test.
 - [ ] ⚠ The project is named `.GPU.Test`; its siblings are `.UnitTests`,
-      `.IntegrationTests` and `.Tests.Shared`.
+      `.IntegrationTests` and `.Tests.Common`.
 
 ## Taboos
 

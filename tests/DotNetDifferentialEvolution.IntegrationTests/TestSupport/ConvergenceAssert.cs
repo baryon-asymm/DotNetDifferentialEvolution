@@ -1,5 +1,5 @@
 using DotNetDifferentialEvolution.Models;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.Interfaces;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 
@@ -28,11 +28,15 @@ internal static class ConvergenceAssert
             $"Expected fitness ~{expectedValue} (±{valueTolerance}) but got {actualValue}.");
 
         if (geneTolerance is null)
+        {
             return;
+        }
 
         var expectedGenes = evaluator.GetGlobalMinimumGenes();
         var actualGenes = population.IndividualCursor.Genes;
-        for (int i = 0; i < expectedGenes.Length; i++)
+        for (var i = 0; i < expectedGenes.Length; i++)
+        {
             Assert.Equal(expectedGenes.Span[i], actualGenes.Span[i], geneTolerance.Value);
+        }
     }
 }

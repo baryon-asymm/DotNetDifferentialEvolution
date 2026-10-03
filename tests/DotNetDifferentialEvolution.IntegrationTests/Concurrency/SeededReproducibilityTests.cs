@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.Concurrency;
 
@@ -28,8 +28,8 @@ public class SeededReproducibilityTests
     public async Task TheSameSeedReproducesTheRunExactly(
         int workers)
     {
-        var first = await RunAsync(seed: 20260728, workers: workers);
-        var second = await RunAsync(seed: 20260728, workers: workers);
+        var first = await RunAsync(seed: 20260728, workers: workers).ConfigureAwait(true);
+        var second = await RunAsync(seed: 20260728, workers: workers).ConfigureAwait(true);
 
         Assert.Equal(first.BestFfValue, second.BestFfValue);
         Assert.Equal(first.BestGenes, second.BestGenes);
@@ -42,8 +42,8 @@ public class SeededReproducibilityTests
     public async Task TheSameSeedReproducesTheInitialPopulationToo(
         int workers)
     {
-        var first = await RunAsync(seed: 7, workers: workers, generations: 0);
-        var second = await RunAsync(seed: 7, workers: workers, generations: 0);
+        var first = await RunAsync(seed: 7, workers: workers, generations: 0).ConfigureAwait(true);
+        var second = await RunAsync(seed: 7, workers: workers, generations: 0).ConfigureAwait(true);
 
         Assert.Equal(first.PopulationFfValues, second.PopulationFfValues);
     }
@@ -54,8 +54,8 @@ public class SeededReproducibilityTests
     public async Task DifferentSeedsProduceDifferentRuns(
         int workers)
     {
-        var first = await RunAsync(seed: 1, workers: workers);
-        var second = await RunAsync(seed: 2, workers: workers);
+        var first = await RunAsync(seed: 1, workers: workers).ConfigureAwait(true);
+        var second = await RunAsync(seed: 2, workers: workers).ConfigureAwait(true);
 
         Assert.NotEqual(first.PopulationFfValues, second.PopulationFfValues);
     }
@@ -65,8 +65,8 @@ public class SeededReproducibilityTests
     {
         // The default must stay unseeded; otherwise every run of a program would follow the same
         // trajectory, which is not what an unqualified builder chain promises.
-        var first = await RunAsync(seed: null, workers: 4);
-        var second = await RunAsync(seed: null, workers: 4);
+        var first = await RunAsync(seed: null, workers: 4).ConfigureAwait(true);
+        var second = await RunAsync(seed: null, workers: 4).ConfigureAwait(true);
 
         Assert.NotEqual(first.PopulationFfValues, second.PopulationFfValues);
     }
@@ -80,8 +80,8 @@ public class SeededReproducibilityTests
         // JADE draws from three separate streams: the workers' (mutation and crossover), the
         // control-parameter provider's (which is handed a worker's provider), and the
         // orchestrator's own (random archive eviction once the archive is full).
-        var first = await RunAsync(seed: 99, workers: workers, configure: builder => builder.WithJade());
-        var second = await RunAsync(seed: 99, workers: workers, configure: builder => builder.WithJade());
+        var first = await RunAsync(seed: 99, workers: workers, configure: builder => builder.WithJade()).ConfigureAwait(true);
+        var second = await RunAsync(seed: 99, workers: workers, configure: builder => builder.WithJade()).ConfigureAwait(true);
 
         Assert.Equal(first.BestFfValue, second.BestFfValue);
         Assert.Equal(first.PopulationFfValues, second.PopulationFfValues);
@@ -116,7 +116,7 @@ public class SeededReproducibilityTests
 
         using var de = (seed is { } seedValue ? builder.WithSeed(seedValue) : builder).Build();
 
-        var population = await de.RunAsync().WaitAsync(Timeout);
+        var population = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         return RunResult.From(population);
     }
@@ -132,7 +132,7 @@ public class SeededReproducibilityTests
             population.MoveCursorToBestIndividual();
 
             var ffValues = new double[population.PopulationSize];
-            for (int i = 0; i < ffValues.Length; i++)
+            for (var i = 0; i < ffValues.Length; i++)
             {
                 population.MoveCursorTo(i);
                 ffValues[i] = population.IndividualCursor.FitnessFunctionValue;

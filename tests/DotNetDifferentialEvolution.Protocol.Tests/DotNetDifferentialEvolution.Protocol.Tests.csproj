@@ -20,11 +20,12 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj"/>
         <ProjectReference Include="..\..\src\DotNetDifferentialEvolution.GPU\DotNetDifferentialEvolution.GPU.csproj"/>
-        <ProjectReference Include="..\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj"/>
+        <ProjectReference Include="..\DotNetDifferentialEvolution.Tests.Common\DotNetDifferentialEvolution.Tests.Common.csproj"/>
         <ProjectReference Include="..\DotNetDifferentialEvolution.UnitTests\DotNetDifferentialEvolution.UnitTests.csproj"/>
         <ProjectReference Include="..\DotNetDifferentialEvolution.IntegrationTests\DotNetDifferentialEvolution.IntegrationTests.csproj"/>
         <ProjectReference Include="..\DotNetDifferentialEvolution.GPU.Test\DotNetDifferentialEvolution.GPU.Test.csproj"/>
         <ProjectReference Include="..\..\benchmarks\DotNetDifferentialEvolution.Benchmark\DotNetDifferentialEvolution.Benchmark.csproj"/>
+        <ProjectReference Include="..\..\benchmarks\DotNetDifferentialEvolution.Benchmark.Runner\DotNetDifferentialEvolution.Benchmark.Runner.csproj"/>
     </ItemGroup>
 
 </Project>

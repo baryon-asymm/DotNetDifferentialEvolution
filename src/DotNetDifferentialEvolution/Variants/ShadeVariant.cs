@@ -28,7 +28,9 @@ public sealed class ShadeVariant : IDeVariant
         int memorySize = ShadeStrategy.DefaultMemorySize)
     {
         if (archiveSizeRate < 0.0)
+        {
             throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
+        }
 
         _pBestRate = pBestRate;
         _archiveSizeRate = archiveSizeRate;

@@ -4,7 +4,7 @@ using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests;
 
@@ -31,7 +31,7 @@ public class WorkerControllerTests
         using var worker = new WorkerController(workerId: 0, executor, handler);
 
         worker.Start();
-        var result = await handler.GetResultPopulationTask().WaitAsync(Timeout);
+        var result = await handler.GetResultPopulationTask().WaitAsync(Timeout).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, result, valueTolerance: 1e-6, geneTolerance: 1e-3);
         Assert.False(worker.IsRunning);
@@ -53,9 +53,9 @@ public class WorkerControllerTests
         worker.Start();
 
         var aggregate = await Assert.ThrowsAsync<AggregateException>(
-            () => handler.GetResultPopulationTask().WaitAsync(Timeout));
-        Assert.Single(aggregate.InnerExceptions);
-        Assert.IsType<RosenbrockException>(aggregate.InnerExceptions[0]);
+            () => handler.GetResultPopulationTask().WaitAsync(Timeout)).ConfigureAwait(true);
+        _ = Assert.Single(aggregate.InnerExceptions);
+        _ = Assert.IsType<RosenbrockException>(aggregate.InnerExceptions[0]);
         Assert.False(worker.IsRunning);
     }
 
@@ -80,7 +80,7 @@ public class WorkerControllerTests
         var random = new Random(20240601);
         var state = BuildStateMachine();
 
-        for (int i = 0; i < commandCount; i++)
+        for (var i = 0; i < commandCount; i++)
         {
             var command = (WorkerCommand)random.Next(2);
             var next = state.Next[(int)command];
@@ -89,15 +89,27 @@ public class WorkerControllerTests
             {
                 case WorkerCommand.Start:
                     if (next.MustThrow)
-                        Assert.Throws<InvalidOperationException>(() => worker.Start(throwIfRunning: true));
+                    {
+                        _ = Assert.Throws<InvalidOperationException>(() => worker.Start(throwIfRunning: true));
+                    }
                     else
+                    {
                         worker.Start(throwIfRunning: true);
+                    }
+
                     break;
                 case WorkerCommand.Stop:
                     if (next.MustThrow)
-                        Assert.Throws<InvalidOperationException>(() => worker.Stop(throwIfStopped: true));
+                    {
+                        _ = Assert.Throws<InvalidOperationException>(() => worker.Stop(throwIfStopped: true));
+                    }
                     else
+                    {
                         worker.Stop(throwIfStopped: true);
+                    }
+
+                    break;
+                default:
                     break;
             }
 
@@ -105,11 +117,13 @@ public class WorkerControllerTests
             state = next;
         }
 
-        if (worker.IsRunning == false)
+        if (!worker.IsRunning)
+        {
             worker.Start(throwIfRunning: true);
+        }
 
         termination.SetShouldTerminate(true);
-        var result = await handler.GetResultPopulationTask().WaitAsync(TimeSpan.FromSeconds(60));
+        var result = await handler.GetResultPopulationTask().WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(true);
 
         Assert.NotNull(result);
         Assert.False(worker.IsRunning);

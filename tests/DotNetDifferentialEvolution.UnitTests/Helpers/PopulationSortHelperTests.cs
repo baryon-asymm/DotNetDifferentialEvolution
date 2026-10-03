@@ -17,7 +17,7 @@ public class PopulationSortHelperTests
 
         PopulationSortHelper.SortIndicesByFitness(indices, ffValues, count: 4, keys);
 
-        Assert.Equal(new[] { 3, 1, 2, 0 }, indices);
+        Assert.Equal([3, 1, 2, 0], indices);
     }
 
     [Fact]
@@ -30,9 +30,9 @@ public class PopulationSortHelperTests
         PopulationSortHelper.SortIndicesByFitness(indices, ffValues, count: 3, keys);
 
         // First three indices (0,1,2) ranked by their fitness 5,4,3 → 2,1,0.
-        Assert.Equal(new[] { 2, 1, 0 }, indices[..3]);
+        Assert.Equal([2, 1, 0], indices[..3]);
         // Entries beyond count are left untouched.
-        Assert.Equal(new[] { -1, -1 }, indices[3..]);
+        Assert.Equal([-1, -1], indices[3..]);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class PopulationSortHelperTests
 
         PopulationSortHelper.SortIndicesByFitness(indices, ffValues, count: 4, keys);
 
-        Assert.Equal(new[] { 2, 3, 0, 1 }, indices);
+        Assert.Equal([2, 3, 0, 1], indices);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class PopulationSortHelperTests
 
         PopulationSortHelper.SortIndicesByFitness(indices, ffValues, count: 4, keys);
 
-        Assert.Equal(new[] { 3, 1 }, indices[..2]);        // the finite values lead, best first
+        Assert.Equal([3, 1], indices[..2]);        // the finite values lead, best first
         Assert.Equal(new[] { 0, 2 }, indices[2..].Order()); // both NaN individuals trail
     }
 

@@ -11,16 +11,16 @@ L-SHADE can turn them on and each can be tested alone.
 - **Only improving trials with a finite improvement enter the memory.** A tie has weight
   zero; a `NaN` or infinite weight is unmeasurable and would poison `M_F`/`M_CR` for
   the rest of the run, since `weightSum <= 0` does not catch `NaN` (`68f3a92`). Held by
-  `ShadeStrategyTests.AfterGeneration_IgnoresASuccessWhoseImprovementIsNotMeasurable` and
-  `AfterGeneration_IgnoresASuccessOverAnInfiniteParent`.
+  `ShadeStrategyTests.AfterGenerationIgnoresASuccessWhoseImprovementIsNotMeasurable` and
+  `AfterGenerationIgnoresASuccessOverAnInfiniteParent`.
 - **SHADE (2013) updates `M_CR` with the weighted arithmetic mean** (Eq. 17); the Lehmer
   mean is L-SHADE's (`e489324`). Held by
-  `ShadeStrategyTests.AfterGeneration_StoresImprovementWeightedMeans`.
+  `ShadeStrategyTests.AfterGenerationStoresImprovementWeightedMeans`.
 - **A terminal slot stays terminal and yields CR = 0.** Held by
-  `ShadeStrategyTests.AfterGeneration_WithTerminalCrEnabled_FixesSlotToZeroWhenAllSuccessfulCrAreZero`
-  and `AfterGeneration_TerminalCrSlotStaysTerminal_EvenAfterNonZeroSuccessfulCr`.
+  `ShadeStrategyTests.AfterGenerationWithTerminalCrEnabledFixesSlotToZeroWhenAllSuccessfulCrAreZero`
+  and `AfterGenerationTerminalCrSlotStaysTerminalEvenAfterNonZeroSuccessfulCr`.
 - **No usable success, no change.** Held by
-  `ShadeStrategyTests.AfterGeneration_WithNoSuccesses_LeavesMemoryUnchanged`.
+  `ShadeStrategyTests.AfterGenerationWithNoSuccessesLeavesMemoryUnchanged`.
 
 ## Dependencies
 

@@ -21,12 +21,12 @@ internal static class BuilderOptimizer
 
     public static async Task<Population> RunOnceAsync(
         TimeSpan timeout,
-        Func<DotNetDifferentialEvolution.DifferentialEvolution> factory)
+        Func<DifferentialEvolution> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
 
         using var de = factory();
-        var result = await de.RunAsync().WaitAsync(timeout);
+        var result = await de.RunAsync().WaitAsync(timeout).ConfigureAwait(true);
         result.MoveCursorToBestIndividual();
 
         return result;

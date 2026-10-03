@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.MutationStrategies.Helpers;
 using DotNetDifferentialEvolution.RandomProviders;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.MutationStrategies.Helpers;
 
@@ -21,7 +21,7 @@ public class RandomIndexSelectorTests
 
         RandomIndexSelector.FillDistinctIndices(indices, populationSize: 5, excludeIndex: 2, new ProviderRandomSource(random));
 
-        Assert.Equal(new[] { 0, 4, 1 }, indices.ToArray());
+        Assert.Equal([0, 4, 1], indices.ToArray());
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class RandomIndexSelectorTests
 
         RandomIndexSelector.FillDistinctIndices(indices, populationSize: 4, excludeIndex: 0, new ProviderRandomSource(random));
 
-        Assert.Equal(new[] { 1, 2 }, indices.ToArray());
+        Assert.Equal([1, 2], indices.ToArray());
     }
 
     [Theory]
@@ -50,7 +50,7 @@ public class RandomIndexSelectorTests
         var random = new DeterministicRandomProvider(seed: populationSize + excludeIndex + count);
         Span<int> indices = stackalloc int[count];
 
-        for (int trial = 0; trial < 200; trial++)
+        for (var trial = 0; trial < 200; trial++)
         {
             RandomIndexSelector.FillDistinctIndices(indices, populationSize, excludeIndex, new ProviderRandomSource(random));
 

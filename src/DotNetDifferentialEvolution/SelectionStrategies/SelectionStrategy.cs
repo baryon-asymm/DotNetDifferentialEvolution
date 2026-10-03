@@ -23,10 +23,29 @@ namespace DotNetDifferentialEvolution.SelectionStrategies;
 /// <c>acceptsTies</c> constructor argument.
 /// </para>
 /// </remarks>
-public class SelectionStrategy : ISelectionStrategy
+/// <remarks>
+/// Initializes a new instance of the <see cref="SelectionStrategy"/> class with an explicit
+/// rule for a trial whose fitness exactly equals its parent's.
+/// </remarks>
+/// <param name="genomeSize">The size of the genome.</param>
+/// <param name="acceptsTies">
+/// <see langword="true"/> to let a tied trial replace its parent — SHADE (2013) Eq. (6),
+/// L-SHADE (2014) Algorithm 2 line 12, and Tanabe's reference implementation, which takes the
+/// trial in its <c>==</c> branch without recording a success. <see langword="false"/> to keep
+/// the parent, which is JADE (2009) Table I lines 20–21.
+/// </param>
+/// <remarks>
+/// The two settings differ only on an exact tie, so on a smooth objective they are
+/// indistinguishable; the difference appears on plateaus and on objectives with a discrete
+/// range. Either way a success stays strict, so the archive and the parameter adaptation see
+/// the same records.
+/// </remarks>
+public class SelectionStrategy(
+    int genomeSize,
+    bool acceptsTies) : ISelectionStrategy
 {
-    private readonly int _genomeSize;
-    private readonly bool _acceptsTies;
+    private readonly int _genomeSize = genomeSize;
+    private readonly bool _acceptsTies = acceptsTies;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SelectionStrategy"/> class that takes a trial
@@ -37,31 +56,6 @@ public class SelectionStrategy : ISelectionStrategy
         int genomeSize)
         : this(genomeSize, acceptsTies: true)
     {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SelectionStrategy"/> class with an explicit
-    /// rule for a trial whose fitness exactly equals its parent's.
-    /// </summary>
-    /// <param name="genomeSize">The size of the genome.</param>
-    /// <param name="acceptsTies">
-    /// <see langword="true"/> to let a tied trial replace its parent — SHADE (2013) Eq. (6),
-    /// L-SHADE (2014) Algorithm 2 line 12, and Tanabe's reference implementation, which takes the
-    /// trial in its <c>==</c> branch without recording a success. <see langword="false"/> to keep
-    /// the parent, which is JADE (2009) Table I lines 20–21.
-    /// </param>
-    /// <remarks>
-    /// The two settings differ only on an exact tie, so on a smooth objective they are
-    /// indistinguishable; the difference appears on plateaus and on objectives with a discrete
-    /// range. Either way a success stays strict, so the archive and the parameter adaptation see
-    /// the same records.
-    /// </remarks>
-    public SelectionStrategy(
-        int genomeSize,
-        bool acceptsTies)
-    {
-        _genomeSize = genomeSize;
-        _acceptsTies = acceptsTies;
     }
 
     /// <summary>
@@ -82,7 +76,7 @@ public class SelectionStrategy : ISelectionStrategy
     /// the improvement, while a NaN trial replaces nothing — including a NaN parent, since
     /// swapping one unusable value for another buys nothing.
     /// </remarks>
-    public SelectionOutcome Select(
+    public SelectionOutcome SelectSurvivor(
         int individualIndex,
         double trialIndividualFfValue,
         Span<double> trialIndividual,
@@ -95,12 +89,16 @@ public class SelectionStrategy : ISelectionStrategy
 
         SelectionOutcome outcome;
         if (FitnessComparisonHelper.IsBetter(trialIndividualFfValue, parentFfValue))
+        {
             outcome = SelectionOutcome.TrialImproved;
-        else if (_acceptsTies
-                 && FitnessComparisonHelper.IsBetterOrEqual(trialIndividualFfValue, parentFfValue))
-            outcome = SelectionOutcome.TrialAccepted;
+        }
         else
-            outcome = SelectionOutcome.ParentKept;
+        {
+            outcome = _acceptsTies
+                 && FitnessComparisonHelper.IsBetterOrEqual(trialIndividualFfValue, parentFfValue)
+            ? SelectionOutcome.TrialAccepted
+            : SelectionOutcome.ParentKept;
+        }
 
         if (outcome != SelectionOutcome.ParentKept)
         {

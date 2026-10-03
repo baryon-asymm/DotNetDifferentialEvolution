@@ -112,7 +112,7 @@ nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 |---|---|---|---|
 | [DotNetDifferentialEvolution](src/DotNetDifferentialEvolution/API.md) | the CPU package | 28 | UnitTests (U0–U2, surface) and IntegrationTests (I0–I3) |
 | [DotNetDifferentialEvolution.GPU](src/DotNetDifferentialEvolution.GPU/API.md) | the GPU package | 15 | GPU.Test (L2 only) |
-| [Tests.Shared](tests/DotNetDifferentialEvolution.Tests.Shared/API.md) | CPU test support: benchmark functions, fakes, context helper | 5 | its consumers |
+| [Tests.Common](tests/DotNetDifferentialEvolution.Tests.Common/API.md) | CPU test support: benchmark functions, fakes, context helper | 5 | its consumers |
 | [UnitTests](tests/DotNetDifferentialEvolution.UnitTests/API.md) | the CPU package part by part | 15 | — |
 | [IntegrationTests](tests/DotNetDifferentialEvolution.IntegrationTests/API.md) | the CPU engine as a whole | 4 | — |
 | [GPU.Test](tests/DotNetDifferentialEvolution.GPU.Test/API.md) | two end-to-end GPU runs | 3 | — |
@@ -121,7 +121,7 @@ nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 | [Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/API.md) | the reflection checks (§13): documents against compiled code | 1 | mutations, once |
 
 Dependencies run one way: test projects and benchmarks depend on a package and on
-Tests.Shared; Tests.Shared on the CPU package; the packages on nothing in the tree. The
+Tests.Common; Tests.Common on the CPU package; the packages on nothing in the tree. The
 one cycle is inside the CPU package (`Models` and the hook contracts; see its
 `BOOT.md`, `## Decomposition`).
 
@@ -133,6 +133,6 @@ The open findings with the most weight, each recorded in full in its node:
   ([Lshade](src/DotNetDifferentialEvolution/Algorithms/Lshade/BOOT.md),
   [Shade](src/DotNetDifferentialEvolution/Algorithms/Shade/BOOT.md)).
 - Approximate declared optima for Schwefel and Styblinski-Tang
-  ([FitnessFunctionEvaluators](tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/BOOT.md)).
+  ([FitnessFunctionEvaluators](tests/DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/BOOT.md)).
 - The GPU package diverges from the CPU package in semantics a user may carry over
   ([GPU](src/DotNetDifferentialEvolution.GPU/BOOT.md)).

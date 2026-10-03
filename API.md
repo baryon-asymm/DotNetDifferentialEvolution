@@ -24,7 +24,7 @@ type.
   package.
 - [DotNetDifferentialEvolution.GPU](src/DotNetDifferentialEvolution.GPU/API.md) — the
   GPU package.
-- [Tests.Shared](tests/DotNetDifferentialEvolution.Tests.Shared/API.md) — CPU test
+- [Tests.Common](tests/DotNetDifferentialEvolution.Tests.Common/API.md) — CPU test
   support.
 - [protocol-lint](tools/protocol-lint/API.md) — the tree's file-level checks.
 

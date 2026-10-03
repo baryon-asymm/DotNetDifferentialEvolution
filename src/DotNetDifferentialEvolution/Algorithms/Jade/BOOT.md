@@ -8,11 +8,11 @@ with F from a Cauchy and CR from a normal distribution around them.
 ## Invariants
 
 - **Only improving trials move the means.** A tie taught nothing (`ae16907`). Held by
-  `JadeStrategyTests.AfterGeneration_IgnoresATrialAcceptedOnATie`.
+  `JadeStrategyTests.AfterGenerationIgnoresATrialAcceptedOnATie`.
 - **No success, no change.** Held by
-  `JadeStrategyTests.AfterGeneration_WithNoSuccesses_LeavesMeansUnchanged`.
+  `JadeStrategyTests.AfterGenerationWithNoSuccessesLeavesMeansUnchanged`.
 - **μCR follows the arithmetic mean and μF the Lehmer mean.** Held by
-  `JadeStrategyTests.AfterGeneration_NudgesMeansTowardSuccessfulParameters`.
+  `JadeStrategyTests.AfterGenerationNudgesMeansTowardSuccessfulParameters`.
 - **F is strictly positive and at most 1; CR is in `[0, 1]`.** Held by the redraw loop
   and the clamps (see the ⚠ below).
 

@@ -1,8 +1,7 @@
 using System.Diagnostics;
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.Controllers;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.Concurrency;
 
@@ -20,14 +19,14 @@ public class WorkerLifecycleTests
     private const int Iterations = 25;
 
     [Fact]
-    public async Task RepeatedBuildRunDispose_DoesNotLeakWorkerControllers()
+    public async Task RepeatedBuildRunDisposeDoesNotLeakWorkerControllers()
     {
         var baseline = WorkerController.GlobalWorkerCounter;
 
-        for (int i = 0; i < Iterations; i++)
+        for (var i = 0; i < Iterations; i++)
         {
             using var de = BuildSmallOptimizer();
-            await de.RunAsync().WaitAsync(Timeout);
+            _ = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
         }
 
         // Every controller created across all iterations must have been disposed.
@@ -35,24 +34,26 @@ public class WorkerLifecycleTests
     }
 
     [Fact]
-    public async Task RepeatedBuildRunDispose_DoesNotLeakThreads()
+    public async Task RepeatedBuildRunDisposeDoesNotLeakThreads()
     {
         // Warm up so the thread pool / JIT threads are already created before we measure.
         using (var warmup = BuildSmallOptimizer())
-            await warmup.RunAsync().WaitAsync(Timeout);
+        {
+            _ = await warmup.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
+        }
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
         var baselineThreads = CurrentThreadCount();
 
-        for (int i = 0; i < Iterations; i++)
+        for (var i = 0; i < Iterations; i++)
         {
             using var de = BuildSmallOptimizer();
-            await de.RunAsync().WaitAsync(Timeout);
+            _ = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
         }
 
         // Give disposed worker threads a moment to fully exit, then confirm no unbounded growth.
-        await Task.Delay(500);
+        await Task.Delay(500).ConfigureAwait(true);
         GC.Collect();
         GC.WaitForPendingFinalizers();
 
@@ -65,7 +66,7 @@ public class WorkerLifecycleTests
             $"Thread count grew from {baselineThreads} to {finalThreads}; suspected worker-thread leak.");
     }
 
-    private static DotNetDifferentialEvolution.DifferentialEvolution BuildSmallOptimizer() =>
+    private static DifferentialEvolution BuildSmallOptimizer() =>
         DifferentialEvolutionBuilder.ForFunction(new SphereEvaluator(dimension: 4))
             .WithBounds(new SphereEvaluator(4).GetLowerBounds(), new SphereEvaluator(4).GetUpperBounds())
             .WithPopulationSize(40)

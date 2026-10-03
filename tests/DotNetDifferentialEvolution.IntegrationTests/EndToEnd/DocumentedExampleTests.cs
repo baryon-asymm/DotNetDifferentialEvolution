@@ -1,5 +1,4 @@
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetOptimization.Abstractions;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -30,7 +29,9 @@ public class DocumentedExampleTests
         {
             var sum = 0.0;
             foreach (var gene in genes)
+            {
                 sum += gene * gene;
+            }
 
             return sum;
         }
@@ -53,7 +54,7 @@ public class DocumentedExampleTests
             .UseAllProcessors()
             .Build();
 
-        var population = await de.RunAsync();
+        var population = await de.RunAsync().ConfigureAwait(true);
 
         population.MoveCursorToBestIndividual();
         var best = population.IndividualCursor.GetSnapshot(deepCopy: true);
@@ -93,7 +94,7 @@ public class DocumentedExampleTests
             .UseAllProcessors()
             .Build();
 
-        var population = await de.RunAsync();
+        var population = await de.RunAsync().ConfigureAwait(true);
 
         Assert.True(
             population.EvaluationCount >= Budget,
@@ -122,7 +123,7 @@ public class DocumentedExampleTests
             .UseAllProcessors()
             .Build();
 
-        var population = await de.RunAsync();
+        var population = await de.RunAsync().ConfigureAwait(true);
 
         population.MoveCursorToBestIndividual();
         var best = population.IndividualCursor.GetSnapshot(deepCopy: true);

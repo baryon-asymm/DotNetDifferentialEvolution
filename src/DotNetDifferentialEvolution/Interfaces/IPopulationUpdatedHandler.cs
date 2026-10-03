@@ -16,6 +16,6 @@ public interface IPopulationUpdatedHandler
     /// </summary>
     /// <param name="population">The updated <see cref="Population"/> object, 
     /// representing the state of the population after the current generation.</param>
-    public void Handle(
+    void Handle(
         Population population);
 }

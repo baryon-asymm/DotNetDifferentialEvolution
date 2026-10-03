@@ -30,7 +30,7 @@ public class SelectionStrategy : ISelectionStrategy
 {
     public SelectionStrategy(int genomeSize);
     public SelectionStrategy(int genomeSize, bool acceptsTies);
-    public SelectionOutcome Select(int individualIndex, double trialIndividualFfValue,
+    public SelectionOutcome SelectSurvivor(int individualIndex, double trialIndividualFfValue,
         Span<double> trialIndividual, Span<double> populationFfValues,
         Span<double> population, Span<double> nextPopulationFfValues,
         Span<double> nextPopulation);

@@ -9,7 +9,7 @@ namespace DotNetDifferentialEvolution.UnitTests.Models;
 public class IndividualCursorTests
 {
     [Fact]
-    public void Snapshot_PreservesValueAndGenes()
+    public void SnapshotPreservesValueAndGenes()
     {
         double[] genes = [1.0, 2.0, 3.0];
         var cursor = new IndividualCursor(4.0, genes);
@@ -21,7 +21,7 @@ public class IndividualCursorTests
     }
 
     [Fact]
-    public void ShallowSnapshot_SharesGeneStorage()
+    public void ShallowSnapshotSharesGeneStorage()
     {
         double[] genes = [1.0, 2.0, 3.0];
         var cursor = new IndividualCursor(4.0, genes);
@@ -33,7 +33,7 @@ public class IndividualCursorTests
     }
 
     [Fact]
-    public void DeepSnapshot_CopiesGeneStorage()
+    public void DeepSnapshotCopiesGeneStorage()
     {
         double[] genes = [1.0, 2.0, 3.0];
         var cursor = new IndividualCursor(4.0, genes);

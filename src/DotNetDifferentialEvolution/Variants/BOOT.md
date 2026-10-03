@@ -32,7 +32,7 @@ caller can implement.
   by the five `DeVariantTests.AThirdPartyVariant…` tests and
   `AVariantThatChoosesNoSelectionStrategyGetsTheGreedyDefault`.
 - **Archive capacities round half up** (`f7887ab`). Held by
-  `DifferentialEvolutionBuilderTests.WithJade_RoundsAMidpointArchiveCapacityHalfUp`,
+  `DifferentialEvolutionBuilderTests.WithJadeRoundsAMidpointArchiveCapacityHalfUp`,
   `WithShade_…` and `WithLShade_…`.
 
 ## Dependencies
@@ -70,12 +70,12 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 - [x] The presets and the extension point pass their unit tests: 2026-10-02,
       `DeVariantTests` (13 tests, local run).
 - [x] L-SHADE's argument and budget checks: 2026-10-02,
-      `DifferentialEvolutionBuilderTests.WithLShade_ThrowsWhenEvaluationBudgetIsNotPositive`,
-      `WithLShade_ThrowsWhenTerminationEvaluationBudgetDoesNotMatch`,
-      `WithLShade_BuildsWhenTerminationEvaluationBudgetMatches`.
+      `DifferentialEvolutionBuilderTests.WithLShadeThrowsWhenEvaluationBudgetIsNotPositive`,
+      `WithLShadeThrowsWhenTerminationEvaluationBudgetDoesNotMatch`,
+      `WithLShadeBuildsWhenTerminationEvaluationBudgetMatches`.
 - [x] Every variant converges: 2026-10-02, `AdaptiveVariantsConvergenceTests`,
-      `BenchmarkConvergenceTests.Shade_ConvergesOnMultimodalFunctions` and
-      `LShade_ConvergesOnHarderMultimodalFunctions` (integration, full local run).
+      `BenchmarkConvergenceTests.ShadeConvergesOnMultimodalFunctions` and
+      `LShadeConvergesOnHarderMultimodalFunctions` (integration, full local run).
 - [ ] ⚠ `LShadeVariant.Validate` compares the budget only against
       `LimitEvaluationNumberTerminationStrategy`: under any other stop rule, a run can stop
       with the population far above 4 or spend its tail at 4, unreported.

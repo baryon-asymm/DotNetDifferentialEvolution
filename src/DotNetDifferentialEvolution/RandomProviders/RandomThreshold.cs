@@ -32,9 +32,6 @@ internal static class RandomThreshold
     {
         var scaled = value * Domain;
 
-        if (scaled <= 0.0)
-            return 0UL;
-
-        return scaled >= Domain ? ulong.MaxValue : (ulong)scaled;
+        return scaled <= 0.0 ? 0UL : scaled >= Domain ? ulong.MaxValue : (ulong)scaled;
     }
 }

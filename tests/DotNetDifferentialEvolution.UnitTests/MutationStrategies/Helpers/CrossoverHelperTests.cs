@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.MutationStrategies.Helpers;
 using DotNetDifferentialEvolution.RandomProviders;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.MutationStrategies.Helpers;
 
@@ -46,7 +46,7 @@ public class CrossoverHelperTests
     }
 
     [Fact]
-    public void GuaranteedGeneAlwaysComesFromMutant_EvenWhenCrossoverNeverFires()
+    public void GuaranteedGeneAlwaysComesFromMutantEvenWhenCrossoverNeverFires()
     {
         // CR = 0 means the CR test (NextDouble() <= 0) is effectively always false, so every
         // non-jrand gene is copied from the parent. The jrand gene must still take the mutant.
@@ -156,7 +156,7 @@ public class CrossoverHelperTests
         Array.Fill(upperBound, 1_000.0);
 
         var fromMutant = 0L;
-        for (int t = 0; t < Trials; t++)
+        for (var t = 0; t < Trials; t++)
         {
             Array.Fill(trial, 1.0);                   // mutant: all ones, all in bounds
 
@@ -170,7 +170,9 @@ public class CrossoverHelperTests
                 randomSource: new SeededRandomSource(random));
 
             foreach (var gene in trial)
+            {
                 fromMutant += gene == 1.0 ? 1 : 0;
+            }
         }
 
         var observed = (double)fromMutant / (Trials * (long)genomeSize);
@@ -199,7 +201,7 @@ public class CrossoverHelperTests
         Array.Fill(upperBound, 1_000.0);
 
         var counts = new int[GenomeSize];
-        for (int t = 0; t < Trials; t++)
+        for (var t = 0; t < Trials; t++)
         {
             Array.Fill(trial, 1.0);
 
@@ -213,10 +215,12 @@ public class CrossoverHelperTests
                 upperBound: upperBound,
                 randomSource: new SeededRandomSource(random));
 
-            for (int i = 0; i < GenomeSize; i++)
+            for (var i = 0; i < GenomeSize; i++)
             {
                 if (trial[i] == 1.0)
+                {
                     counts[i]++;
+                }
             }
         }
 

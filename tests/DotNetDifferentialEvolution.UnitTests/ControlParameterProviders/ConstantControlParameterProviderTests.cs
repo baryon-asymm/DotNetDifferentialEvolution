@@ -1,5 +1,5 @@
 using DotNetDifferentialEvolution.ControlParameterProviders;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.ControlParameterProviders;
 

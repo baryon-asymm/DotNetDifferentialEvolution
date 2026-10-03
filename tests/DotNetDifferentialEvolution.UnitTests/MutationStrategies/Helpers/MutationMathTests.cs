@@ -23,12 +23,14 @@ public class MutationMathTests
         foreach (var size in new[] { 1, 2, 3, vectorWidth - 1, vectorWidth, vectorWidth + 1, 2 * vectorWidth, 2 * vectorWidth + 3, 37 }
                      .Where(size => size >= 1)
                      .Distinct())
+        {
             yield return [size];
+        }
     }
 
     [Theory]
     [MemberData(nameof(GenomeSizes))]
-    public void AssignBasePlusScaledDifference_MatchesScalarReference(
+    public void AssignBasePlusScaledDifferenceMatchesScalarReference(
         int genomeSize)
     {
         var random = new Random(genomeSize * 7919);
@@ -40,13 +42,15 @@ public class MutationMathTests
         var actual = new double[genomeSize];
         MutationMath.AssignBasePlusScaledDifference(actual, baseVector, minuend, subtrahend, force);
 
-        for (int i = 0; i < genomeSize; i++)
+        for (var i = 0; i < genomeSize; i++)
+        {
             Assert.Equal(baseVector[i] + force * (minuend[i] - subtrahend[i]), actual[i], Precision);
+        }
     }
 
     [Theory]
     [MemberData(nameof(GenomeSizes))]
-    public void AddScaledDifference_AccumulatesOntoDestination(
+    public void AddScaledDifferenceAccumulatesOntoDestination(
         int genomeSize)
     {
         var random = new Random(genomeSize * 104729);
@@ -58,13 +62,15 @@ public class MutationMathTests
         var actual = (double[])initial.Clone();
         MutationMath.AddScaledDifference(actual, minuend, subtrahend, force);
 
-        for (int i = 0; i < genomeSize; i++)
+        for (var i = 0; i < genomeSize; i++)
+        {
             Assert.Equal(initial[i] + force * (minuend[i] - subtrahend[i]), actual[i], Precision);
+        }
     }
 
     [Theory]
     [MemberData(nameof(GenomeSizes))]
-    public void AssignCurrentToTarget_MovesCurrentTowardTarget(
+    public void AssignCurrentToTargetMovesCurrentTowardTarget(
         int genomeSize)
     {
         var random = new Random(genomeSize * 1299709);
@@ -75,12 +81,14 @@ public class MutationMathTests
         var actual = new double[genomeSize];
         MutationMath.AssignCurrentToTarget(actual, current, target, force);
 
-        for (int i = 0; i < genomeSize; i++)
+        for (var i = 0; i < genomeSize; i++)
+        {
             Assert.Equal(current[i] + force * (target[i] - current[i]), actual[i], Precision);
+        }
     }
 
     [Fact]
-    public void AssignCurrentToTarget_WithForceZero_YieldsCurrent()
+    public void AssignCurrentToTargetWithForceZeroYieldsCurrent()
     {
         double[] current = [1.0, -2.0, 3.5];
         double[] target = [10.0, 10.0, 10.0];
@@ -92,7 +100,7 @@ public class MutationMathTests
     }
 
     [Fact]
-    public void AssignCurrentToTarget_WithForceOne_YieldsTarget()
+    public void AssignCurrentToTargetWithForceOneYieldsTarget()
     {
         double[] current = [1.0, -2.0, 3.5];
         double[] target = [10.0, 10.0, 10.0];
@@ -100,8 +108,10 @@ public class MutationMathTests
         var actual = new double[current.Length];
         MutationMath.AssignCurrentToTarget(actual, current, target, mutationForce: 1.0);
 
-        for (int i = 0; i < target.Length; i++)
+        for (var i = 0; i < target.Length; i++)
+        {
             Assert.Equal(target[i], actual[i], Precision);
+        }
     }
 
     private static double[] RandomVector(
@@ -109,8 +119,10 @@ public class MutationMathTests
         int length)
     {
         var vector = new double[length];
-        for (int i = 0; i < length; i++)
+        for (var i = 0; i < length; i++)
+        {
             vector[i] = random.NextDouble() * 20.0 - 10.0;
+        }
 
         return vector;
     }

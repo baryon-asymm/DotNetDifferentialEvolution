@@ -3,9 +3,9 @@ using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Algorithms;
 
@@ -19,7 +19,7 @@ public class JdeStrategyTests
     private const int PopulationSize = 4;
 
     [Fact]
-    public void WithoutAdaptation_ReturnsTheStoredPerIndividualParameters()
+    public void WithoutAdaptationReturnsTheStoredPerIndividualParameters()
     {
         var jde = new JdeStrategy(
             PopulationSize,
@@ -38,7 +38,7 @@ public class JdeStrategyTests
     }
 
     [Fact]
-    public void WhenAdaptationTriggers_RegeneratesFWithinRangeAndCrUniformly()
+    public void WhenAdaptationTriggersRegeneratesFWithinRangeAndCrUniformly()
     {
         var jde = new JdeStrategy(
             PopulationSize,
@@ -58,7 +58,7 @@ public class JdeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_KeepsParametersOfSuccessfulTrialsPerIndividual()
+    public void AfterGenerationKeepsParametersOfSuccessfulTrialsPerIndividual()
     {
         var jde = new JdeStrategy(
             PopulationSize,
@@ -86,7 +86,7 @@ public class JdeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_KeepsParametersOfATrialAcceptedOnATie()
+    public void AfterGenerationKeepsParametersOfATrialAcceptedOnATie()
     {
         // jDE attaches the parameters to the individual, so what matters is survival, not
         // improvement: a trial taken on a tie *is* the individual in the next generation, and the

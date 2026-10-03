@@ -9,12 +9,12 @@ public class Population : IIndividualCursorUpdater
 {
     private readonly ReadOnlyMemory<double> _genes;
     private readonly ReadOnlyMemory<double> _fitnessFunctionValues;
-    
+
     /// <summary>
     /// Gets or sets the individual cursor for the population.
     /// </summary>
     public IndividualCursor IndividualCursor { get; init; }
-    
+
     /// <summary>
     /// Gets or sets the generation number of the population.
     /// </summary>
@@ -58,7 +58,7 @@ public class Population : IIndividualCursorUpdater
     /// Gets or sets the total number of fitness-function evaluations performed so far.
     /// </summary>
     public long EvaluationCount { get; set; }
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Population"/> class.
     /// </summary>
@@ -76,7 +76,7 @@ public class Population : IIndividualCursorUpdater
 
         IndividualCursor = new IndividualCursor(
             double.MaxValue,
-            _genes.Slice(0, GenomeSize));
+            _genes[..GenomeSize]);
     }
 
     /// <summary>
@@ -97,14 +97,11 @@ public class Population : IIndividualCursorUpdater
             individualIndex,
             this);
     }
-    
+
     /// <summary>
     /// Moves the individual cursor to the best individual in the population.
     /// </summary>
-    public void MoveCursorToBestIndividual()
-    {
-        MoveCursorTo(BestIndividualIndex);
-    }
+    public void MoveCursorToBestIndividual() => MoveCursorTo(BestIndividualIndex);
 
     /// <summary>
     /// Updates the individual at the specified index.

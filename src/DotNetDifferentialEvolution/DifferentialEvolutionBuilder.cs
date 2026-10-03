@@ -1,7 +1,6 @@
 ﻿using DotNetDifferentialEvolution.AlgorithmExecutors;
 using DotNetDifferentialEvolution.Algorithms.Jade;
 using DotNetDifferentialEvolution.Algorithms.Jde;
-using DotNetDifferentialEvolution.Algorithms.Lshade;
 using DotNetDifferentialEvolution.Algorithms.Shade;
 using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.GenerationStrategies;
@@ -23,7 +22,7 @@ namespace DotNetDifferentialEvolution;
 /// <summary>
 /// Provides a builder for creating instances of the <see cref="DifferentialEvolution"/> class.
 /// </summary>
-public class DifferentialEvolutionBuilder 
+public class DifferentialEvolutionBuilder
     : IBoundsRequired,
       IPopulationSizeRequired,
       IPopulationSamplingRequired,
@@ -34,14 +33,14 @@ public class DifferentialEvolutionBuilder
       IDifferentialEvolutionBuilder
 {
     private readonly IFitnessFunctionEvaluator _fitnessFunctionEvaluator;
-    
+
     private ReadOnlyMemory<double> _lowerBound;
     private ReadOnlyMemory<double> _upperBound;
-    
+
     private int _populationSize;
-    
+
     private IPopulationSamplingMaker? _populationSamplingMaker;
-    
+
     private IMutationStrategy? _mutationStrategy;
     private ISelectionStrategy? _selectionStrategy;
     private ITerminationStrategy? _terminationStrategy;
@@ -61,7 +60,7 @@ public class DifferentialEvolutionBuilder
     private int _localSearchInterval = 1;
 
     private int? _seed;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DifferentialEvolutionBuilder"/> class.
     /// </summary>
@@ -73,7 +72,7 @@ public class DifferentialEvolutionBuilder
 
         _fitnessFunctionEvaluator = fitnessFunctionEvaluator;
     }
-    
+
     /// <summary>
     /// Creates a new builder for the specified fitness function evaluator. This is the entry point:
     /// every configuration starts here and the builder is staged, so each call returns only the
@@ -115,28 +114,29 @@ public class DifferentialEvolutionBuilder
     /// </para>
     /// </example>
     public static IBoundsRequired ForFunction(
-        IFitnessFunctionEvaluator fitnessFunctionEvaluator)
-    {
-        return new DifferentialEvolutionBuilder(fitnessFunctionEvaluator);
-    }
-    
+        IFitnessFunctionEvaluator fitnessFunctionEvaluator) => new DifferentialEvolutionBuilder(fitnessFunctionEvaluator);
+
     /// <inheritdoc />
     public IPopulationSizeRequired WithBounds(
         ReadOnlyMemory<double> lowerBound,
         ReadOnlyMemory<double> upperBound)
     {
         if (lowerBound.Length != upperBound.Length)
+        {
             throw new ArgumentException("Lower and upper bounds must have the same length.");
+        }
 
-        for (int i = 0; i < lowerBound.Length; i++)
+        for (var i = 0; i < lowerBound.Length; i++)
         {
             if (lowerBound.Span[i] > upperBound.Span[i])
+            {
                 throw new ArgumentException("Lower bound must be less than or equal upper bound.");
+            }
         }
-        
+
         _lowerBound = lowerBound;
         _upperBound = upperBound;
-        
+
         return this;
     }
 
@@ -145,10 +145,12 @@ public class DifferentialEvolutionBuilder
         int populationSize)
     {
         if (populationSize <= 0)
+        {
             throw new ArgumentException("Population size must be greater than 0.");
-        
+        }
+
         _populationSize = populationSize;
-        
+
         return this;
     }
 
@@ -157,9 +159,9 @@ public class DifferentialEvolutionBuilder
         IPopulationSamplingMaker populationSamplingMaker)
     {
         ArgumentNullException.ThrowIfNull(populationSamplingMaker);
-        
+
         _populationSamplingMaker = populationSamplingMaker;
-        
+
         return this;
     }
 
@@ -167,7 +169,7 @@ public class DifferentialEvolutionBuilder
     public IMutationStrategyRequired WithUniformPopulationSampling()
     {
         _populationSamplingMaker = new UniformRandomSamplingMaker(_lowerBound, _upperBound);
-        
+
         return this;
     }
 
@@ -176,9 +178,9 @@ public class DifferentialEvolutionBuilder
         IMutationStrategy mutationStrategy)
     {
         ArgumentNullException.ThrowIfNull(mutationStrategy);
-        
+
         _mutationStrategy = mutationStrategy;
-        
+
         return this;
     }
 
@@ -189,10 +191,7 @@ public class DifferentialEvolutionBuilder
     {
         _mutationStrategy = new MutationStrategy(
             mutationForce: mutationForce,
-            crossoverProbability: crossoverProbability,
-            populationSize: _populationSize,
-            lowerBound: _lowerBound,
-            upperBound: _upperBound);
+            crossoverProbability: crossoverProbability);
 
         return this;
     }
@@ -253,8 +252,10 @@ public class DifferentialEvolutionBuilder
         var setup = variant.Configure(in configuration);
 
         if (setup.MutationStrategy is null)
+        {
             throw new InvalidOperationException(
                 $"The variant {variant.GetType().Name} produced no mutation strategy.");
+        }
 
         _variant = variant;
         _mutationStrategy = setup.MutationStrategy;
@@ -299,9 +300,9 @@ public class DifferentialEvolutionBuilder
         ISelectionStrategy selectionStrategy)
     {
         ArgumentNullException.ThrowIfNull(selectionStrategy);
-        
+
         _selectionStrategy = selectionStrategy;
-        
+
         return this;
     }
 
@@ -309,7 +310,7 @@ public class DifferentialEvolutionBuilder
     public ITerminationConditionRequired WithDefaultSelectionStrategy()
     {
         _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
-        
+
         return this;
     }
 
@@ -318,9 +319,9 @@ public class DifferentialEvolutionBuilder
         ITerminationStrategy terminationStrategy)
     {
         ArgumentNullException.ThrowIfNull(terminationStrategy);
-        
+
         _terminationStrategy = terminationStrategy;
-        
+
         return this;
     }
 
@@ -329,10 +330,12 @@ public class DifferentialEvolutionBuilder
         int processorsCount)
     {
         if (processorsCount <= 0)
+        {
             throw new ArgumentException("Processors count must be greater than 0.");
-        
+        }
+
         _workersCount = processorsCount;
-        
+
         return this;
     }
 
@@ -340,7 +343,7 @@ public class DifferentialEvolutionBuilder
     public IDifferentialEvolutionBuilder UseAllProcessors()
     {
         _workersCount = Environment.ProcessorCount;
-        
+
         return this;
     }
 
@@ -361,8 +364,10 @@ public class DifferentialEvolutionBuilder
         ArgumentNullException.ThrowIfNull(refiner);
 
         if (everyNGenerations < 1)
+        {
             throw new ArgumentOutOfRangeException(
                 nameof(everyNGenerations), "Local-search interval must be at least 1 generation.");
+        }
 
         _localSearchRefiner = refiner;
         _localSearchInterval = everyNGenerations;
@@ -392,13 +397,13 @@ public class DifferentialEvolutionBuilder
         var populationFfValues = new double[_populationSize];
         var trialPopulation = new double[_populationSize * genomeSize];
         var trialPopulationFfValues = new double[_populationSize];
-        
+
         _populationSamplingMaker!.SamplePopulation(population);
 
         EvaluatePopulationFfValues(
             population,
             populationFfValues);
-        
+
         var context = new ProblemContext(
             populationSize: _populationSize,
             genomeSize: genomeSize,
@@ -432,7 +437,7 @@ public class DifferentialEvolutionBuilder
             _mutationStrategy!,
             _selectionStrategy!,
             context);
-        
+
         return new DifferentialEvolution(context, algorithmExecutor);
     }
 
@@ -442,31 +447,44 @@ public class DifferentialEvolutionBuilder
     private void EnsureReadyStateToBuild()
     {
         if (_lowerBound.Length == 0)
+        {
             throw new InvalidOperationException("Lower bound must be set.");
-        
+        }
+
         if (_upperBound.Length == 0)
+        {
             throw new InvalidOperationException("Upper bound must be set.");
-        
+        }
+
         if (_populationSize == 0)
+        {
             throw new InvalidOperationException("Population size must be set.");
-        
+        }
+
         if (_populationSamplingMaker == null)
+        {
             throw new InvalidOperationException("Population sampling maker must be set.");
-        
+        }
+
         if (_mutationStrategy == null)
+        {
             throw new InvalidOperationException("Mutation strategy must be set.");
+        }
 
         if (_populationSize < _mutationStrategy.MinimumPopulationSize)
+        {
             throw new InvalidOperationException(
                 $"Population size {_populationSize} is too small for the chosen mutation strategy, " +
                 $"which needs at least {_mutationStrategy.MinimumPopulationSize} individuals to draw " +
                 "the distinct vectors it requires.");
+        }
 
         // An unmet ControlParameters requirement is not recoverable at run time: the strategy would
         // read NaN for F and CR, every mutant vector would be NaN, every trial would lose selection,
         // and the run would complete normally having optimized nothing.
         if (_mutationStrategy.Requirements.HasFlag(MutationRequirements.ControlParameters)
             && _controlParameterProvider is null)
+        {
             throw new InvalidOperationException(
                 $"The mutation strategy {_mutationStrategy.GetType().Name} takes its per-individual " +
                 "control parameters (F and CR) from the mutation context, but no control-parameter " +
@@ -475,15 +493,22 @@ public class DifferentialEvolutionBuilder
                 "are built in — or use one of the WithJde/WithJade/WithShade/WithLShade presets. A " +
                 "strategy that carries its own F and CR should declare " +
                 $"{nameof(MutationRequirements)}.{nameof(MutationRequirements.None)}.");
+        }
 
         if (_selectionStrategy == null)
+        {
             throw new InvalidOperationException("Selection strategy must be set.");
+        }
 
         if (_terminationStrategy == null)
+        {
             throw new InvalidOperationException("Termination strategy must be set.");
+        }
 
         if (_workersCount == 0)
+        {
             throw new InvalidOperationException("Workers count must be set.");
+        }
 
         // Last, so a variant's own cross-checks see a configuration the builder has already
         // agreed is coherent.
@@ -509,7 +534,9 @@ public class DifferentialEvolutionBuilder
     private void SeedComponents()
     {
         if (_seed is not { } seed)
+        {
             return;
+        }
 
         _generationStrategy?.UseRandomProvider(new SeededRandomProvider(seed + _workersCount));
         _populationSamplingMaker!.UseRandomProvider(new SeededRandomProvider(seed + _workersCount + 1));
@@ -524,7 +551,7 @@ public class DifferentialEvolutionBuilder
             GenomeSize: _lowerBound.Length,
             LowerBound: _lowerBound,
             UpperBound: _upperBound);
-    
+
     /// <summary>
     /// Finds the index of the best (lowest fitness) individual in the initial population.
     /// An individual the objective scored NaN never wins; an all-NaN population still yields
@@ -536,10 +563,12 @@ public class DifferentialEvolutionBuilder
         ReadOnlySpan<double> populationFfValues)
     {
         var bestIndividualIndex = 0;
-        for (int i = 1; i < populationFfValues.Length; i++)
+        for (var i = 1; i < populationFfValues.Length; i++)
         {
             if (FitnessComparisonHelper.IsBetter(populationFfValues[i], populationFfValues[bestIndividualIndex]))
+            {
                 bestIndividualIndex = i;
+            }
         }
 
         return bestIndividualIndex;
@@ -555,11 +584,11 @@ public class DifferentialEvolutionBuilder
         Span<double> populationFfValues)
     {
         var genomeSize = _lowerBound.Length;
-        
-        for (int i = 0; i < populationFfValues.Length; i++)
+
+        for (var i = 0; i < populationFfValues.Length; i++)
         {
             var individual = population.Slice(i * genomeSize, genomeSize);
-            
+
             populationFfValues[i] = _fitnessFunctionEvaluator.Evaluate(individual);
         }
     }
@@ -595,7 +624,7 @@ public interface IBoundsRequired
     /// objective ever sees it, so the objective is never called with an out-of-box vector. Any other
     /// kind of constraint has to be encoded in the objective itself.
     /// </remarks>
-    public IPopulationSizeRequired WithBounds(
+    IPopulationSizeRequired WithBounds(
         ReadOnlyMemory<double> lowerBound,
         ReadOnlyMemory<double> upperBound);
 }
@@ -621,7 +650,7 @@ public interface IPopulationSizeRequired
     /// Under <see cref="IMutationStrategyRequired.WithLShade"/> this is the <em>initial</em> size:
     /// linear population size reduction shrinks it toward 4 as the evaluation budget is consumed.
     /// </remarks>
-    public IPopulationSamplingRequired WithPopulationSize(
+    IPopulationSamplingRequired WithPopulationSize(
         int populationSize);
 }
 
@@ -640,7 +669,7 @@ public interface IPopulationSamplingRequired
     /// A custom sampler is offered the seeded random source and is reproducible only if it draws
     /// from what it is given. It is responsible for staying inside the bounds.
     /// </remarks>
-    public IMutationStrategyRequired WithPopulationSampling(
+    IMutationStrategyRequired WithPopulationSampling(
         IPopulationSamplingMaker populationSamplingMaker);
 
     /// <summary>
@@ -648,7 +677,7 @@ public interface IPopulationSamplingRequired
     /// one every paper in this library assumes.
     /// </summary>
     /// <returns>An instance of <see cref="IMutationStrategyRequired"/> to set the mutation strategy.</returns>
-    public IMutationStrategyRequired WithUniformPopulationSampling();
+    IMutationStrategyRequired WithUniformPopulationSampling();
 }
 
 /// <summary>
@@ -671,7 +700,7 @@ public interface IMutationStrategyRequired
     /// </summary>
     /// <param name="mutationStrategy">The mutation strategy.</param>
     /// <returns>An instance of <see cref="ISelectionStrategyRequired"/> to set the selection strategy.</returns>
-    public ISelectionStrategyRequired WithMutationStrategy(
+    ISelectionStrategyRequired WithMutationStrategy(
         IMutationStrategy mutationStrategy);
 
     /// <summary>
@@ -686,7 +715,7 @@ public interface IMutationStrategyRequired
     /// chosen at random is always taken, so a trial is never an exact copy of its parent.
     /// </param>
     /// <returns>An instance of <see cref="ISelectionStrategyRequired"/> to set the selection strategy.</returns>
-    public ISelectionStrategyRequired WithDefaultMutationStrategy(
+    ISelectionStrategyRequired WithDefaultMutationStrategy(
         double mutationForce,
         double crossoverProbability);
 
@@ -694,7 +723,7 @@ public interface IMutationStrategyRequired
     /// Sets <c>DE/best/1/bin</c> with constant parameters: the base vector is the current best, so
     /// the search converges faster and is likelier to be trapped. Needs a population of at least 3.
     /// </summary>
-    public ISelectionStrategyRequired WithBestMutationStrategy(
+    ISelectionStrategyRequired WithBestMutationStrategy(
         double mutationForce,
         double crossoverProbability);
 
@@ -702,7 +731,7 @@ public interface IMutationStrategyRequired
     /// Sets <c>DE/current-to-best/1/bin</c> with constant parameters: each individual moves partway
     /// toward the current best. Needs a population of at least 3.
     /// </summary>
-    public ISelectionStrategyRequired WithCurrentToBestMutationStrategy(
+    ISelectionStrategyRequired WithCurrentToBestMutationStrategy(
         double mutationForce,
         double crossoverProbability);
 
@@ -710,14 +739,14 @@ public interface IMutationStrategyRequired
     /// Sets <c>DE/rand/2/bin</c> with constant parameters: two difference vectors instead of one,
     /// which explores more and converges more slowly. Needs a population of at least 6.
     /// </summary>
-    public ISelectionStrategyRequired WithRandTwoMutationStrategy(
+    ISelectionStrategyRequired WithRandTwoMutationStrategy(
         double mutationForce,
         double crossoverProbability);
 
     /// <summary>
     /// Sets <c>DE/best/2/bin</c> with constant parameters. Needs a population of at least 5.
     /// </summary>
-    public ISelectionStrategyRequired WithBestTwoMutationStrategy(
+    ISelectionStrategyRequired WithBestTwoMutationStrategy(
         double mutationForce,
         double crossoverProbability);
 
@@ -732,7 +761,7 @@ public interface IMutationStrategyRequired
     /// <see cref="ConstantControlParameterProvider"/> and <see cref="DitheredControlParameterProvider"/>
     /// are built in.
     /// </remarks>
-    public ISelectionStrategyRequired WithMutationStrategy(
+    ISelectionStrategyRequired WithMutationStrategy(
         IMutationStrategy mutationStrategy,
         IControlParameterProvider controlParameterProvider);
 
@@ -759,7 +788,7 @@ public interface IMutationStrategyRequired
     /// <see cref="IDeVariant.Validate"/> runs against the completed configuration.
     /// </para>
     /// </remarks>
-    public ITerminationConditionRequired WithVariant(
+    ITerminationConditionRequired WithVariant(
         IDeVariant variant);
 
     /// <summary>
@@ -771,7 +800,7 @@ public interface IMutationStrategyRequired
     /// <param name="initialMutationForce">The initial mutation factor for every individual.</param>
     /// <param name="initialCrossoverProbability">The initial crossover probability for every individual.</param>
     /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
-    public ITerminationConditionRequired WithJde(
+    ITerminationConditionRequired WithJde(
         double initialMutationForce = JdeStrategy.DefaultInitialMutationForce,
         double initialCrossoverProbability = JdeStrategy.DefaultInitialCrossoverProbability);
 
@@ -789,7 +818,7 @@ public interface IMutationStrategyRequired
     /// its Table I says so, and its unweighted parameter means are why it can afford to. Do not
     /// read the difference from SHADE and L-SHADE as an inconsistency.
     /// </remarks>
-    public ITerminationConditionRequired WithJade(
+    ITerminationConditionRequired WithJade(
         double pBestRate = 0.1,
         double archiveSizeRate = 1.0,
         double adaptationRate = JadeStrategy.DefaultAdaptationRate);
@@ -811,7 +840,7 @@ public interface IMutationStrategyRequired
     /// <see cref="WithLShade"/> is built on, as the L-SHADE paper specifies. Differences against the
     /// distributed sources are deliberate and are listed in the package's <c>docs/ALGORITHMS.md</c>.
     /// </remarks>
-    public ITerminationConditionRequired WithShade(
+    ITerminationConditionRequired WithShade(
         double pBestRate = 0.2,
         double archiveSizeRate = 1.0,
         int memorySize = ShadeStrategy.DefaultMemorySize);
@@ -856,7 +885,7 @@ public interface IMutationStrategyRequired
     /// cannot be — the check has no second budget to compare against. The run then either ends with
     /// the population still far above its floor, or spends its tail collapsed at 4 individuals.
     /// </example>
-    public ITerminationConditionRequired WithLShade(
+    ITerminationConditionRequired WithLShade(
         long maxEvaluationNumber,
         double pBestRate = 0.11,
         double archiveSizeRate = 2.6,
@@ -875,7 +904,7 @@ public interface ISelectionStrategyRequired
     /// </summary>
     /// <param name="selectionStrategy">The selection strategy.</param>
     /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
-    public ITerminationConditionRequired WithSelectionStrategy(
+    ITerminationConditionRequired WithSelectionStrategy(
         ISelectionStrategy selectionStrategy);
 
     /// <summary>
@@ -884,7 +913,7 @@ public interface ISelectionStrategyRequired
     /// never get worse.
     /// </summary>
     /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
-    public ITerminationConditionRequired WithDefaultSelectionStrategy();
+    ITerminationConditionRequired WithDefaultSelectionStrategy();
 }
 
 /// <summary>
@@ -900,7 +929,7 @@ public interface ITerminationConditionRequired
     /// </summary>
     /// <param name="terminationStrategy">The termination strategy.</param>
     /// <returns>An instance of <see cref="IWorkersCountRequired"/> to set the number of workers.</returns>
-    public IWorkersCountRequired WithTerminationCondition(
+    IWorkersCountRequired WithTerminationCondition(
         ITerminationStrategy terminationStrategy);
 }
 
@@ -920,7 +949,7 @@ public interface IWorkersCountRequired
     /// Parallelism pays for itself when the objective is expensive; for a very cheap objective the
     /// per-generation barrier can cost more than it saves, and a single worker may be faster.
     /// </remarks>
-    public IDifferentialEvolutionBuilder UseProcessors(
+    IDifferentialEvolutionBuilder UseProcessors(
         int processorsCount);
 
     /// <summary>
@@ -928,7 +957,7 @@ public interface IWorkersCountRequired
     /// any seeded run — depend on the machine; see <see cref="IDifferentialEvolutionBuilder.WithSeed"/>.
     /// </summary>
     /// <returns>An instance of <see cref="IDifferentialEvolutionBuilder"/> to build the Differential Evolution instance.</returns>
-    public IDifferentialEvolutionBuilder UseAllProcessors();
+    IDifferentialEvolutionBuilder UseAllProcessors();
 }
 
 /// <summary>
@@ -949,7 +978,7 @@ public interface IDifferentialEvolutionBuilder
     /// <see cref="Population"/> it receives is a live cursor-based view, so anything that must
     /// outlive the call has to be copied out of it.
     /// </remarks>
-    public IDifferentialEvolutionBuilder WithPopulationUpdateHandler(
+    IDifferentialEvolutionBuilder WithPopulationUpdateHandler(
         IPopulationUpdatedHandler populationUpdatedHandler);
 
     /// <summary>
@@ -966,7 +995,7 @@ public interface IDifferentialEvolutionBuilder
     /// This is the seam a local optimizer such as Nelder–Mead plugs into. A refiner owns its own
     /// randomness and must seed itself to stay reproducible.
     /// </remarks>
-    public IDifferentialEvolutionBuilder WithLocalSearch(
+    IDifferentialEvolutionBuilder WithLocalSearch(
         ILocalSearchRefiner refiner,
         int everyNGenerations = 1);
 
@@ -998,7 +1027,7 @@ public interface IDifferentialEvolutionBuilder
     /// it is given; an <see cref="ILocalSearchRefiner"/> owns its randomness entirely.
     /// </para>
     /// </remarks>
-    public IDifferentialEvolutionBuilder WithSeed(
+    IDifferentialEvolutionBuilder WithSeed(
         int seed);
 
     /// <summary>
@@ -1016,5 +1045,5 @@ public interface IDifferentialEvolutionBuilder
     /// <see cref="DifferentialEvolution.RunAsync()"/> returns the already-completed task rather than
     /// starting a new search, so searching again means building again.
     /// </remarks>
-    public DifferentialEvolution Build();
+    DifferentialEvolution Build();
 }

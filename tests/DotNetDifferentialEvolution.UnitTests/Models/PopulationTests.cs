@@ -20,7 +20,7 @@ public class PopulationTests
     }
 
     [Fact]
-    public void MoveCursorTo_PointsCursorAtTheRequestedIndividual()
+    public void MoveCursorToPointsCursorAtTheRequestedIndividual()
     {
         var population = PopulationFactory.Create(
             genes: [0, 1, 2, 3, 4, 5], fitnessValues: [9.0, 1.0, 5.0]);
@@ -28,11 +28,11 @@ public class PopulationTests
         population.MoveCursorTo(2);
 
         Assert.Equal(5.0, population.IndividualCursor.FitnessFunctionValue);
-        Assert.Equal(new[] { 4.0, 5.0 }, population.IndividualCursor.Genes.ToArray());
+        Assert.Equal([4.0, 5.0], population.IndividualCursor.Genes.ToArray());
     }
 
     [Fact]
-    public void MoveCursorToBestIndividual_UsesBestIndividualIndex()
+    public void MoveCursorToBestIndividualUsesBestIndividualIndex()
     {
         var population = PopulationFactory.Create(
             genes: [0, 1, 2, 3, 4, 5], fitnessValues: [9.0, 1.0, 5.0], bestIndividualIndex: 1);
@@ -40,7 +40,7 @@ public class PopulationTests
         population.MoveCursorToBestIndividual();
 
         Assert.Equal(1.0, population.IndividualCursor.FitnessFunctionValue);
-        Assert.Equal(new[] { 2.0, 3.0 }, population.IndividualCursor.Genes.ToArray());
+        Assert.Equal([2.0, 3.0], population.IndividualCursor.Genes.ToArray());
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class PopulationTests
     [InlineData(-1)]
     [InlineData(1)]
     [InlineData(3)]
-    public void MoveCursorTo_RefusesAnIndexOutsideTheActivePopulation(
+    public void MoveCursorToRefusesAnIndexOutsideTheActivePopulation(
         int individualIndex)
     {
         // Index 1 and 2 are allocated but no longer live once the population is reduced to one;
@@ -78,6 +78,6 @@ public class PopulationTests
 
         population.PopulationSize = 1;
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => population.MoveCursorTo(individualIndex));
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => population.MoveCursorTo(individualIndex));
     }
 }

@@ -5,8 +5,8 @@ using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.AlgorithmExecutors;
 
@@ -61,10 +61,7 @@ public class AlgorithmExecutorTests
         var context = CreateContext(controlParameterProvider: null);
         var legacy = new MutationStrategy(
             mutationForce: 0.5,
-            crossoverProbability: 0.9,
-            populationSize: PopulationSize,
-            lowerBound: context.GenesLowerBound,
-            upperBound: context.GenesUpperBound);
+            crossoverProbability: 0.9);
 
         var executor = new AlgorithmExecutor(legacy, new SelectionStrategy(context.GenomeSize), context);
 

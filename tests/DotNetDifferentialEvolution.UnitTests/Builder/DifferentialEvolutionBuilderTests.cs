@@ -1,9 +1,8 @@
 using System.Reflection;
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.LocalSearch;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.UnitTests.Builder;
 
@@ -18,34 +17,34 @@ public class DifferentialEvolutionBuilderTests
     private static SphereEvaluator Evaluator => new(dimension: 2);
 
     [Fact]
-    public void WithBounds_ThrowsWhenLengthsDiffer()
+    public void WithBoundsThrowsWhenLengthsDiffer()
     {
-        Assert.Throws<ArgumentException>(() =>
+        _ = Assert.Throws<ArgumentException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0 }));
     }
 
     [Fact]
-    public void WithBounds_ThrowsWhenLowerExceedsUpper()
+    public void WithBoundsThrowsWhenLowerExceedsUpper()
     {
-        Assert.Throws<ArgumentException>(() =>
+        _ = Assert.Throws<ArgumentException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 5.0, 0.0 }, new[] { 1.0, 1.0 }));
     }
 
     [Fact]
-    public void WithPopulationSize_ThrowsWhenNotPositive()
+    public void WithPopulationSizeThrowsWhenNotPositive()
     {
-        Assert.Throws<ArgumentException>(() =>
+        _ = Assert.Throws<ArgumentException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0 }, new[] { 1.0 })
                 .WithPopulationSize(0));
     }
 
     [Fact]
-    public void UseProcessors_ThrowsWhenNotPositive()
+    public void UseProcessorsThrowsWhenNotPositive()
     {
-        Assert.Throws<ArgumentException>(() =>
+        _ = Assert.Throws<ArgumentException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0 }, new[] { 1.0 })
                 .WithPopulationSize(10)
@@ -57,9 +56,9 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void WithJade_ThrowsWhenArchiveSizeRateIsNegative()
+    public void WithJadeThrowsWhenArchiveSizeRateIsNegative()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
                 .WithPopulationSize(10)
@@ -68,9 +67,9 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void WithLShade_ThrowsWhenEvaluationBudgetIsNotPositive()
+    public void WithLShadeThrowsWhenEvaluationBudgetIsNotPositive()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
                 .WithPopulationSize(10)
@@ -79,9 +78,9 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void WithLShade_ThrowsWhenTerminationEvaluationBudgetDoesNotMatch()
+    public void WithLShadeThrowsWhenTerminationEvaluationBudgetDoesNotMatch()
     {
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
                 .WithPopulationSize(10)
@@ -93,7 +92,7 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void WithLShade_BuildsWhenTerminationEvaluationBudgetMatches()
+    public void WithLShadeBuildsWhenTerminationEvaluationBudgetMatches()
     {
         using var de = DifferentialEvolutionBuilder.ForFunction(Evaluator)
             .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
@@ -108,10 +107,10 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void Build_ThrowsWhenPopulationIsTooSmallForTheMutationStrategy()
+    public void BuildThrowsWhenPopulationIsTooSmallForTheMutationStrategy()
     {
         // DE/rand/2 draws five distinct individuals plus the target, so it needs at least six.
-        Assert.Throws<InvalidOperationException>(() =>
+        _ = Assert.Throws<InvalidOperationException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
                 .WithPopulationSize(5)
@@ -124,7 +123,7 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void Build_WithCompleteConfiguration_ProducesAUsableInstance()
+    public void BuildWithCompleteConfigurationProducesAUsableInstance()
     {
         using var de = DifferentialEvolutionBuilder.ForFunction(Evaluator)
             .WithBounds(new[] { -5.0, -5.0 }, new[] { 5.0, 5.0 })
@@ -140,9 +139,9 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void WithLocalSearch_ThrowsWhenRefinerIsNull()
+    public void WithLocalSearchThrowsWhenRefinerIsNull()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        _ = Assert.Throws<ArgumentNullException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
                 .WithPopulationSize(10)
@@ -155,9 +154,9 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void WithLocalSearch_ThrowsWhenIntervalIsNotPositive()
+    public void WithLocalSearchThrowsWhenIntervalIsNotPositive()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() =>
             DifferentialEvolutionBuilder.ForFunction(Evaluator)
                 .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
                 .WithPopulationSize(10)
@@ -173,7 +172,7 @@ public class DifferentialEvolutionBuilderTests
     // an exact midpoint: the papers round half away from zero, .NET's default
     // MidpointRounding.ToEven would round it down to 8.
     [Fact]
-    public void WithJade_RoundsAMidpointArchiveCapacityHalfUp()
+    public void WithJadeRoundsAMidpointArchiveCapacityHalfUp()
     {
         using var de = DifferentialEvolutionBuilder.ForFunction(Evaluator)
             .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
@@ -188,7 +187,7 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void WithShade_RoundsAMidpointArchiveCapacityHalfUp()
+    public void WithShadeRoundsAMidpointArchiveCapacityHalfUp()
     {
         using var de = DifferentialEvolutionBuilder.ForFunction(Evaluator)
             .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })
@@ -203,7 +202,7 @@ public class DifferentialEvolutionBuilderTests
     }
 
     [Fact]
-    public void WithLShade_RoundsAMidpointArchiveCapacityHalfUp()
+    public void WithLShadeRoundsAMidpointArchiveCapacityHalfUp()
     {
         using var de = DifferentialEvolutionBuilder.ForFunction(Evaluator)
             .WithBounds(new[] { 0.0, 0.0 }, new[] { 1.0, 1.0 })

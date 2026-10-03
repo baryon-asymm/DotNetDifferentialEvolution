@@ -1,5 +1,5 @@
 using DotNetDifferentialEvolution.RandomProviders;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.RandomProviders;
 
@@ -29,17 +29,17 @@ public class SeededRandomProviderGaussianTests
     }
 
     [Fact]
-    public void APairOfDrawsConsumesTwoUniforms_NotFour()
+    public void APairOfDrawsConsumesTwoUniformsNotFour()
     {
         // The point of the change: the second draw costs no randomness at all. A third draw
         // starts a new pair.
         var random = new SeededRandomProvider(seed: 5);
-        random.NextGaussian(0.0, 1.0);
-        random.NextGaussian(0.0, 1.0);
+        _ = random.NextGaussian(0.0, 1.0);
+        _ = random.NextGaussian(0.0, 1.0);
 
         var afterTwoGaussians = new SeededRandomProvider(seed: 5);
-        afterTwoGaussians.NextDouble();
-        afterTwoGaussians.NextDouble();
+        _ = afterTwoGaussians.NextDouble();
+        _ = afterTwoGaussians.NextDouble();
 
         Assert.Equal(afterTwoGaussians.NextULong(), random.NextULong());
     }
@@ -53,7 +53,7 @@ public class SeededRandomProviderGaussianTests
         var sum = 0.0;
         var sumOfSquares = 0.0;
 
-        for (int i = 0; i < Samples; i++)
+        for (var i = 0; i < Samples; i++)
         {
             var value = random.NextGaussian(mean: 3.0, standardDeviation: 2.0);
             sum += value;
@@ -78,13 +78,15 @@ public class SeededRandomProviderGaussianTests
 
         var random = new SeededRandomProvider(seed: 2024);
         var values = new double[Samples];
-        for (int i = 0; i < Samples; i++)
+        for (var i = 0; i < Samples; i++)
+        {
             values[i] = random.NextGaussian(mean: 0.0, standardDeviation: 1.0);
+        }
 
         Array.Sort(values);
 
         var deviation = 0.0;
-        for (int i = 0; i < Samples; i++)
+        for (var i = 0; i < Samples; i++)
         {
             var theoretical = NormalCdf(values[i]);
             deviation = Math.Max(deviation, Math.Abs((i + 1.0) / Samples - theoretical));
@@ -107,7 +109,7 @@ public class SeededRandomProviderGaussianTests
         var random = new SeededRandomProvider(seed: 8);
         var sumOfProducts = 0.0;
 
-        for (int i = 0; i < Pairs; i++)
+        for (var i = 0; i < Pairs; i++)
         {
             var first = random.NextGaussian(0.0, 1.0);
             var second = random.NextGaussian(0.0, 1.0);
@@ -122,7 +124,7 @@ public class SeededRandomProviderGaussianTests
     }
 
     [Fact]
-    public void TheCacheTravelsWithTheInstance_NotTheThread()
+    public void TheCacheTravelsWithTheInstanceNotTheThread()
     {
         // Reproducibility depends on this. Two providers seeded alike must give the same Gaussian
         // sequence no matter which thread draws from them, and one provider's spare must never
@@ -133,7 +135,7 @@ public class SeededRandomProviderGaussianTests
         var interleaved = new List<double>();
         var straight = new List<double>();
 
-        for (int i = 0; i < 100; i++)
+        for (var i = 0; i < 100; i++)
         {
             interleaved.Add(first.NextGaussian(0.0, 1.0));
             straight.Add(second.NextGaussian(0.0, 1.0));
@@ -163,7 +165,7 @@ public class SeededRandomProviderGaussianTests
         var direct = new SeededRandomProvider(seed: 404);
         var viaHelper = new SeededRandomProvider(seed: 404);
 
-        for (int i = 0; i < 50; i++)
+        for (var i = 0; i < 50; i++)
         {
             Assert.Equal(
                 direct.NextGaussian(1.5, 0.25),
@@ -189,7 +191,7 @@ public class SeededRandomProviderGaussianTests
         const double P = 0.3275911;
 
         var t = 1.0 / (1.0 + P * x);
-        var y = 1.0 - (((((A5 * t + A4) * t) + A3) * t + A2) * t + A1) * t * Math.Exp(-x * x);
+        var y = 1.0 - ((((A5 * t + A4) * t + A3) * t + A2) * t + A1) * t * Math.Exp(-x * x);
 
         return sign * y;
     }

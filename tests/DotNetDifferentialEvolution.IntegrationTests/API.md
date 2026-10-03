@@ -46,12 +46,12 @@ public class WorkersOrchestratorTests
 [Trait("Category", "Integration")]
 public class NaNFitnessTests
 {
-    public async Task PerWorkerScan_DoesNotReportANaNIndividualAsTheBest();
-    public async Task CrossWorkerReduction_DoesNotReportANaNIndividualAsTheBest();
-    public async Task PopulationScan_DoesNotReportANaNIndividualAsTheBest();
-    public async Task PopulationScan_WithAnAllNaNPopulation_StillReportsAnInRangeIndex();
-    public async Task Builder_DoesNotHandANaNIndividualToMutationAsTheInitialBest();
-    public async Task JadeRun_WithANaNInTheInitialPopulation_ReportsAFiniteBest();
+    public async Task PerWorkerScanDoesNotReportANaNIndividualAsTheBest();
+    public async Task CrossWorkerReductionDoesNotReportANaNIndividualAsTheBest();
+    public async Task PopulationScanDoesNotReportANaNIndividualAsTheBest();
+    public async Task PopulationScanWithAnAllNaNPopulationStillReportsAnInRangeIndex();
+    public async Task BuilderDoesNotHandANaNIndividualToMutationAsTheInitialBest();
+    public async Task JadeRunWithANaNInTheInitialPopulationReportsAFiniteBest();
 }
 [Trait("Category", "Integration")]
 public class FitnessRankingMaintenanceTests

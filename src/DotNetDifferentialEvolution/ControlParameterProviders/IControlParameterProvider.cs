@@ -19,7 +19,7 @@ public interface IControlParameterProvider
     /// <param name="randomProvider">The random provider to use for sampling.</param>
     /// <param name="mutationForce">The mutation factor (F) to use.</param>
     /// <param name="crossoverProbability">The crossover probability (CR) to use.</param>
-    public void GetControlParameters(
+    void GetControlParameters(
         int individualIndex,
         BaseRandomProvider randomProvider,
         out double mutationForce,

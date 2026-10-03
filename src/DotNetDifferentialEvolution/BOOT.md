@@ -31,7 +31,7 @@ This node owns the two entry points, `DifferentialEvolutionBuilder` and
   that reads F and CR without a provider (it would read `NaN` and finish having
   optimized nothing, silently), then the variant's own `Validate`, last, on a
   configuration the builder already accepted. Held by
-  `DifferentialEvolutionBuilderTests.Build_ThrowsWhenPopulationIsTooSmallForTheMutationStrategy`,
+  `DifferentialEvolutionBuilderTests.BuildThrowsWhenPopulationIsTooSmallForTheMutationStrategy`,
   `MutationRequirementsValidationTests.BuildThrowsWhenAStrategyNeedingControlParametersHasNoProvider`,
   `DeVariantTests.AThirdPartyVariantsValidateRunsAgainstTheCompletedConfiguration`.
 - **One seed fixes the whole run for a given worker count.** Worker `k` draws from

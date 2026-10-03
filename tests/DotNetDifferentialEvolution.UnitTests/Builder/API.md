@@ -20,21 +20,21 @@ variant extension point.
 [Trait("Category", "Unit")]
 public class DifferentialEvolutionBuilderTests
 {
-    public void WithBounds_ThrowsWhenLengthsDiffer();
-    public void WithBounds_ThrowsWhenLowerExceedsUpper();
-    public void WithPopulationSize_ThrowsWhenNotPositive();
-    public void UseProcessors_ThrowsWhenNotPositive();
-    public void WithJade_ThrowsWhenArchiveSizeRateIsNegative();
-    public void WithLShade_ThrowsWhenEvaluationBudgetIsNotPositive();
-    public void WithLShade_ThrowsWhenTerminationEvaluationBudgetDoesNotMatch();
-    public void WithLShade_BuildsWhenTerminationEvaluationBudgetMatches();
-    public void Build_ThrowsWhenPopulationIsTooSmallForTheMutationStrategy();
-    public void Build_WithCompleteConfiguration_ProducesAUsableInstance();
-    public void WithLocalSearch_ThrowsWhenRefinerIsNull();
-    public void WithLocalSearch_ThrowsWhenIntervalIsNotPositive();
-    public void WithJade_RoundsAMidpointArchiveCapacityHalfUp();
-    public void WithShade_RoundsAMidpointArchiveCapacityHalfUp();
-    public void WithLShade_RoundsAMidpointArchiveCapacityHalfUp();
+    public void WithBoundsThrowsWhenLengthsDiffer();
+    public void WithBoundsThrowsWhenLowerExceedsUpper();
+    public void WithPopulationSizeThrowsWhenNotPositive();
+    public void UseProcessorsThrowsWhenNotPositive();
+    public void WithJadeThrowsWhenArchiveSizeRateIsNegative();
+    public void WithLShadeThrowsWhenEvaluationBudgetIsNotPositive();
+    public void WithLShadeThrowsWhenTerminationEvaluationBudgetDoesNotMatch();
+    public void WithLShadeBuildsWhenTerminationEvaluationBudgetMatches();
+    public void BuildThrowsWhenPopulationIsTooSmallForTheMutationStrategy();
+    public void BuildWithCompleteConfigurationProducesAUsableInstance();
+    public void WithLocalSearchThrowsWhenRefinerIsNull();
+    public void WithLocalSearchThrowsWhenIntervalIsNotPositive();
+    public void WithJadeRoundsAMidpointArchiveCapacityHalfUp();
+    public void WithShadeRoundsAMidpointArchiveCapacityHalfUp();
+    public void WithLShadeRoundsAMidpointArchiveCapacityHalfUp();
 }
 [Trait("Category", "Unit")]
 public class MutationRequirementsValidationTests

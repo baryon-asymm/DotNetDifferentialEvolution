@@ -11,12 +11,12 @@ crossover and repair are shared ([Helpers](Helpers/API.md)).
 
 - **Randomness comes from the context, never from the strategy.** Even the legacy
   `MutationStrategy`, which carries its own F and CR, draws from the worker's provider;
-  its provider-taking constructor is `[Obsolete]` and ignores the argument (`3f3d394`).
-  Held by the shape of the code.
+  its constructor takes no provider (the `[Obsolete]` one that ignored it, `3f3d394`, went
+  in 6.0.0). Held by the shape of the code.
 - **The p-best pool is at least `min(2, N)` and rounds half away from zero**, as in
   Tanabe's reference implementation (`f7887ab`). Held by
-  `CurrentToPBestMutationStrategyTests.Mutate_NeverDrawsPBestFromAPoolSmallerThanTwo`
-  and `Mutate_AddressesThePBestPoolThroughTheFitnessRanking`.
+  `CurrentToPBestMutationStrategyTests.MutateNeverDrawsPBestFromAPoolSmallerThanTwo`
+  and `MutateAddressesThePBestPoolThroughTheFitnessRanking`.
 - **Each strategy's `MinimumPopulationSize` covers its distinct draws plus the target.**
   Held by the constants in each class (table in `API.md`).
 - **`RandomProvider` and `WorkerRandomProvider` are one object**, so a run's draw order
@@ -51,8 +51,10 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       adaptive variants' suites.
 - [ ] No unit test of the six other strategies' vector choice (only convergence).
 - [ ] None of these tests has been shown red on a mutation (AGENTS.md §13).
-- [ ] ⚠ `MutationStrategy`'s constructors keep `populationSize`, `lowerBound` and
-      `upperBound` parameters that are ignored ("retained for API compatibility").
+- [x] `MutationStrategy` takes only the F and CR it uses: 2026-10-03, for 6.0.0. The
+      ignored `populationSize`, `lowerBound` and `upperBound` and the `[Obsolete]`
+      provider-taking constructor are removed; IDE0290 (primary constructor) and CS9113
+      (unread parameter) together allowed no other form under the maximum diagnostics.
 - [ ] ⚠ `CurrentToPBestMutationStrategy` draws its indices through the virtual
       `RandomProvider`, unlike the helpers; per trial rather than per gene (cost not
       measured).

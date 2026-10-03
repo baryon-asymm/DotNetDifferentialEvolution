@@ -14,7 +14,7 @@ public interface IMutationStrategy
     /// Defaults to <c>2</c>; built-in strategies override it with the number of distinct
     /// individuals they require (e.g. <c>DE/rand/2</c> needs six).
     /// </remarks>
-    public int MinimumPopulationSize => 2;
+    int MinimumPopulationSize => 2;
 
     /// <summary>
     /// Gets what the engine must provision for this strategy before it can build a trial vector.
@@ -28,13 +28,13 @@ public interface IMutationStrategy
     /// run that quietly optimizes nothing. A strategy that carries its own control parameters —
     /// like <see cref="MutationStrategy"/> — declares <see cref="MutationRequirements.None"/>.
     /// </remarks>
-    public MutationRequirements Requirements => MutationRequirements.ControlParameters;
+    MutationRequirements Requirements => MutationRequirements.ControlParameters;
 
     /// <summary>
     /// Builds a trial individual (mutation + crossover) into
     /// <see cref="MutationContext.TrialIndividual"/>.
     /// </summary>
     /// <param name="context">The data required to build the trial vector.</param>
-    public void Mutate(
+    void Mutate(
         in MutationContext context);
 }

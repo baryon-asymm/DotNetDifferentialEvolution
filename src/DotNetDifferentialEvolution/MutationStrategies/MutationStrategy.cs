@@ -12,7 +12,11 @@ namespace DotNetDifferentialEvolution.MutationStrategies;
 /// constructor and ignores any per-individual parameters in the
 /// <see cref="MutationContext"/>, preserving the original constant-parameter behavior.
 /// </remarks>
-public class MutationStrategy : IMutationStrategy
+/// <param name="mutationForce">The mutation force F, used for every individual.</param>
+/// <param name="crossoverProbability">The crossover probability CR, used for every individual.</param>
+public class MutationStrategy(
+    double mutationForce,
+    double crossoverProbability) : IMutationStrategy
 {
     /// <summary>
     /// The number of individuals to choose for mutation.
@@ -28,50 +32,8 @@ public class MutationStrategy : IMutationStrategy
     /// </summary>
     public MutationRequirements Requirements => MutationRequirements.None;
 
-    private readonly double _mutationForce;
-    private readonly double _crossoverProbability;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MutationStrategy"/> class.
-    /// </summary>
-    /// <param name="mutationForce">The mutation force.</param>
-    /// <param name="crossoverProbability">The crossover probability.</param>
-    /// <param name="populationSize">The size of the population (retained for API compatibility).</param>
-    /// <param name="lowerBound">The lower bound of the genes (retained for API compatibility).</param>
-    /// <param name="upperBound">The upper bound of the genes (retained for API compatibility).</param>
-    /// <param name="randomProvider">The random provider (retained for API compatibility; ignored).</param>
-    [Obsolete("The engine supplies the random provider through MutationContext, one per worker, "
-              + "so that a seeded run is reproducible and no generator is shared between threads. "
-              + "Use the overload without a random provider and DifferentialEvolutionBuilder.WithSeed.")]
-    public MutationStrategy(
-        double mutationForce,
-        double crossoverProbability,
-        int populationSize,
-        ReadOnlyMemory<double> lowerBound,
-        ReadOnlyMemory<double> upperBound,
-        BaseRandomProvider randomProvider)
-        : this(mutationForce, crossoverProbability, populationSize, lowerBound, upperBound)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MutationStrategy"/> class.
-    /// </summary>
-    /// <param name="mutationForce">The mutation force.</param>
-    /// <param name="crossoverProbability">The crossover probability.</param>
-    /// <param name="populationSize">The size of the population (retained for API compatibility).</param>
-    /// <param name="lowerBound">The lower bound of the genes (retained for API compatibility).</param>
-    /// <param name="upperBound">The upper bound of the genes (retained for API compatibility).</param>
-    public MutationStrategy(
-        double mutationForce,
-        double crossoverProbability,
-        int populationSize,
-        ReadOnlyMemory<double> lowerBound,
-        ReadOnlyMemory<double> upperBound)
-    {
-        _mutationForce = mutationForce;
-        _crossoverProbability = crossoverProbability;
-    }
+    private readonly double _mutationForce = mutationForce;
+    private readonly double _crossoverProbability = crossoverProbability;
 
     /// <inheritdoc />
     public void Mutate(

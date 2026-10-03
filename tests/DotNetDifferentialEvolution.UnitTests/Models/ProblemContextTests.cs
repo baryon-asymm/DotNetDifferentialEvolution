@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Models;
 
@@ -14,7 +14,7 @@ public class ProblemContextTests
     private const int PopulationSize = 4;
 
     [Fact]
-    public void Constructor_InitializesDerivedState()
+    public void ConstructorInitializesDerivedState()
     {
         var context = CreateContext();
 
@@ -25,7 +25,7 @@ public class ProblemContextTests
     }
 
     [Fact]
-    public void SwapPopulations_ExchangesCurrentAndTrialBuffers()
+    public void SwapPopulationsExchangesCurrentAndTrialBuffers()
     {
         var context = CreateContext();
 
@@ -43,7 +43,7 @@ public class ProblemContextTests
     }
 
     [Fact]
-    public void GetRepresentativePopulation_StampsGenerationBestAndEvaluationCount()
+    public void GetRepresentativePopulationStampsGenerationBestAndEvaluationCount()
     {
         var context = CreateContext();
         context.EvaluationCount = 1234;

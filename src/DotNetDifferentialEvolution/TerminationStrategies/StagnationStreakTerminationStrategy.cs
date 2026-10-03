@@ -6,18 +6,25 @@ namespace DotNetDifferentialEvolution.TerminationStrategies;
 /// <summary>
 /// Represents a termination strategy that stops the evolution process when a stagnation streak is detected.
 /// </summary>
-public class StagnationStreakTerminationStrategy : ITerminationStrategy
+/// <remarks>
+/// Initializes a new instance of the <see cref="StagnationStreakTerminationStrategy"/> class.
+/// </remarks>
+/// <param name="maxStagnationStreak">The maximum number of generations allowed without improvement before termination.</param>
+/// <param name="stagnationThreshold">The threshold for considering a change in fitness function value as significant.</param>
+public class StagnationStreakTerminationStrategy(
+    int maxStagnationStreak,
+    double stagnationThreshold) : ITerminationStrategy
 {
     /// <summary>
     /// Gets the maximum number of generations allowed without improvement before termination.
     /// </summary>
-    public int MaxStagnationStreak { get; init; }
-    
+    public int MaxStagnationStreak { get; init; } = maxStagnationStreak;
+
     /// <summary>
     /// Gets the threshold for considering a change in fitness function value as significant.
     /// </summary>
-    public double StagnationThreshold { get; init; }
-    
+    public double StagnationThreshold { get; init; } = stagnationThreshold;
+
     /// <summary>
     /// Gets the current number of generations without significant improvement.
     /// </summary>
@@ -27,20 +34,7 @@ public class StagnationStreakTerminationStrategy : ITerminationStrategy
     /// Gets the fitness function value of the best individual in the last generation.
     /// </summary>
     public double LastBestFitnessFunctionValue { get; private set; } = double.MinValue;
-    
-    /// <summary>
-    /// Initializes a new instance of the <see cref="StagnationStreakTerminationStrategy"/> class.
-    /// </summary>
-    /// <param name="maxStagnationStreak">The maximum number of generations allowed without improvement before termination.</param>
-    /// <param name="stagnationThreshold">The threshold for considering a change in fitness function value as significant.</param>
-    public StagnationStreakTerminationStrategy(
-        int maxStagnationStreak,
-        double stagnationThreshold)
-    {
-        MaxStagnationStreak = maxStagnationStreak;
-        StagnationThreshold = stagnationThreshold;
-    }
-    
+
     /// <summary>
     /// Determines whether the evolution process should terminate based on the current population.
     /// </summary>
@@ -51,7 +45,7 @@ public class StagnationStreakTerminationStrategy : ITerminationStrategy
         ArgumentNullException.ThrowIfNull(population);
 
         population.MoveCursorToBestIndividual();
-        
+
         var difference = Math.Abs(population.IndividualCursor.FitnessFunctionValue - LastBestFitnessFunctionValue);
         if (difference > StagnationThreshold)
         {

@@ -42,17 +42,20 @@ internal static class RandomIndexSelector
         TRandom randomSource)
         where TRandom : struct, IRandomSource
     {
-        for (int i = 0; i < indices.Length; i++)
+        for (var i = 0; i < indices.Length; i++)
         {
             int candidate;
             bool isUnique;
             do
             {
                 candidate = randomSource.Next(populationSize - 1);
-                if (candidate >= excludeIndex) candidate++;
+                if (candidate >= excludeIndex)
+                {
+                    candidate++;
+                }
 
                 isUnique = true;
-                for (int j = 0; j < i; j++)
+                for (var j = 0; j < i; j++)
                 {
                     if (indices[j] == candidate)
                     {
@@ -60,7 +63,7 @@ internal static class RandomIndexSelector
                         break;
                     }
                 }
-            } while (isUnique == false);
+            } while (!isUnique);
 
             indices[i] = candidate;
         }

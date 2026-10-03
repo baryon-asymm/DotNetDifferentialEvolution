@@ -1,4 +1,4 @@
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.UnitTests.FitnessFunctions;
 
@@ -50,8 +50,10 @@ public class BenchmarkFunctionEvaluatorTests
 
             Assert.Equal(lower.Length, upper.Length);
             Assert.Equal(evaluator.Dimension, lower.Length);
-            for (int i = 0; i < lower.Length; i++)
+            for (var i = 0; i < lower.Length; i++)
+            {
                 Assert.True(lower.Span[i] < upper.Span[i], $"{evaluator.Name} bound {i} must be a proper interval.");
+            }
         }
     }
 

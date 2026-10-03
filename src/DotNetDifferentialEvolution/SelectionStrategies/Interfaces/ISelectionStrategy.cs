@@ -33,7 +33,7 @@ public interface ISelectionStrategy
     /// not be credited as one.
     /// </para>
     /// </remarks>
-    public SelectionOutcome Select(
+    SelectionOutcome SelectSurvivor(
         int individualIndex,
         double trialIndividualFfValue,
         Span<double> trialIndividual,

@@ -3,9 +3,9 @@ using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Algorithms;
 
@@ -27,7 +27,7 @@ public class LShadeStrategyTests
     [InlineData(50L, 7)]     // halfway → 7
     [InlineData(100L, 4)]    // budget exhausted → minimum
     [InlineData(200L, 4)]    // over budget → clamped to the minimum
-    public void AfterGeneration_ReducesPopulationLinearlyWithTheEvaluationBudget(
+    public void AfterGenerationReducesPopulationLinearlyWithTheEvaluationBudget(
         long evaluationCount,
         int expectedPopulationSize)
     {
@@ -41,7 +41,7 @@ public class LShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_KeepsTheBestSurvivorsInAscendingFitnessOrder()
+    public void AfterGenerationKeepsTheBestSurvivorsInAscendingFitnessOrder()
     {
         var lshade = CreateStrategy();
         var context = CreateContext();
@@ -65,7 +65,7 @@ public class LShadeStrategyTests
     [InlineData(24, 2000L, 750L, 17)]   // 24 - 20 * 0.375  = 16.5 → 17 (ToEven gives 16)
     [InlineData(8, 1000L, 375L, 7)]     //  8 -  4 * 0.375  =  6.5 →  7 (ToEven gives  6)
     [InlineData(12, 1600L, 300L, 11)]   // 12 -  8 * 0.1875 = 10.5 → 11 (ToEven gives 10)
-    public void AfterGeneration_RoundsMidpointPopulationSizesHalfUp(
+    public void AfterGenerationRoundsMidpointPopulationSizesHalfUp(
         int initialPopulationSize,
         long maxEvaluationNumber,
         long evaluationCount,
@@ -85,7 +85,7 @@ public class LShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_RoundsAMidpointArchiveCapacityHalfUp()
+    public void AfterGenerationRoundsAMidpointArchiveCapacityHalfUp()
     {
         // Half the budget reduces 10 → 7 individuals; 1.5 * 7 = 10.5 is an exact midpoint,
         // which MidpointRounding.ToEven would round down to 10.
@@ -104,7 +104,7 @@ public class LShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_UpdatesMemoryCrWithTheWeightedLehmerMean()
+    public void AfterGenerationUpdatesMemoryCrWithTheWeightedLehmerMean()
     {
         // L-SHADE is built on SHADE 1.1, whose memory update takes the weighted *Lehmer* mean of
         // the successful CR values (its Algorithm 1, line 5). SHADE (2013), Eq. (17), takes the
@@ -118,11 +118,19 @@ public class LShadeStrategyTests
         var records = new TrialRecord[InitialPopulationSize];
         records[0] = new TrialRecord
         {
-            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.4, UsedF = 0.2
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 10,
+            TrialFfValue = 8,
+            UsedCr = 0.4,
+            UsedF = 0.2
         };
         records[1] = new TrialRecord
         {
-            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 10,
+            TrialFfValue = 6,
+            UsedCr = 0.9,
+            UsedF = 0.5
         };
 
         lshade.AfterGeneration(new GenerationContext(context), records);
@@ -139,7 +147,7 @@ public class LShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_TerminalCrRuleWinsOverTheLehmerMean()
+    public void AfterGenerationTerminalCrRuleWinsOverTheLehmerMean()
     {
         // Both halves of SHADE 1.1's rule are on for L-SHADE, and the terminal test comes first:
         // all-zero successful CR fixes the slot rather than feeding a 0/0 Lehmer mean.
@@ -149,11 +157,19 @@ public class LShadeStrategyTests
         var records = new TrialRecord[InitialPopulationSize];
         records[0] = new TrialRecord
         {
-            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.0, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 10,
+            TrialFfValue = 8,
+            UsedCr = 0.0,
+            UsedF = 0.5
         };
         records[1] = new TrialRecord
         {
-            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 10,
+            TrialFfValue = 6,
+            UsedCr = 0.0,
+            UsedF = 0.5
         };
 
         lshade.AfterGeneration(new GenerationContext(context), records);
@@ -169,13 +185,13 @@ public class LShadeStrategyTests
     [Theory]
     [InlineData(0L)]
     [InlineData(-1L)]
-    public void Constructor_RejectsANonPositiveEvaluationBudget(
+    public void ConstructorRejectsANonPositiveEvaluationBudget(
         long maxEvaluationNumber)
     {
         // The budget is the denominator of the reduction schedule. Left unchecked it produces a
         // non-finite progress and collapses the population to the minimum in one generation,
         // which no exception ever reports.
-        Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
             initialPopulationSize: InitialPopulationSize,
             maxEvaluationNumber: maxEvaluationNumber,
             archiveSizeRate: 0.0,
@@ -183,9 +199,9 @@ public class LShadeStrategyTests
     }
 
     [Fact]
-    public void Constructor_RejectsANegativeArchiveSizeRate()
+    public void ConstructorRejectsANegativeArchiveSizeRate()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
             initialPopulationSize: InitialPopulationSize,
             maxEvaluationNumber: MaxEvaluations,
             archiveSizeRate: -0.5,
@@ -195,10 +211,10 @@ public class LShadeStrategyTests
     [Theory]
     [InlineData(3)]                       // below the floor of 4
     [InlineData(InitialPopulationSize)]   // equal handled separately; this checks > initial
-    public void Constructor_ValidatesMinimumPopulationSize(
+    public void ConstructorValidatesMinimumPopulationSize(
         int minPopulationSize)
     {
-        Assert.ThrowsAny<ArgumentException>(() => new LShadeStrategy(
+        _ = Assert.ThrowsAny<ArgumentException>(() => new LShadeStrategy(
             initialPopulationSize: minPopulationSize < 4 ? InitialPopulationSize : 4,
             maxEvaluationNumber: MaxEvaluations,
             archiveSizeRate: 0.0,

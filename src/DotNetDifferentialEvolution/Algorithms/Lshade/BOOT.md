@@ -9,18 +9,18 @@ spent.
 ## Invariants
 
 - **The schedule is linear in the consumed budget and rounds half up.** Held by
-  `LShadeStrategyTests.AfterGeneration_ReducesPopulationLinearlyWithTheEvaluationBudget`
-  and `AfterGeneration_RoundsMidpointPopulationSizesHalfUp` (`f7887ab`).
+  `LShadeStrategyTests.AfterGenerationReducesPopulationLinearlyWithTheEvaluationBudget`
+  and `AfterGenerationRoundsMidpointPopulationSizesHalfUp` (`f7887ab`).
 - **The best survive, stored in ascending order.** Held by
-  `LShadeStrategyTests.AfterGeneration_KeepsTheBestSurvivorsInAscendingFitnessOrder`.
+  `LShadeStrategyTests.AfterGenerationKeepsTheBestSurvivorsInAscendingFitnessOrder`.
 - **The archive capacity follows the population and rounds half up.** Held by
-  `LShadeStrategyTests.AfterGeneration_RoundsAMidpointArchiveCapacityHalfUp`.
+  `LShadeStrategyTests.AfterGenerationRoundsAMidpointArchiveCapacityHalfUp`.
 - **`M_CR` takes the weighted Lehmer mean, and the terminal rule wins over it.** Held by
-  `LShadeStrategyTests.AfterGeneration_UpdatesMemoryCrWithTheWeightedLehmerMean` and
-  `AfterGeneration_TerminalCrRuleWinsOverTheLehmerMean` (`e489324`).
+  `LShadeStrategyTests.AfterGenerationUpdatesMemoryCrWithTheWeightedLehmerMean` and
+  `AfterGenerationTerminalCrRuleWinsOverTheLehmerMean` (`e489324`).
 - **Arguments that would fail silently are refused at construction** (`c54fa57`). Held
-  by `Constructor_RejectsANonPositiveEvaluationBudget`,
-  `Constructor_RejectsANegativeArchiveSizeRate`, `Constructor_ValidatesMinimumPopulationSize`.
+  by `ConstructorRejectsANonPositiveEvaluationBudget`,
+  `ConstructorRejectsANegativeArchiveSizeRate`, `ConstructorValidatesMinimumPopulationSize`.
 
 ## Dependencies
 

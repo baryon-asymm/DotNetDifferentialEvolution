@@ -11,13 +11,13 @@ minimizer.
 
 - **The check is consistency, not an independent truth.** It shows that the code and
   the declared optimum agree; the optima themselves come from the literature cited in
-  the library ([FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/BOOT.md)).
+  the library ([FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/BOOT.md)).
 - **One tolerance for all eleven**: `1e-6 + 1e-4·|f*|`, absolute plus relative, stated
   in the test.
 
 ## Dependencies
 
-- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
+- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md)
   — under test, through `BenchmarkFunctionCatalog`.
 
 ## Constraints

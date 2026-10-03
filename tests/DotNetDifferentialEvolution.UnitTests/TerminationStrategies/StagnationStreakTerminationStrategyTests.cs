@@ -35,9 +35,9 @@ public class StagnationStreakTerminationStrategyTests
         var ff = new[] { 10.0 };
         var population = PopulationFactory.SingleIndividual(ff);
 
-        strategy.ShouldTerminate(population); // baseline
-        strategy.ShouldTerminate(population); // streak 1
-        strategy.ShouldTerminate(population); // streak 2
+        _ = strategy.ShouldTerminate(population); // baseline
+        _ = strategy.ShouldTerminate(population); // streak 1
+        _ = strategy.ShouldTerminate(population); // streak 2
         Assert.Equal(2, strategy.CurrentStagnationStreak);
 
         // A meaningful improvement resets the streak.
@@ -54,10 +54,10 @@ public class StagnationStreakTerminationStrategyTests
         var ff = new[] { 1.0 };
         var population = PopulationFactory.SingleIndividual(ff);
 
-        strategy.ShouldTerminate(population); // baseline, last = 1.0
+        _ = strategy.ShouldTerminate(population); // baseline, last = 1.0
         // Tiny change below the threshold counts as stagnation.
         ff[0] = 1.0 - 1e-5;
-        strategy.ShouldTerminate(population);
+        _ = strategy.ShouldTerminate(population);
         Assert.Equal(1, strategy.CurrentStagnationStreak);
         // Baseline is not updated for sub-threshold changes.
         Assert.Equal(1.0, strategy.LastBestFitnessFunctionValue);

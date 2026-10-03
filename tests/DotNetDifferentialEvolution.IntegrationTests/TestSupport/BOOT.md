@@ -26,8 +26,8 @@ convergence. It holds no tests.
   [SelectionStrategies](../../../src/DotNetDifferentialEvolution/SelectionStrategies/API.md),
   [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md)
   — the parts they are built from.
-- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md),
-  [Helpers](../../DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) — the test
+- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md),
+  [Helpers](../../DotNetDifferentialEvolution.Tests.Common/Helpers/API.md) — the test
   objective contract, `ProblemContextHelper`.
 - [DotNetDifferentialEvolution](../../../src/DotNetDifferentialEvolution/API.md) — `DifferentialEvolution`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [AlgorithmExecutors/Interfaces](../../../src/DotNetDifferentialEvolution/AlgorithmExecutors/Interfaces/API.md) — `IAlgorithmExecutor`. Added 2026-10-03 from the reflection check (`DependencyTests`).

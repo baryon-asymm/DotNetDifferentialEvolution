@@ -1,14 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!-- TargetFramework, nullability, implicit usings, RollForward and the shared-contracts
-         global using all come from benchmarks/Directory.Build.props. -->
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-    </PropertyGroup>
+         global using all come from benchmarks/Directory.Build.props. A class library: the
+         benchmark classes must be public for BenchmarkDotNet, and CA1515 forbids public types in
+         an executable, so the entry point lives in DotNetDifferentialEvolution.Benchmark.Runner. -->
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj" />
-      <ProjectReference Include="..\..\tests\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj" />
+      <ProjectReference Include="..\..\tests\DotNetDifferentialEvolution.Tests.Common\DotNetDifferentialEvolution.Tests.Common.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -19,12 +19,12 @@ The state of a CPU run and its shapes: `ProblemContext` (everything the engine r
   `PopulationViewTests.NarrowingTheContextNarrowsBothViewsAtOnce` and
   `SwappingKeepsBothViewsNarrowed`.
 - **The cursor never points at a dropped individual.** `MoveCursorTo` checks against
-  the live size. Held by `PopulationTests.MoveCursorTo_RefusesAnIndexOutsideTheActivePopulation`.
+  the live size. Held by `PopulationTests.MoveCursorToRefusesAnIndexOutsideTheActivePopulation`.
 - **A swap exchanges references, never copies.** Held by
-  `ProblemContextTests.SwapPopulations_ExchangesCurrentAndTrialBuffers`.
+  `ProblemContextTests.SwapPopulationsExchangesCurrentAndTrialBuffers`.
 - **The representative population carries the live size, generation, best index and
   evaluation count of the moment it is requested.** Held by
-  `ProblemContextTests.GetRepresentativePopulation_StampsGenerationBestAndEvaluationCount`
+  `ProblemContextTests.GetRepresentativePopulationStampsGenerationBestAndEvaluationCount`
   and the integration tests `PopulationSizeReportingTests`.
 - **`TrialRecord` defaults to "nothing happened"** (`ParentKept`). Held by the
   enumeration's zero value in [SelectionStrategies](../SelectionStrategies/API.md).

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -59,7 +57,7 @@ internal static class IlBody
             }
 
             var width = opcode.OperandType == OperandType.InlineSwitch
-                ? 4 + (4 * BitConverter.ToInt32(il, offset))
+                ? 4 + 4 * BitConverter.ToInt32(il, offset)
                 : OperandWidths.GetValueOrDefault(opcode.OperandType, 4);
 
             MemberInfo? operand = null;

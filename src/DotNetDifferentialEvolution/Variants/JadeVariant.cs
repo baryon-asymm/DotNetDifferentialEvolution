@@ -27,7 +27,9 @@ public sealed class JadeVariant : IDeVariant
         double adaptationRate = JadeStrategy.DefaultAdaptationRate)
     {
         if (archiveSizeRate < 0.0)
+        {
             throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
+        }
 
         _pBestRate = pBestRate;
         _archiveSizeRate = archiveSizeRate;

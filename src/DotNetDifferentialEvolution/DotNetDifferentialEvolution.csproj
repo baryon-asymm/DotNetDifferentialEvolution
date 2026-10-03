@@ -14,7 +14,7 @@
         <PackageTags>differential-evolution de optimization .net</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <Version>5.1.0</Version>
+        <Version>6.0.0</Version>
     </PropertyGroup>
 
     <!-- Shared contracts for the DotNetOptimization family. The objective evaluator, the random
@@ -67,7 +67,7 @@
     -->
     <PropertyGroup>
         <EnablePackageValidation>true</EnablePackageValidation>
-        <PackageValidationBaselineVersion>4.0.0</PackageValidationBaselineVersion>
+        <PackageValidationBaselineVersion>5.1.0</PackageValidationBaselineVersion>
     </PropertyGroup>
 
     <ItemGroup>

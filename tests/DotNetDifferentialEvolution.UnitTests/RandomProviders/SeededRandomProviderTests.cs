@@ -16,7 +16,7 @@ public class SeededRandomProviderTests
         var first = new SeededRandomProvider(seed: 12345);
         var second = new SeededRandomProvider(seed: 12345);
 
-        for (int i = 0; i < 1_000; i++)
+        for (var i = 0; i < 1_000; i++)
         {
             Assert.Equal(first.NextULong(), second.NextULong());
             Assert.Equal(first.NextDouble(), second.NextDouble());
@@ -31,10 +31,12 @@ public class SeededRandomProviderTests
         var second = new SeededRandomProvider(seed: 12346);
 
         var collisions = 0;
-        for (int i = 0; i < 1_000; i++)
+        for (var i = 0; i < 1_000; i++)
         {
             if (first.NextULong() == second.NextULong())
+            {
                 collisions++;
+            }
         }
 
         // Adjacent seeds are what the engine hands consecutive workers. SplitMix64 expansion is
@@ -47,10 +49,10 @@ public class SeededRandomProviderTests
     {
         var random = new SeededRandomProvider(seed: 7);
 
-        for (int i = 0; i < 100_000; i++)
+        for (var i = 0; i < 100_000; i++)
         {
             var value = random.NextDouble();
-            Assert.True(value >= 0.0 && value < 1.0, $"NextDouble returned {value}");
+            Assert.True(value is >= 0.0 and < 1.0, $"NextDouble returned {value}");
         }
     }
 
@@ -68,7 +70,7 @@ public class SeededRandomProviderTests
         var counts = new int[maxValue];
         var draws = maxValue * DrawsPerBucket;
 
-        for (int i = 0; i < draws; i++)
+        for (var i = 0; i < draws; i++)
         {
             var value = random.Next(maxValue);
             Assert.InRange(value, 0, maxValue - 1);
@@ -101,7 +103,7 @@ public class SeededRandomProviderTests
 
         var orOfAll = 0UL;
         var andOfAll = ulong.MaxValue;
-        for (int i = 0; i < 1_000; i++)
+        for (var i = 0; i < 1_000; i++)
         {
             var value = random.NextULong();
             orOfAll |= value;

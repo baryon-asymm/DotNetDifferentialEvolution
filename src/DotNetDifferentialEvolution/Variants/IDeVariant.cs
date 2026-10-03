@@ -17,7 +17,7 @@ public interface IDeVariant
     /// </summary>
     /// <param name="configuration">The problem dimensions known at configuration time.</param>
     /// <returns>The strategies to install.</returns>
-    public DeVariantSetup Configure(
+    DeVariantSetup Configure(
         in DeVariantConfiguration configuration);
 
     /// <summary>
@@ -33,7 +33,7 @@ public interface IDeVariant
     /// Defaults to accepting everything, so a variant with nothing to cross-check implements only
     /// <see cref="Configure"/>.
     /// </remarks>
-    public void Validate(
+    void Validate(
         in DeVariantConfiguration configuration,
         ITerminationStrategy terminationStrategy)
     {

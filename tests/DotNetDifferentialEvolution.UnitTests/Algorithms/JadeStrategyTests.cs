@@ -3,9 +3,9 @@ using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Algorithms;
 
@@ -27,7 +27,7 @@ public class JadeStrategyTests
     private static double[] MeanRevealingDraws => [0.5, 0.75, 0.5];
 
     [Fact]
-    public void AfterGeneration_NudgesMeansTowardSuccessfulParameters()
+    public void AfterGenerationNudgesMeansTowardSuccessfulParameters()
     {
         var jade = new JadeStrategy(PopulationSize, adaptationRate: 0.1, initialMean: 0.5);
         var context = CreateContext();
@@ -48,7 +48,7 @@ public class JadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_WithNoSuccesses_LeavesMeansUnchanged()
+    public void AfterGenerationWithNoSuccessesLeavesMeansUnchanged()
     {
         var jade = new JadeStrategy(PopulationSize, adaptationRate: 0.1, initialMean: 0.5);
         var context = CreateContext();
@@ -68,7 +68,7 @@ public class JadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_IgnoresATrialAcceptedOnATie()
+    public void AfterGenerationIgnoresATrialAcceptedOnATie()
     {
         // The mirror of the jDE case: a tie survives selection but is not a success. S_CR and S_F
         // take improving trials only (both papers, Algorithm 2 line 16), so a tie must move
@@ -103,7 +103,7 @@ public class JadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_WithANegativeArchiveCapacity_LeavesTheArchiveAlone()
+    public void AfterGenerationWithANegativeArchiveCapacityLeavesTheArchiveAlone()
     {
         // ArchiveCapacity is writable by any generation hook — L-SHADE rescales it every time it
         // shrinks the population. A negative value slipped past the `== 0` test that disables the

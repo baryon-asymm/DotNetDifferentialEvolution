@@ -1,9 +1,6 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
-using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -45,7 +42,7 @@ public class AdaptiveVariantsConvergenceTests
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
                 .Build();
-        });
+        }).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-6, geneTolerance: 1e-3);
     }
@@ -65,7 +62,7 @@ public class AdaptiveVariantsConvergenceTests
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(maxEvaluations))
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
-                .Build());
+                .Build()).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-6, geneTolerance: 1e-3);
     }

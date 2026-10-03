@@ -1,7 +1,7 @@
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Models;
 
@@ -36,7 +36,7 @@ public class PopulationViewTests
             Count: 3,
             GenomeSize: 2);
 
-        Assert.Equal(new[] { 2.0, 3.0 }, view.GenesOf(1).ToArray());
+        Assert.Equal([2.0, 3.0], view.GenesOf(1).ToArray());
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public class PopulationViewTests
             Count: 2,
             GenomeSize: 2);
 
-        Assert.Equal(new[] { 0.0, 1.0, 2.0, 3.0 }, view.ActiveGenes.ToArray());
-        Assert.Equal(new[] { 9.0, 1.0 }, view.ActiveFfValues.ToArray());
+        Assert.Equal([0.0, 1.0, 2.0, 3.0], view.ActiveGenes.ToArray());
+        Assert.Equal([9.0, 1.0], view.ActiveFfValues.ToArray());
     }
 
     [Fact]

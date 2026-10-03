@@ -1,10 +1,8 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.MutationStrategies;
-using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -29,12 +27,12 @@ public class MutationStrategyConvergenceTests
     {
         var evaluator = new SphereEvaluator(dimension: 5);
 
-        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () => Build(strategy, evaluator));
+        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () => Build(strategy, evaluator)).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-3);
     }
 
-    private static DotNetDifferentialEvolution.DifferentialEvolution Build(
+    private static DifferentialEvolution Build(
         string strategy,
         SphereEvaluator evaluator)
     {

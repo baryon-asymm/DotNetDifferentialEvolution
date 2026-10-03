@@ -22,12 +22,12 @@ consumer-facing size to the live count.
 - [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — the limit the contexts are built with.
 - [TestSupport](../TestSupport/API.md) — `PopulationFactory`.
-- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md),
-  [Helpers](../../DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) — Sphere,
+- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md),
+  [Helpers](../../DotNetDifferentialEvolution.Tests.Common/Helpers/API.md) — Sphere,
   `ProblemContextHelper`.
 - [GenerationStrategies](../../../src/DotNetDifferentialEvolution/GenerationStrategies/API.md) — `IGenerationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ## Constraints
 
@@ -39,7 +39,7 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
       context 3).
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. Bounding `MoveCursorTo`
       by `Capacity` instead of the live `PopulationSize` turned
-      `MoveCursorTo_RefusesAnIndexOutsideTheActivePopulation` red.
+      `MoveCursorToRefusesAnIndexOutsideTheActivePopulation` red.
 - [ ] ⚠ The contexts come from `ProblemContextHelper` without a seed, so their
       populations are random; no assertion here depends on the values.
 

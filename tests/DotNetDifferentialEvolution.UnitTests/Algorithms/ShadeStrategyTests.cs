@@ -3,9 +3,9 @@ using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Algorithms;
 
@@ -24,13 +24,10 @@ public class ShadeStrategyTests
         new(ints: [0], doubles: [0.5, 0.75, 0.5]);
 
     [Fact]
-    public void Constructor_ThrowsWhenMemorySizeIsNotPositive()
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new ShadeStrategy(PopulationSize, memorySize: 0));
-    }
+    public void ConstructorThrowsWhenMemorySizeIsNotPositive() => _ = Assert.Throws<ArgumentOutOfRangeException>(() => new ShadeStrategy(PopulationSize, memorySize: 0));
 
     [Fact]
-    public void AfterGeneration_StoresImprovementWeightedMeans()
+    public void AfterGenerationStoresImprovementWeightedMeans()
     {
         var shade = new ShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
         var context = CreateContext();
@@ -53,7 +50,7 @@ public class ShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_WithNoSuccesses_LeavesMemoryUnchanged()
+    public void AfterGenerationWithNoSuccessesLeavesMemoryUnchanged()
     {
         var shade = new ShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
         var context = CreateContext();
@@ -73,7 +70,7 @@ public class ShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_WithTerminalCrEnabled_FixesSlotToZeroWhenAllSuccessfulCrAreZero()
+    public void AfterGenerationWithTerminalCrEnabledFixesSlotToZeroWhenAllSuccessfulCrAreZero()
     {
         var shade = new TerminalCrShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
         var context = CreateContext();
@@ -97,24 +94,24 @@ public class ShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_TerminalCrSlotStaysTerminal_EvenAfterNonZeroSuccessfulCr()
+    public void AfterGenerationTerminalCrSlotStaysTerminalEvenAfterNonZeroSuccessfulCr()
     {
         var shade = new TerminalCrShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
         var context = CreateContext();
 
         // Generation 1: all-zero successful CR makes slot 0 terminal.
-        shade.AfterGeneration(new GenerationContext(context), new[]
-        {
+        shade.AfterGeneration(new GenerationContext(context),
+        [
             new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 9, UsedCr = 0.0, UsedF = 0.5 },
             new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 9, UsedCr = 0.0, UsedF = 0.5 },
-        });
+        ]);
 
         // Generation 2: a non-zero successful CR must NOT revive the terminal slot.
-        shade.AfterGeneration(new GenerationContext(context), new[]
-        {
+        shade.AfterGeneration(new GenerationContext(context),
+        [
             new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 5, UsedCr = 0.9, UsedF = 0.5 },
             new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 5, UsedCr = 0.9, UsedF = 0.5 },
-        });
+        ]);
 
         var draws = new ScriptedRandomProvider(ints: [0], doubles: [0.5]);
         shade.GetControlParameters(0, draws, out _, out var cr);
@@ -123,7 +120,7 @@ public class ShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_WithTerminalCrDisabled_KeepsZeroMeanAsAnOrdinaryValue()
+    public void AfterGenerationWithTerminalCrDisabledKeepsZeroMeanAsAnOrdinaryValue()
     {
         // Plain SHADE (no terminal rule): an all-zero successful CR yields an ordinary M_CR = 0.
         var shade = new ShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
@@ -147,7 +144,7 @@ public class ShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_IgnoresASuccessWhoseImprovementIsNotMeasurable()
+    public void AfterGenerationIgnoresASuccessWhoseImprovementIsNotMeasurable()
     {
         // Replacing a parent the objective scored NaN is a genuine success — the selection
         // strategy accepts any real-valued trial over it — but the improvement is NaN. Letting it
@@ -174,7 +171,7 @@ public class ShadeStrategyTests
     }
 
     [Fact]
-    public void AfterGeneration_IgnoresASuccessOverAnInfiniteParent()
+    public void AfterGenerationIgnoresASuccessOverAnInfiniteParent()
     {
         // Same hazard from the other direction: an infinite improvement would swamp the weighted
         // mean rather than poison it, which is just as wrong.
@@ -210,13 +207,8 @@ public class ShadeStrategyTests
     /// SHADE with the L-SHADE terminal <c>M_CR</c> rule turned on, to exercise that branch in
     /// isolation (the real consumer is <see cref="DotNetDifferentialEvolution.Algorithms.Lshade.LShadeStrategy"/>).
     /// </summary>
-    private sealed class TerminalCrShadeStrategy : ShadeStrategy
+    private sealed class TerminalCrShadeStrategy(int populationSize, int memorySize, double initialMemoryValue) : ShadeStrategy(populationSize, memorySize, initialMemoryValue)
     {
-        public TerminalCrShadeStrategy(int populationSize, int memorySize, double initialMemoryValue)
-            : base(populationSize, memorySize, initialMemoryValue)
-        {
-        }
-
         protected override bool UseTerminalCr => true;
     }
 }

@@ -22,7 +22,7 @@ Cauchy samplers, and the integer threshold the crossover compares against.
 
 - [RandomProviders](../../../src/DotNetDifferentialEvolution/RandomProviders/API.md) —
   under test (`RandomThreshold` is internal).
-- [Fakes](../../DotNetDifferentialEvolution.Tests.Shared/Fakes/API.md) —
+- [Fakes](../../DotNetDifferentialEvolution.Tests.Common/Fakes/API.md) —
   `ScriptedRandomProvider`.
 
 ## Constraints
@@ -34,7 +34,7 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 - [x] Green: 2026-10-02, 26 cases in 4 classes (distribution 4, threshold 5,
       Gaussian 8, provider 9).
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. Never caching the spare
-      normal turned `APairOfDrawsConsumesTwoUniforms_NotFour` and
+      normal turned `APairOfDrawsConsumesTwoUniformsNotFour` and
       `TheCachedValueIsTheOtherHalfOfTheSameTransform` red.
 - [ ] ⚠ The statistical cases ran red only for the caching mutation's draw-count side;
       none of the KS, chi-square or correlation bounds was itself seen red.

@@ -2,7 +2,7 @@ using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.UnitTests.Builder;
 
@@ -20,15 +20,17 @@ public class MutationRequirementsValidationTests
     private static SphereEvaluator Evaluator => new(dimension: 2);
 
     public static TheoryData<IMutationStrategy> StrategiesNeedingControlParameters() =>
-        new()
-        {
-            new RandMutationStrategy(),
-            new BestMutationStrategy(),
-            new CurrentToBestMutationStrategy(),
-            new RandTwoMutationStrategy(),
-            new BestTwoMutationStrategy(),
-            new CurrentToPBestMutationStrategy(0.1)
-        };
+        new(AllStrategiesNeedingControlParameters());
+
+    private static IMutationStrategy[] AllStrategiesNeedingControlParameters() =>
+    [
+        new RandMutationStrategy(),
+        new BestMutationStrategy(),
+        new CurrentToBestMutationStrategy(),
+        new RandTwoMutationStrategy(),
+        new BestTwoMutationStrategy(),
+        new CurrentToPBestMutationStrategy(0.1),
+    ];
 
     [Theory]
     [MemberData(nameof(StrategiesNeedingControlParameters))]
@@ -59,8 +61,7 @@ public class MutationRequirementsValidationTests
     [Fact]
     public void EveryStrategyNeedingControlParametersSaysSo()
     {
-        foreach (var mutationStrategy in StrategiesNeedingControlParameters()
-                     .Select(row => (IMutationStrategy)row[0]))
+        foreach (var mutationStrategy in AllStrategiesNeedingControlParameters())
         {
             Assert.True(
                 mutationStrategy.Requirements.HasFlag(MutationRequirements.ControlParameters),
@@ -75,10 +76,7 @@ public class MutationRequirementsValidationTests
         // is the one built-in that must keep working without a provider.
         var legacy = new MutationStrategy(
             mutationForce: 0.5,
-            crossoverProbability: 0.9,
-            populationSize: 10,
-            lowerBound: new[] { 0.0, 0.0 },
-            upperBound: new[] { 1.0, 1.0 });
+            crossoverProbability: 0.9);
 
         Assert.Equal(MutationRequirements.None, legacy.Requirements);
 

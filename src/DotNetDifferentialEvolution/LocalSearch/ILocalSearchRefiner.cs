@@ -29,7 +29,7 @@ public interface ILocalSearchRefiner
     /// <see cref="ProblemContext.EvaluationCount"/> so evaluation-budget termination stays accurate.
     /// </param>
     /// <param name="generationNumber">The number of the generation that just completed.</param>
-    public void Refine(
+    void Refine(
         ProblemContext context,
         int generationNumber);
 }

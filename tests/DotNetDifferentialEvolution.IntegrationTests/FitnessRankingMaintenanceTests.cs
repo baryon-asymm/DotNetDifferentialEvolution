@@ -4,7 +4,7 @@ using DotNetDifferentialEvolution.LocalSearch;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 using DotNetDifferentialEvolution.Variants;
 
 namespace DotNetDifferentialEvolution.IntegrationTests;
@@ -36,7 +36,7 @@ public class FitnessRankingMaintenanceTests
             .WithMutationStrategy(
                 new CurrentToPBestMutationStrategy(0.1),
                 new ConstantControlParameterProvider(0.5, 0.9))
-            .WithDefaultSelectionStrategy());
+            .WithDefaultSelectionStrategy()).ConfigureAwait(true);
 
         AssertRankingWasCorrectEveryGeneration(spy);
         Assert.True(
@@ -52,7 +52,7 @@ public class FitnessRankingMaintenanceTests
         var generationStrategy = new CountingGenerationStrategy();
 
         var spy = await RunAsync(builder => builder.WithVariant(
-            new ObservedPBestVariant(generationStrategy)));
+            new ObservedPBestVariant(generationStrategy))).ConfigureAwait(true);
 
         AssertRankingWasCorrectEveryGeneration(spy);
         Assert.True(spy.RankingEverChanged);
@@ -67,7 +67,7 @@ public class FitnessRankingMaintenanceTests
     {
         var spy = await RunAsync(builder => variant == "jade"
             ? builder.WithJade()
-            : builder.WithShade());
+            : builder.WithShade()).ConfigureAwait(true);
 
         AssertRankingWasCorrectEveryGeneration(spy);
         Assert.True(spy.RankingEverChanged, $"{variant} produced a frozen ranking");
@@ -93,7 +93,7 @@ public class FitnessRankingMaintenanceTests
             .UseProcessors(1)
             .Build();
 
-        var result = await de.RunAsync().WaitAsync(Timeout);
+        var result = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         result.MoveCursorToBestIndividual();
         Assert.True(
@@ -117,7 +117,7 @@ public class FitnessRankingMaintenanceTests
             .WithLocalSearch(spy)
             .Build();
 
-        await de.RunAsync().WaitAsync(Timeout);
+        _ = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         return spy;
     }
@@ -129,12 +129,11 @@ public class FitnessRankingMaintenanceTests
 
         foreach (var (generationNumber, ranking, ffValues) in spy.Snapshots)
         {
-            Assert.Equal(
-                Enumerable.Range(0, ranking.Length).ToArray(),
-                ranking.Order().ToArray());
+            int[] sortedRanking = [.. ranking.Order()];
+            Assert.Equal(Enumerable.Range(0, ranking.Length).ToArray(), sortedRanking);
 
             var ranked = ranking.Select(index => ffValues[index]).ToArray();
-            for (int k = 1; k < ranked.Length; k++)
+            for (var k = 1; k < ranked.Length; k++)
             {
                 Assert.True(
                     ranked[k - 1] <= ranked[k],
@@ -164,11 +163,14 @@ public class FitnessRankingMaintenanceTests
             ArgumentNullException.ThrowIfNull(context);
 
             var activeSize = context.CurrentPopulationSize;
-            var ranking = context.FitnessSortedIndices.Span.Slice(0, activeSize).ToArray();
-            var ffValues = context.CurrentPopulation.FfValues.Span.Slice(0, activeSize).ToArray();
+            var ranking = context.FitnessSortedIndices.Span[..activeSize].ToArray();
+            var ffValues = context.CurrentPopulation.FfValues.Span[..activeSize].ToArray();
 
-            if (_previousRanking is not null && ranking.SequenceEqual(_previousRanking) == false)
+            if (_previousRanking is not null && !ranking.SequenceEqual(_previousRanking))
+            {
                 RankingEverChanged = true;
+            }
+
             _previousRanking = ranking;
 
             Snapshots.Add((generationNumber, ranking, ffValues));
@@ -179,13 +181,10 @@ public class FitnessRankingMaintenanceTests
     /// A third-party variant: <c>DE/current-to-pbest/1</c> with fixed control parameters and a
     /// generation hook that adapts nothing.
     /// </summary>
-    private sealed class ObservedPBestVariant : IDeVariant
+    private sealed class ObservedPBestVariant(
+        IGenerationStrategy generationStrategy) : IDeVariant
     {
-        private readonly IGenerationStrategy _generationStrategy;
-
-        public ObservedPBestVariant(
-            IGenerationStrategy generationStrategy)
-            => _generationStrategy = generationStrategy;
+        private readonly IGenerationStrategy _generationStrategy = generationStrategy;
 
         public DeVariantSetup Configure(
             in DeVariantConfiguration configuration)

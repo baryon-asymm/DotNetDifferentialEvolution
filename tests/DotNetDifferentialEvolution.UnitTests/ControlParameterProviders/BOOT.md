@@ -16,7 +16,7 @@ and the number of draws taken.
 
 - [ControlParameterProviders](../../../src/DotNetDifferentialEvolution/ControlParameterProviders/API.md)
   — under test.
-- [Fakes](../../DotNetDifferentialEvolution.Tests.Shared/Fakes/API.md) —
+- [Fakes](../../DotNetDifferentialEvolution.Tests.Common/Fakes/API.md) —
   `ScriptedRandomProvider`.
 
 ## Constraints

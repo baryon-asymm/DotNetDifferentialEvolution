@@ -1,5 +1,5 @@
 using DotNetDifferentialEvolution.ControlParameterProviders;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.ControlParameterProviders;
 
@@ -32,7 +32,7 @@ public class DitheredControlParameterProviderTests
     [Fact]
     public void ConstructorThrowsWhenMinExceedsMax()
     {
-        Assert.Throws<ArgumentException>(() =>
+        _ = Assert.Throws<ArgumentException>(() =>
             new DitheredControlParameterProvider(minMutationForce: 0.9, maxMutationForce: 0.3, crossoverProbability: 0.5));
     }
 
