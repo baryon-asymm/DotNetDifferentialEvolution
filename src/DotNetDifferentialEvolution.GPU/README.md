@@ -1,185 +1,134 @@
 # DotNetDifferentialEvolution.GPU
 
-## Introduction
+Differential Evolution with the whole population on a GPU. Each generation is one kernel
+launch in which every thread builds, evaluates and selects one individual; your objective
+is a struct compiled into that kernel by [ILGPU](https://github.com/m4rs-mt/ILGPU/). It
+runs on NVIDIA GPUs through CUDA, on other GPUs through OpenCL, and on ILGPU's CPU
+accelerator when there is no GPU.
 
-Differential Evolution (DE) is a stochastic optimization algorithm used for finding global minima or maxima of functions in multi-dimensional spaces. It was introduced by Kenneth Price and Rainer Storn in 1997. DE is known for its simplicity and effectiveness, especially for complex optimization problems. For more details on the algorithm, you can refer to the [Wikipedia page](https://en.wikipedia.org/wiki/Differential_evolution).
-
-This library implements the Differential Evolution algorithm with GPU acceleration using [ILGPU](https://github.com/m4rs-mt/ILGPU/), which significantly speeds up the optimization process. The library is designed to be flexible and customizable, allowing users to define their own algorithm components through interfaces.
-
-## Features
-
-- **Support for various mutation, selection, and termination strategies**: Adaptable to specific tasks and problem domains.
-- **GPU acceleration using ILGPU**: Improves performance by utilizing GPU computation.
-- **Customizable algorithm components**: Implement your own strategies by defining interfaces.
+It pays off when the objective is cheap per call and the population is large: thousands
+of individuals, one GPU thread each. For expensive objectives, adaptive variants (jDE,
+JADE, SHADE, L-SHADE) or host-side code, use the CPU package,
+[DotNetDifferentialEvolution](https://www.nuget.org/packages/DotNetDifferentialEvolution).
 
 ## Installation
-
-To use this library, you need:
-- .NET SDK version 8.0 or higher.
-- ILGPU package for GPU computation.
-
-You can install the library via NuGet:
 
 ```bash
 dotnet add package DotNetDifferentialEvolution.GPU
 ```
 
-## Usage
+.NET 8 or later. For CUDA, an NVIDIA driver; for OpenCL, a GPU driver whose OpenCL device ILGPU
+accepts (Auto skips it, with the reason, when ILGPU does not).
+ILGPU comes with the package.
 
-Here's a complete example showing how to use the library for optimizing a polynomial approximation function:
+## Quick start
 
 ```csharp
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using ILGPU;
-using ILGPU.Runtime;
+using DotNetDifferentialEvolution.GPU;
+using DotNetDifferentialEvolution.GPU.Objectives;
 
-public class Program
+double[] lowerBound = [-5.0, -5.0, -5.0, -5.0, -5.0];
+double[] upperBound = [5.0, 5.0, 5.0, 5.0, 5.0];
+
+using var optimizer = GpuDifferentialEvolutionBuilder
+    .ForFunction(new Sphere())
+    .WithBounds(lowerBound, upperBound)
+    .WithPopulationSize(10_000)
+    .WithDefaultMutationStrategy(mutationForce: 0.5, crossoverProbability: 0.9)
+    .WithGenerationLimit(500)
+    .OnDevice(GpuDevice.Auto)
+    .WithSeed(1)
+    .Build();
+
+var result = await optimizer.RunAsync();
+
+Console.WriteLine($"{result.Device.Kind} ({result.Device.Name}): f = {result.FitnessFunctionValue}");
+Console.WriteLine(string.Join(", ", result.Genes.ToArray()));
+
+public readonly struct Sphere : IGpuFitnessFunction
 {
-    private const int MaxGenerationCount = 1000;
-    private const int PopulationSize = 10000;
-
-    public static async Task Main(string[] args)
+    public double Evaluate(GeneView genes)
     {
-        // Set up GPU context and device
-        using var context = Context.Create(builder =>
+        var sum = 0.0;
+        for (var j = 0; j < genes.Length; j++)
         {
-            builder.OpenCL(); // Use OpenCL or Cuda depending on your GPU
-            builder.EnableAlgorithms();
-        });
-
-        var device = context.GetPreferredDevice(preferCPU: false).CreateAccelerator(context);
-
-        // Define bounds and create PopulationSamplingMaker
-        double lowerValue = -2000;
-        double upperValue = 2000;
-        int individualSize = PolynomialApproximationFunction.IndividualSize;
-
-        var lowerBound = Enumerable.Repeat(lowerValue, individualSize).ToArray();
-        var upperBound = Enumerable.Repeat(upperValue, individualSize).ToArray();
-        var populationSamplingMaker = new PopulationSamplingMaker(PopulationSize, upperBound, lowerBound);
-
-        // Initialize random generator
-        var random = new Random();
-        var xorShifts = new XorShift32[PopulationSize];
-        for (var i = 0; i < xorShifts.Length; i++)
-            xorShifts[i] = new XorShift32((uint)random.Next());
-        var deviceXorShifts = device.Allocate1D(xorShifts);
-        var randomGenerator = new RandomGenerator(deviceXorShifts.View);
-
-        // Create strategies
-        var mutationStrategy = new MutationStrategy<RandomGenerator>(device.Allocate1D(lowerBound).View, device.Allocate1D(upperBound).View);
-        var selectionStrategy = new SelectionStrategy();
-        var terminationStrategy = new MaxGenerationStrategy(MaxGenerationCount);
-
-        // Create and initialize optimizer
-        var optimizer = new DifferentialEvolutionOptimizer(
-            new KernelController<PolynomialApproximationFunction, RandomGenerator, MutationStrategy<RandomGenerator>, SelectionStrategy>(
-                context,
-                device,
-                populationSamplingMaker,
-                new PolynomialApproximationFunction(),
-                randomGenerator,
-                mutationStrategy,
-                selectionStrategy,
-                terminationStrategy
-            ));
-
-        // Run optimization
-        var result = await optimizer.RunAsync();
-
-        // Output results
-        Console.WriteLine($"Result Fitness Function Value: {result.FitnessFunctionValue}");
-        Console.WriteLine($"Result Vector: {string.Join(", ", result.Individual)}");
-    }
-}
-
-public readonly struct PolynomialApproximationFunction : IFitnessFunctionInvoker
-{
-    public static int IndividualSize => 6;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Invoke(int individualIndex, DevicePopulation devicePopulation)
-    {
-        double[] functionValues = { 0.264, 0.228, 0.194, 0.176, 0.162, 0.15, 0.14, 0.134, 0.13, 0.122, 0.12, 0.114 };
-        double[] argValues = { 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5 };
-
-        var result = 0.0;
-        for (var i = 0; i < functionValues.Length; i++)
-        {
-            result += XMath.Pow(functionValues[i] - GetFunctionValue(individualIndex, devicePopulation.Individuals, argValues[i]), 2);
+            sum += genes[j] * genes[j];
         }
 
-        devicePopulation.FitnessFunctionValues[individualIndex] = result;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static double GetFunctionValue(int individualIndex, ArrayView2D<double, Stride2D.DenseX> individuals, double argValue)
-    {
-        var length = individuals.Extent.Y;
-        var result = 0.0;
-        for (var i = 0; i < length; i++)
-        {
-            result += individuals[individualIndex, i] * XMath.Pow(argValue, i);
-        }
-
-        return result;
+        return sum;
     }
 }
 ```
 
-### Explanation
+## Writing the objective
 
-1. **Context and Device Setup**: 
-   - Initializes the GPU context and selects the appropriate device for computations.
+The objective is a **struct** implementing `IGpuFitnessFunction`. `Evaluate` receives a
+read-only view of one individual's genes and returns its fitness: lower is better, and
+`NaN` ranks worst. Its body runs on the GPU, so it is kernel code:
 
-2. **Population and Strategy Initialization**: 
-   - Sets up bounds, sampling, random generators, mutation, selection, and termination strategies.
+- value types only; no classes, strings, arrays allocated in the body, exceptions or
+  virtual calls;
+- `Math.Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`, `Max` and `double.IsNaN` work
+  on every backend;
+- data the objective needs (fit points, constants) goes in its fields, as value types or
+  as ILGPU `ArrayView`s allocated on the same accelerator (pass that accelerator with
+  `OnAccelerator`);
+- reading `genes[j]` outside `0 ≤ j < genes.Length` is undefined: kernels cannot check.
 
-3. **Optimizer Creation and Execution**: 
-   - Creates an instance of `DifferentialEvolutionOptimizer` with a `KernelController` and runs the optimization.
+The type must be **public**, or internal in an assembly that declares
+`[assembly: InternalsVisibleTo("ILGPURuntime")]`: ILGPU emits its launchers into a dynamic
+assembly of that name. A private nested struct fails at `Build` with "Access is denied".
 
-4. **Results Output**: 
-   - Prints the results of the optimization, including the fitness function value and the optimized vector.
+ILGPU reports code it cannot compile when the optimizer is built, not when C# compiles.
 
-This example demonstrates how to configure and run the Differential Evolution algorithm using the provided library, allowing you to optimize a polynomial approximation function on a GPU.
+## Devices
 
-### Flexibility
+- `GpuDevice.Auto` tries CUDA, then OpenCL, then the CPU accelerator.
+  `result.Device.FallbackReason` says why it skipped each backend before the one it chose.
+- `GpuDevice.Cuda`, `OpenCL` or `Cpu` uses that device, or `Build` throws
+  `InvalidOperationException` naming it. An explicit device never falls back.
+- `OnAccelerator(accelerator)` runs on your own ILGPU accelerator, which the optimizer
+  never disposes.
 
-The library allows you to create custom algorithm components by implementing the following interfaces:
+## The run
 
-- `IDifferentialEvolutionOptimizer<T>` — Interface for implementing the Differential Evolution optimizer.
-- `IFitnessFunctionInvoker` — Interface for invoking the fitness function.
-- `IKernelController` — Interface for managing GPU kernels.
-- `IMutationStrategy<TRandomGenerator>` — Interface for implementing mutation strategies.
-- `ISelectionStrategy` — Interface for implementing selection strategies.
-- `ITerminationStrategy` — Interface for implementing termination strategies.
-- `IPopulationSamplingMaker` — Interface for creating initial populations.
-- `IRandomGenerator` — Interface for generating random numbers.
+- **Stop rules:** `WithGenerationLimit(n)` runs exactly `n` generations;
+  `WithEvaluationLimit(m)` stops at the first generation boundary where the evaluation
+  count, which starts at N for the initial population, reaches `m`.
+- **Asynchronous:** `RunAsync` returns at once and runs the generations on a thread of its
+  own. A cancellation token is observed between generations and ends the task as
+  canceled. After a run, calling `RunAsync` again returns the same task.
+- **The population stays on the device.** It is copied to the host once at the end, and
+  once per observer call if you register one with `WithPopulationUpdateHandler(handler,
+  everyNGenerations)`.
+- **Reproducible:** the same seed on the same device, with the same package and ILGPU
+  versions, gives a bit-identical result. The random numbers (Philox4x32-10, a
+  counter-based generator) are identical on every backend, but results across backends
+  may differ, because floating-point code generation is the backend's.
+- **Result:** the best individual of the final population (`ISolution` from
+  `DotNetOptimization.Abstractions`), with the number of generations and evaluations and
+  the device it ran on.
 
-This allows you to create your own versions of these components to fit different scenarios and needs.
+The algorithm is DE/rand/1/bin with the CPU package's semantics: three donors distinct
+from each other and from the target, binomial crossover with one guaranteed mutant gene,
+out-of-box genes repaired to the midpoint between the bound and the parent, and the trial
+surviving when it is at least as good as its parent. Details:
+[docs/ALGORITHMS.md](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/ALGORITHMS.md).
 
-### GPU Execution
+## Version 1.0.0
 
-The library utilizes [ILGPU](https://github.com/m4rs-mt/ILGPU/) for GPU execution. It automatically detects the suitable device (GPU or CPU) and uses it for computations. Example code for creating a context and selecting a device is shown above.
+1.0.0 is a new library under the old name: every public type of 0.x is gone. The
+hand-assembled `KernelController`, the strategy structs and `XorShift32` states are
+replaced by the builder; the objective returns its value instead of writing into the
+population; the result is an `ISolution`; runs are seeded; `RunAsync` no longer blocks;
+`Dispose` no longer forces a garbage collection.
 
-## Contributing and License
+## License
 
-This library is open-source and distributed under the [MIT License](https://github.com/baryon-asymm/DotNetDifferentialEvolution.GPU/blob/master/LICENSE). You are free to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software. For details on the terms and conditions, please refer to the full [LICENSE](https://github.com/baryon-asymm/DotNetDifferentialEvolution.GPU/blob/master/LICENSE) file.
+MIT, see
+[LICENSE](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/LICENSE).
+Issues and contributions: [the repository](https://github.com/baryon-asymm/DotNetDifferentialEvolution).
 
-### How to Contribute
-
-Contributions are welcome! If you'd like to contribute to the project, please follow these steps:
-1. Fork the repository.
-2. Create a new branch for your feature or fix.
-3. Make your changes and ensure they are well-documented.
-4. Submit a pull request with a detailed description of your changes.
-
-If you have any questions or suggestions, please open an issue in the [project repository](https://github.com/baryon-asymm/DotNetDifferentialEvolution.GPU).
-
-### Third-Party Libraries
-
-This project utilizes [ILGPU](https://github.com/m4rs-mt/ILGPU/), which is licensed under the [University of Illinois/NCSA Open Source License](https://github.com/m4rs-mt/ILGPU/blob/master/LICENSE.txt). ILGPU is used for GPU acceleration in this library.
-
-A copy of the ILGPU license is provided in the file [ILGPU_LICENSE](https://github.com/baryon-asymm/DotNetDifferentialEvolution.GPU/blob/master/ILGPU_LICENSE).
+The package uses [ILGPU](https://github.com/m4rs-mt/ILGPU/), licensed under the
+[University of Illinois/NCSA Open Source License](https://github.com/m4rs-mt/ILGPU/blob/master/LICENSE.txt);
+a copy is shipped as `ILGPU_LICENSE`.

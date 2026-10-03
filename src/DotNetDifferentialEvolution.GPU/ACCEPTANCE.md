@@ -1,29 +1,9 @@
 # ACCEPTANCE.md — DotNetDifferentialEvolution.GPU
 
-The node's acceptance criteria (AGENTS.md 3.2, §6). Two parts: the 0.x package as it
-stands, and the checks of v1, frozen before any v1 code (`BOOT.md`, `## v1 design ⏳`).
+The node's acceptance criteria (AGENTS.md 3.2, §6): the checks of v1, frozen on 2026-10-03
+before any v1 code, and the state of each.
 
-## 0.x, the code as it stands
-
-- [x] The package builds under the repository's analyzer policy with 0 warnings:
-      2026-10-02, `dotnet build DotNetDifferentialEvolution.sln -c Release`.
-- [x] Two end-to-end runs converge (Rosenbrock 2-D; 6-coefficient polynomial fit):
-      2026-10-02, `DifferentialEvolutionOptimizerTests`, 2 of 2 (local, OpenCL
-      `gfx1036`).
-- [x] `dotnet pack` produces a package with the DLL, `README.md`, `LICENSE` and
-      `ILGPU_LICENSE`: 2026-10-02, local pack into the session scratchpad.
-- [ ] No test runs in CI: hosted runners have no OpenCL device (root `BOOT.md`).
-- [ ] ⚠ `RunAsync` is synchronous: it blocks the caller and returns a completed task.
-- [ ] ⚠ If individual 0's fitness is `NaN`, the result is `NaN`.
-- [ ] ⚠ The constructor compiles kernels and allocates device memory; constructing an
-      optimizer is the expensive and failing step, not running it.
-- [ ] ⚠ `Dispose` forces `GC.Collect()`.
-- [ ] ⚠ Diverges from the CPU package in semantics a user may carry over: ties keep the
-      parent, no `jrand`, out-of-box genes re-drawn, cancellation not reported as such,
-      no seed.
-- [ ] ⚠ `README.md` predates the import: its licence, ILGPU-licence and issue links
-      point to the old repository, and it says the library "automatically detects the
-      suitable device (GPU or CPU)" while its own example opens an OpenCL-only context.
+The criteria of 0.x left with its code on 2026-10-03 → HISTORY.md#v1-built-2026-10-03.
 
 ## v1 — checks frozen before code ⏳
 
