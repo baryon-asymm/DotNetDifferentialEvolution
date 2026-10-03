@@ -25,33 +25,53 @@ Written 2026-10-03, before any v1 code.
       - per gene, a χ² test on 20 bins stays under the 0.999 quantile;
       - the evaluation count after `Build` is N.
       Red: the span written as `upper` instead of `upper − lower`.
-- [ ] **1b, index draws.** On the CPU accelerator, for N = 4 and N = 50, with 10⁵ draws
+- [x] **1b, index draws.** On the CPU accelerator, for N = 4 and N = 50, with 10⁵ draws
       per i:
       - r1, r2 and r3 are mutually distinct and never equal i;
       - each admissible index occurs uniformly (χ², 0.999).
       Red: the "skip i" step removed.
-- [ ] **1c, binomial crossover with `jrand`**, on scripted draws:
+      ⚠ 2026-10-03, read as: one joint χ² per (N, role) over every cell (i, index ≠ i),
+      df = N·(N − 2), so 8 for N = 4 and 2400 for N = 50, six tests at the 0.999 quantile. A
+      separate test per (N, i, role) would be 162 tests at 0.999, failing by chance about one
+      run in seven; the reasoning is in `GPU.Test/Kernels/BOOT.md`.
+      2026-10-03: `DonorPickTests` (test kernel `DonorPickKernel` on the CPU accelerator), green;
+      red with the skip-i step removed (300 000 and 300 376 violations).
+- [x] **1c, binomial crossover with `jrand`**, on scripted draws:
       - CR = 0 takes exactly gene `jrand` from the mutant;
       - CR = 1 takes every gene;
       - a scripted mix matches the closed form gene by gene.
       Red: `|| j == jrand` removed (the CR = 0 case).
-- [ ] **1d, midpoint repair**, on scripted draws:
+      2026-10-03: `CrossoverTests`, green; red with `|| j == jrand` removed (the CR = 0
+      case: [10, 20, 30, 40, 50] against [10, 20, 4, 40, 50]).
+- [x] **1d, midpoint repair**, on scripted draws:
       - a gene below the bound becomes exactly `(lower + x) / 2`;
       - a gene above it becomes `(upper + x) / 2`;
       - an in-box mutant gene is untouched.
       Red: a clamp to the bound.
-- [ ] **1e, selection.** The nine cases of the CPU package's `SelectionStrategyTests`
+      2026-10-03: `RepairTests`, green (−0.5 below, 10.5 above, in-box genes untouched,
+      one on the bound); red with a clamp to the bound.
+- [x] **1e, selection.** The nine cases of the CPU package's `SelectionStrategyTests`
       give the same survivor: better, worse, tie, and `NaN` in the parent, the trial
       and both.
       Red: `<=` written as `<` (the tie case); `NaN` handled by `<` alone (the
       `NaN`-parent case).
-- [ ] **1f, best pick.** Fitness `[NaN, 3, 1, 1]` gives index 2.
+      ⚠ 2026-10-03, changed openly: eight cases, not nine. Three of the CPU package's
+      nine test its `WithTiesRejected` mode, which the GPU package does not have; two of those
+      have the same survivor under the GPU rule (strictly better, `NaN` parent) and are tested;
+      "ties rejected keeps the parent on a tie" has no GPU counterpart and is not.
+      2026-10-03: `SurvivalTests`, green; red with `<=` written as `<` (the tie case), and with
+      `NaN` left to `<=` alone (both `NaN`-parent cases); `<` alone fails all three.
+- [x] **1f, best pick.** Fitness `[NaN, 3, 1, 1]` gives index 2.
       Red: a plain `<` scan from index 0, which returns 0.
-- [ ] **1g, parity with the CPU package.** The same scripted draws give bit-identical
+      2026-10-03: `BestPickTests`, green; red with the `NaN` clause removed (index 0).
+- [x] **1g, parity with the CPU package.** The same scripted draws give bit-identical
       trial vectors through the GPU DE step and through the CPU
       `CrossoverHelper.BinomialCrossoverAndRepair` (100 random cases, fixed seed). The
       test project references both packages; neither package references the other.
       Red: the GPU repair changed to a clamp.
+      2026-10-03: `CpuParityTests`, 100 cases (seed 20261003; N 4–40, D 1–12, F 0.1–2,
+      CR 0 and 1 included): draw kinds, ranges and counts equal one to one, trials bit-identical,
+      repairs below and above the box both occurring; red with the GPU repair as a clamp.
 - [ ] **1h, convergence to a known optimum** (positive control). Seed 1, on the CPU
       accelerator, and again under **Gpu** on both devices:
       - Sphere 5-D reaches 1e-6;
@@ -61,38 +81,56 @@ Written 2026-10-03, before any v1 code.
 
 ### 2. Race-freedom held by the kernel
 
-- [ ] **2a.** `GeneView` exposes no writable member: no setter, no `ref` return, no
+- [x] **2a.** `GeneView` exposes no writable member: no setter, no `ref` return, no
       public field (reflection).
       Red: a public setter on the indexer.
-- [ ] **2b.** After one generation (N = 64, D = 4, fixed seed), every slot i of the next
+      2026-10-03: `GeneViewSurfaceTests` (reflection over every member), green; red with
+      a public setter on the indexer.
+- [x] **2b.** After one generation (N = 64, D = 4, fixed seed), every slot i of the next
       population equals either parent i or trial i recomputed on the host from the same
       draws.
       Red: the kernel writing next slot `(i + 1) % N`.
+      2026-10-03: `GenerationSlotTests` (N 64, D 4), green, both outcomes occurring; red
+      with the kernel writing next slot `(i + 1) % N`.
 
 ### 3. The RNG
 
-- [ ] **3a, Philox4x32-10 known answers.** The three vectors of Random123's
+- [x] **3a, Philox4x32-10 known answers.** The three vectors of Random123's
       `kat_vectors` (zero, all-ones, π digits; the test cites the source) match:
       - on the host;
       - inside a kernel on the CPU accelerator;
       - under **Gpu**, inside a kernel on each device.
       Red: one round constant changed.
-- [ ] **3b, uniform doubles.**
+      2026-10-03: `PhiloxKnownAnswerTests` (host, and a kernel on the CPU accelerator) and,
+      under **Gpu**, `DeviceDrawTests.AKernelOnTheDeviceGivesTheKnownAnswers` on CUDA (RTX 5070 Ti)
+      and OpenCL (`gfx1036`); the vectors cite Random123 `tests/kat_vectors` at 9545ff6, file
+      SHA-256 aab5ebab…86929183, lines 27–29. Red with `Multiplier0` 0xD2511F53 → 0xD2511F57:
+      all six fail.
+- [x] **3b, uniform doubles.**
       - 10⁶ draws: a χ² test on 100 bins stays under the 0.999 quantile.
       - The largest value the 53-bit construction can give, computed exactly, is < 1.
       Red: 32 bits used instead of 53 (caught by the analytic check of the maximum).
-- [ ] **3c, index draws.** Lemire multiply-shift gives exactly the closed-form output on
+      2026-10-03: `UnitDoubleTests`, green; the quantile is computed (`ChiSquared`,
+      incomplete gamma and bisection) and checked by `ChiSquaredTests` against closed forms,
+      df = 2 to 1e-12. Red with 32 bits: the analytic maximum fails (0.99999999976716936), the
+      χ² alone stays green, as the check foresaw.
+- [x] **3c, index draws.** Lemire multiply-shift gives exactly the closed-form output on
       scripted 32-bit words.
       Red: a modulo reduction instead.
+      2026-10-03: `IndexDrawTests` (16 words × 11 values of n, against `BigInteger`),
+      green; red with a modulo reduction.
 
 ### 4. Reproducibility
 
 - [ ] **4a.** The same seed, run twice on the CPU accelerator, gives bit-identical genes
       and fitness, and seeds 1 and 2 differ. Under **Gpu**, the same on each device.
       Red: a seed taken from `Random.Shared` even when one is given.
-- [ ] **4b.** The first 10⁴ draws of a fixed (seed, individual, generation) are
+- [x] **4b.** The first 10⁴ draws of a fixed (seed, individual, generation) are
       bit-identical on the CPU accelerator and, under **Gpu**, on CUDA and OpenCL.
       Results across backends are not compared bitwise (`BOOT.md`, invariant 4).
+      2026-10-03: `DrawSequenceTests` on the CPU accelerator and, under **Gpu**,
+      `DeviceDrawTests.TheDeviceDrawsTheHostWords` on CUDA and OpenCL: 10⁴ words equal to the
+      host's; another seed, individual or generation gives another sequence.
 
 ### 5. No per-generation host round trip
 
