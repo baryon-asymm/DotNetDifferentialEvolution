@@ -125,7 +125,7 @@ internal static class DeviceSelector
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {
             lease = null;
-            reason = failure.Message;
+            reason = failure.Message + ReleaseAfterFailure(ref accelerator, ref context);
             return false;
         }
         finally
@@ -133,6 +133,38 @@ internal static class DeviceSelector
             accelerator?.Dispose();
             context?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Releases what a failed open created, so that a failure of the release cannot replace the reason the open failed:
+    /// ILGPU 1.5.3's CUDA accelerator throws from <c>Dispose</c> after a kernel failed to load (measured 2026-10-03,
+    /// "invalid resource handle"). A release failure is appended to the reason, not dropped.
+    /// </summary>
+    /// <returns>Nothing, or "; releasing it also failed: …".</returns>
+    private static string ReleaseAfterFailure(ref Accelerator? accelerator, ref Context? context)
+    {
+        var failures = new List<string>();
+        try
+        {
+            accelerator?.Dispose();
+        }
+        catch (Exception failure) when (failure is not OutOfMemoryException)
+        {
+            failures.Add(failure.Message);
+        }
+
+        accelerator = null;
+        try
+        {
+            context?.Dispose();
+        }
+        catch (Exception failure) when (failure is not OutOfMemoryException)
+        {
+            failures.Add(failure.Message);
+        }
+
+        context = null;
+        return failures.Count == 0 ? string.Empty : "; releasing it also failed: " + string.Join("; ", failures);
     }
 
     /// <summary>

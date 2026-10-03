@@ -80,9 +80,10 @@ internal static class LibDevicePostLink
         [.. PtxText.Definitions(ptx).Select(name => name[WrapperPrefix.Length..]).Distinct()];
 
     /// <summary>
-    /// Completes the kernel's PTX with the wrappers it calls and ILGPU did not define, and trial-loads the result on either
-    /// path (nothing missing, or something compiled). A kernel that calls no wrapper is returned untouched, without a trial
-    /// load.
+    /// Completes the kernel's PTX with the wrappers it calls and ILGPU did not define, and trial-loads the result on every
+    /// path: nothing called, nothing missing, or something compiled. Unlike APThermo's, a kernel that calls no wrapper is
+    /// trial-loaded too: ILGPU 1.5.3's loader leaves the accelerator unable to dispose after it fails a kernel (BOOT.md),
+    /// so no PTX reaches it that the driver has not accepted once.
     /// </summary>
     /// <param name="accelerator">The accelerator whose backend compiled the kernel; its libnvvm compiles the wrappers.</param>
     /// <param name="compiled">The compiled kernel; its PTX is replaced when anything was inserted.</param>
@@ -93,14 +94,9 @@ internal static class LibDevicePostLink
         ArgumentNullException.ThrowIfNull(accelerator);
         ArgumentNullException.ThrowIfNull(compiled);
         var ptx = compiled.PTXAssembly;
-        var called = WrappersCalled(ptx);
-        if (called.Count == 0)
-        {
-            return new LinkResult(compiled, [], []);
-        }
-
-        var missing = called.Except(WrappersDefined(ptx)).ToList();
         var arch = TargetArch(ptx);
+        var called = WrappersCalled(ptx);
+        var missing = called.Except(WrappersDefined(ptx)).ToList();
 
         // The driver checks the PTX against the context bound to the calling thread.
         using var binding = accelerator.BindScoped();
