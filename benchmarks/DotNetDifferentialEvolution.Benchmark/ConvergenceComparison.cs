@@ -27,6 +27,9 @@ public static class ConvergenceComparison
 
     private sealed record Problem(string Name, IFitnessFunctionEvaluator Evaluator, double LowerBound, double UpperBound);
 
+    /// <summary>
+    /// Runs every variant on every problem once and prints the table of best objective values.
+    /// </summary>
     public static void Run()
     {
         var problems = new[]
@@ -61,7 +64,7 @@ public static class ConvergenceComparison
 
         Console.WriteLine($"Convergence comparison — {Dimensions}D, budget {MaxEvaluationNumber:N0} evaluations (best objective, lower is better)");
         Console.WriteLine();
-        Console.Write($"{"Variant",-16}");
+        Console.Write("Variant".PadRight(16));
         foreach (var problem in problems)
         {
             Console.Write($"{problem.Name,16}");

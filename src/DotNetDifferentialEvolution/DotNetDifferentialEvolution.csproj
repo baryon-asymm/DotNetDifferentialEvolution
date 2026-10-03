@@ -36,8 +36,8 @@
       against it would 404 forever. The release workflow packs explicitly from a tagged commit.
     -->
     <PropertyGroup>
-        <!-- Pack the XML documentation file so consumers get IntelliSense tooltips. -->
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- The XML documentation file is generated for every project (Directory.Build.props)
+             and packed with this one, so consumers get IntelliSense tooltips. -->
 
         <!-- SourceLink: embed the PDB into the DLL (no separate symbol package to publish) and
              record the GitHub repository + commit so sources resolve on demand while debugging. -->

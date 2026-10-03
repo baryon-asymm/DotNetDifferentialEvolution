@@ -87,18 +87,11 @@ public class SelectionStrategy(
     {
         var parentFfValue = populationFfValues[individualIndex];
 
-        SelectionOutcome outcome;
-        if (FitnessComparisonHelper.IsBetter(trialIndividualFfValue, parentFfValue))
-        {
-            outcome = SelectionOutcome.TrialImproved;
-        }
-        else
-        {
-            outcome = _acceptsTies
-                 && FitnessComparisonHelper.IsBetterOrEqual(trialIndividualFfValue, parentFfValue)
-            ? SelectionOutcome.TrialAccepted
-            : SelectionOutcome.ParentKept;
-        }
+        var outcome = FitnessComparisonHelper.IsBetter(trialIndividualFfValue, parentFfValue)
+            ? SelectionOutcome.TrialImproved
+            : (_acceptsTies && FitnessComparisonHelper.IsBetterOrEqual(trialIndividualFfValue, parentFfValue))
+                ? SelectionOutcome.TrialAccepted
+                : SelectionOutcome.ParentKept;
 
         if (outcome != SelectionOutcome.ParentKept)
         {

@@ -37,10 +37,10 @@ public class ProblemContext(
     Memory<double> trialPopulation,
     Memory<double> trialPopulationFfValues)
 {
-    private Population _population = new Population(
+    private Population _population = new(
             population,
             populationFfValues);
-    private Population _trialPopulation = new Population(
+    private Population _trialPopulation = new(
             trialPopulation,
             trialPopulationFfValues);
 

@@ -196,18 +196,17 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
 
         // L-SHADE terminal rule: once a slot's successful CR values are all 0 (or it is already
         // terminal), it stays terminal and forever samples CR = 0.
-        if (UseTerminalCr && (_memoryCr[_memoryIndex] < 0.0 || maxSuccessfulCr <= 0.0))
-        {
-            _memoryCr[_memoryIndex] = TerminalCrValue;
-        }
+        var isTerminal = UseTerminalCr && (_memoryCr[_memoryIndex] < 0.0 || maxSuccessfulCr <= 0.0);
+
         // The Lehmer branch divides by the weighted sum of CR, which is zero only when every
         // successful CR is zero. Under L-SHADE that case is the terminal rule above, so this is
         // unreachable there; the guard is what keeps the mean well defined for a subclass that
         // takes SHADE 1.1's mean without its terminal rule.
-        else
-        {
-            _memoryCr[_memoryIndex] = UseLehmerCrMean && weightedCrSum > 0.0 ? weightedCrSquaredSum / weightedCrSum : weightedCrSum / weightSum;
-        }
+        var crMean = UseLehmerCrMean && weightedCrSum > 0.0
+            ? weightedCrSquaredSum / weightedCrSum
+            : weightedCrSum / weightSum;
+
+        _memoryCr[_memoryIndex] = isTerminal ? TerminalCrValue : crMean;
 
         if (weightedFSum > 0.0)
         {

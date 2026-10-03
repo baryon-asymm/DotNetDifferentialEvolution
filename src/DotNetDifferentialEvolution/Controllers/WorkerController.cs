@@ -8,7 +8,7 @@ namespace DotNetDifferentialEvolution.Controllers;
 /// </summary>
 public class WorkerController : IDisposable
 {
-    private static volatile int _globalWorkerCounter;
+    private static volatile int ActiveWorkerCount;
 
     private readonly object _lock = new();
 
@@ -47,7 +47,7 @@ public class WorkerController : IDisposable
     /// <summary>
     /// Gets the global worker counter.
     /// </summary>
-    public static int GlobalWorkerCounter => _globalWorkerCounter;
+    public static int GlobalWorkerCounter => ActiveWorkerCount;
 
     /// <summary>
     /// Gets the ID (index) of the worker.
@@ -76,7 +76,7 @@ public class WorkerController : IDisposable
         IWorkerPassLoopDoneHandler? workerPassLoopDoneHandler = null)
     {
         WorkerId = workerId;
-        _workerThreadName = $"{Interlocked.Increment(ref _globalWorkerCounter)}-DEWorkerThread_{WorkerId}";
+        _workerThreadName = $"{Interlocked.Increment(ref ActiveWorkerCount)}-DEWorkerThread_{WorkerId}";
         _algorithmExecutor = algorithmExecutor;
         _workerPassLoopDoneHandler = workerPassLoopDoneHandler;
     }
@@ -153,14 +153,11 @@ public class WorkerController : IDisposable
                 // burning the core is what keeps an oversubscribed worker count (more workers than
                 // available cores, e.g. UseAllProcessors) from collapsing into livelock.
                 var passLoopSpinWait = new SpinWait();
-                // CA1508 false positive: _workerShouldStop is volatile and may be flipped by
-                // Stop() on another thread, so this spin-wait condition is not statically constant.
-#pragma warning disable CA1508
-                while (!_passLoopPermitted && !_workerShouldStop)
+                while (MustWaitForPassPermission())
                 {
                     passLoopSpinWait.SpinOnce(sleep1Threshold: -1);
                 }
-#pragma warning restore CA1508
+
                 _passLoopPermitted = false;
 
                 if (_workerShouldStop)
@@ -182,16 +179,14 @@ public class WorkerController : IDisposable
                 }
             }
         }
-        // CA1031: a worker thread is a failure boundary. Any exception from the user-supplied
-        // fitness function must be captured and marshaled to the orchestrator (surfaced as an
-        // AggregateException), never left to crash the thread, so catching all types is intended.
-#pragma warning disable CA1031
-        catch (Exception ex)
+        // A worker thread is a failure boundary. Any exception from the user-supplied fitness
+        // function must be captured and marshaled to the orchestrator (surfaced as an
+        // AggregateException), never left to crash the thread, so every type is caught.
+        catch (Exception ex) when (IsCapturedForTheOrchestrator(ex))
         {
             Exception = ex;
             _workerPassLoopDoneHandler?.Handle(this, out _);
         }
-#pragma warning restore CA1031
         finally
         {
             _isRunning = false;
@@ -201,6 +196,21 @@ public class WorkerController : IDisposable
     /// <summary>
     /// Starts the worker and waits until it is started.
     /// </summary>
+    /// <summary>
+    /// Whether the worker may not yet start its next pass. Both fields are volatile and written by
+    /// other threads (the orchestrator's permit, <see cref="Stop"/>); keeping the test in a method
+    /// of its own leaves no constant for a flow analysis to see in the spin-wait that polls it.
+    /// </summary>
+    private bool MustWaitForPassPermission() => !_passLoopPermitted && !_workerShouldStop;
+
+    /// <summary>
+    /// Whether a worker failure is captured and handed to the orchestrator. Every exception is,
+    /// except <see cref="OutOfMemoryException"/>: a process out of memory cannot be trusted to
+    /// marshal it, so it is left to end the thread as the runtime does by default.
+    /// </summary>
+    private static bool IsCapturedForTheOrchestrator(Exception exception) =>
+        exception is not OutOfMemoryException;
+
     private void StartAndWaitUntilWorkerStarted()
     {
         EnsureRunReadyState();
@@ -273,7 +283,7 @@ public class WorkerController : IDisposable
                 StopAndWaitUntilWorkerStopped();
             }
 
-            _ = Interlocked.Decrement(ref _globalWorkerCounter);
+            _ = Interlocked.Decrement(ref ActiveWorkerCount);
         }
 
         _isDisposed = true;

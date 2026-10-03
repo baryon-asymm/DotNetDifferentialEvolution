@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using DotNetDifferentialEvolution.AlgorithmExecutors.Interfaces;
 using DotNetDifferentialEvolution.Helpers;
 using DotNetDifferentialEvolution.Models;
@@ -71,8 +72,9 @@ public class AlgorithmExecutor : IAlgorithmExecutor
         // An unseeded run still gets a seed — drawn once here — rather than sharing
         // Random.Shared. The point is per-worker state: Random.Shared is thread-safe, but every
         // call walks a thread-static indirection, and the workers would be drawing from one
-        // generator whose interleaving nothing controls.
-        var rootSeed = context.RandomSeed ?? Random.Shared.Next();
+        // generator whose interleaving nothing controls. The one draw comes from the system
+        // generator, over the same range Random.Shared.Next() had: [0, int.MaxValue).
+        var rootSeed = context.RandomSeed ?? RandomNumberGenerator.GetInt32(int.MaxValue);
 
         _randomProviders = new SeededRandomProvider[context.WorkersCount];
         for (var workerId = 0; workerId < _randomProviders.Length; workerId++)

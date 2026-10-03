@@ -43,15 +43,18 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-- [x] Builds with the project, 0 warnings: 2026-10-02.
+- [x] Builds with the project, 0 warnings: 2026-10-02; again under the maximum
+      diagnostics, 2026-10-03.
 - [ ] Not run in this reconstruction: no BenchmarkDotNet figure is recorded here, so
       no claim about the engine's speed rests on this node.
 - [ ] ⚠ Only the classic legacy scheme is measured; the p-best strategies, the adaptive
       hooks and the multi-worker barrier have no throughput benchmark.
-- [ ] ⚠ Three fields (`_mutationStrategy`, `_selectionStrategy`, `_context`) are kept
-      but never read after construction; `RandomProviders` is imported and unused.
-      (The unused import of `Benchmark.RandomGenerators` went with that node,
-      2026-10-03.)
+- [x] ⚠ Three fields (`_mutationStrategy`, `_selectionStrategy`, `_context`) were kept
+      but never read after construction; `RandomProviders` was imported and unused.
+      Closed 2026-10-03 under the maximum diagnostics (IDE0052, IDE0005): the strategies
+      are locals of the constructor, `_context` is gone, the executor field is the concrete
+      `AlgorithmExecutor` (CA1859), and the imports are the ones used. (The unused import
+      of `Benchmark.RandomGenerators` went with that node, 2026-10-03.)
 
 ## Taboos
 
