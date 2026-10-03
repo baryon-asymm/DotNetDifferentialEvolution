@@ -59,9 +59,9 @@ internal static class CudaWslDevices
 - `Locate()` reads the platform, the environment and the platform's base directory; the
   overload with three arguments is the seam the tests drive. `Tried` lists every library
   and bitcode path examined, in order; `Found` is true when both paths are set.
-- `Link` returns the kernel untouched, with both lists empty, when it calls no wrapper.
-  Otherwise it trial-loads the kernel, and when wrappers were missing it compiles them,
-  inserts them and replaces the kernel's PTX. It throws `InvalidOperationException` when a
+- `Link` trial-loads every kernel. When wrappers were missing it first compiles them,
+  inserts them and replaces the kernel's PTX; a kernel that calls none comes back with
+  both lists empty and its PTX unchanged. It throws `InvalidOperationException` when a
   wrapper has no fragment, the context has no libnvvm, libnvvm fails, or the driver refuses
   the result.
 - `AssertIlgpu()` throws `InvalidOperationException` naming the loaded and the expected

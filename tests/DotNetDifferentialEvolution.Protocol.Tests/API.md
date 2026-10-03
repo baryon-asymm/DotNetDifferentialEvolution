@@ -22,6 +22,7 @@ fact was seen red on a mutation (this node's `BOOT.md`, acceptance criteria).
 | GPU kernel-reachable code calls only `Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`, `Max`, `IsNaN` of `Math` and `Double` (GPU check 8b) | `GpuGuardTests.KernelReachableCodeCallsOnlyTheAllowedMathAndDoubleMembers` |
 | No constant left of an ordered floating-point comparison in the GPU package's sources (GPU check 8c) | `GpuGuardTests.GpuSourcesPutNoConstantLeftOfAnOrderedFloatingComparison` |
 | No `src` method passes host memory to an ILGPU transfer as a raw `ref T` (GPU check 8d) | `GpuGuardTests.NoSrcMethodPassesHostMemoryToAnIlgpuTransferByReference` |
+| The GPU package references no `ILGPU.Algorithms`, in its assembly or its project (GPU check L8) | `GpuGuardTests.TheGpuPackageUsesNoIlgpuAlgorithms` |
 | Nothing in the tree suppresses a diagnostic: no `#pragma warning disable`, `#nullable disable`, suppression attribute, `NoWarn` beyond 1701/1702, `WarningsNotAsErrors`, rule set or severity below warning; no generated-code marker on authored code; no skipped test or hidden theory data; the root `Directory.Build.props` keeps the maximum (`TreatWarningsAsErrors`, `CodeAnalysisTreatWarningsAsErrors`, `EnableNETAnalyzers`, `AnalysisLevel` latest-all, `EnforceCodeStyleInBuild`, `WarningLevel` 9999, `Features` strict, `GenerateDocumentationFile`) | `NoSuppressionGuardTests` |
 | Every node path named in `ProtocolConfig` is a node; no library type in the global namespace | `ConfigTests` |
 

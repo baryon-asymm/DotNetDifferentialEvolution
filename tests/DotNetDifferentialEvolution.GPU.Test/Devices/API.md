@@ -19,7 +19,7 @@ math through libdevice, and its math probe.
 | L3: the post-link's definition check and its libnvvm and driver failures name what they must | `PostLinkGuardTests` | ✅ |
 | L4: the ILGPU pin and the WSL reflection fail loudly, by name | `IlgpuPinTests` (first three facts) | ✅ |
 | L5 (`Gpu`): on the RTX 5070 Ti the post-link compiles exactly the missing wrappers and the result loads | `CudaLibDeviceTests.OnTheRtx5070TiThePostLinkCompletesExactlyTheMissingWrappers` | ✅ local |
-| L6: without a toolkit, explicit CUDA throws naming libnvvm and libdevice, Auto skips CUDA with that reason; without a CUDA device, the device is the reason | `CudaLibDeviceTests.WithoutAToolkitCudaIsRefusedWithTheReason` | ✅ the device branch run locally |
+| L6: without a toolkit, explicit CUDA throws naming libnvvm and libdevice, Auto skips CUDA with that reason; without a CUDA device, the device is the reason | `CudaLibDeviceTests.WithoutAToolkitCudaIsRefusedWithTheReason` | ✅ both branches run locally, the GPUs hidden by environment |
 | L7 (`Gpu`): a bad libnvvm is named and costs no device memory | `CudaLibDeviceTests.ABadLibraryIsNamedAndNeverReachesTheDevice` | ✅ local |
 | L9: the WSL resolver failure is recognised by where it was thrown; (`Gpu`) three CUDA optimizers of one process each bind | `IlgpuPinTests.TheResolverFailureIsRecognisedByWhereItWasThrownNotByItsMessage`, `CudaLibDeviceTests.EveryCudaOptimizerOfTheProcessBinds` | ✅ on Windows; not run under WSL |
 

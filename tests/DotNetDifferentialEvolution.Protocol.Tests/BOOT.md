@@ -12,8 +12,9 @@ Installed 2026-10-03 from the kit `reference/dotnet/` of the `boot-api-protocol`
 `[CallerFilePath]` to `AGENTS.md`, and a linked file outside the tree would not find it).
 
 Since 2026-10-03 it also holds the guards that the GPU package's `ACCEPTANCE.md` places
-here (v1 checks 5a, 7a, 8a–8d): one transfer helper, no `GC.Collect`, and the kernel
-guards adapted from APT (`## Deviations from the kit`).
+here (v1 checks 5a, 7a, 8a–8d, and L8 since the libdevice port): one transfer helper,
+no `GC.Collect`, the kernel guards adapted from APT (`## Deviations from the kit`), and no
+ILGPU.Algorithms.
 
 ## Invariants
 
@@ -135,7 +136,8 @@ Each one is marked in the code at the place it changes.
       .NET SDK 10.0.112).
       Again after GPU v1 and the guards, 2026-10-03: 37 of 37 (the GPU guards and
       `NoSuppressionGuardTests` added; the earlier 46 counted a run with different test
-      cases, not re-derived).
+      cases, not re-derived). Again after the libdevice port, 2026-10-03: 38 of 38 (L8
+      added).
 - [x] The first run's findings are resolved in the documents, not in the facts. On
       2026-10-03, 48 dependency findings:
       - 13 were the compiler helpers and 2 were generic constraints (the deviations
@@ -175,6 +177,7 @@ Each one is marked in the code at the place it changes.
       | 8b | `Math.Cbrt` in `MathProbe.Probe` | `KernelReachableCodeCallsOnlyTheAllowedMathAndDoubleMembers` |
       | 8c | `0.0 < inputs[i]` in `MathProbe.Probe` | `GpuSourcesPutNoConstantLeftOfAnOrderedFloatingComparison` |
       | 8d | `CopyToCPU(ref hostFitness[0], length)` in `PopulationTransfers.Download` | `NoSrcMethodPassesHostMemoryToAnIlgpuTransferByReference` (5a stays green) |
+      | L8 | the `ILGPU.Algorithms` package reference and `EnableAlgorithms()` restored in `DeviceSelector` | `TheGpuPackageUsesNoIlgpuAlgorithms` |
 
       Each GpuGuardTests fact also failed with "found nothing" on an emptied walk: entry
       type `Index2D`, transfer prefix `CopyToGPU`, floating types read as `decimal`.

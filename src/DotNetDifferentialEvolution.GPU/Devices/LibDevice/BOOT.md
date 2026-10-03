@@ -65,8 +65,16 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
      callee is followed by a comma; a parameter name or a `.func` header is not); the
      wrappers *defined* are the kernel's own `.func` headers. Both drop the `__ilgpu`
      prefix, as ILGPU's fragment keys do.
-  3. No wrapper called: the kernel is returned untouched, without a trial load. None
-     missing: nothing is compiled, and the kernel is trial-loaded.
+  3. Nothing missing (no wrapper called, or ILGPU defined every one): nothing is
+     compiled, and the kernel is trial-loaded.
+
+     ⚠ 2026-10-03: APT returns a kernel that calls no wrapper untouched, without a trial
+     load; here it is trial-loaded too. ILGPU 1.5.3's CUDA accelerator throws "invalid
+     resource handle" from `Dispose` after its own loader failed a kernel (measured: the
+     probe with its wrappers left undefined), so no PTX reaches that loader before the
+     driver has accepted it once. Shown by check L5's mutation, which made `Open(Cuda)`
+     escape with the `Dispose`'s exception before the parent appended release failures to
+     the reason (the parent's `BOOT.md`).
   4. Otherwise an NVVM module is built from ILGPU's own fragments of the missing wrappers
      (the private static `fragments` of `ILGPU.Backends.PTX.PTXLibDeviceNvvm`), its header
      in the order libnvvm accepts: `target triple`, `target datalayout`, `!nvvmir.version`.

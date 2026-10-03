@@ -47,6 +47,10 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
   version and its bitcode read, then released; the accelerator is created; the probe
   kernel is loaded. Any failure is the skip reason under Auto, or the explicit request's
   error.
+- **A failed open releases what it created in its own catch**, and a failure of that
+  release is appended to the reason ("; releasing it also failed: …"), never put in its
+  place: ILGPU 1.5.3's CUDA accelerator throws from `Dispose` after its loader failed a
+  kernel (2026-10-03, the child's `BOOT.md`).
 - Auto falls back when a backend has no device, no libdevice, or an accelerator or probe
   kernel that cannot be created. It does not fall back when the run's kernels later fail
   to compile on the device it opened: that surfaces from `Build`.

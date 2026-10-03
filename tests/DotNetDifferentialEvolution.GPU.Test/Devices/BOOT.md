@@ -92,7 +92,8 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       green through libdevice; the check and its argument grid unchanged → the package's
       [HISTORY.md](../../../src/DotNetDifferentialEvolution.GPU/HISTORY.md#libdevice-port-2026-10-03).
 - [x] L1–L7 and L9 are green and each was red once on its mutation: 2026-10-03, local,
-      listed per check in the package's `ACCEPTANCE.md`. L6 ran its device branch only.
+      listed per check in the package's `ACCEPTANCE.md`. L6 ran both branches, the
+      no-device one with the GPUs hidden.
 - [ ] ⚠ The hosted-runner branch was run here only with the GPUs hidden by environment
       variables, not yet on a hosted runner.
 

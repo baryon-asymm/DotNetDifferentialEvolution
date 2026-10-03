@@ -15,7 +15,7 @@ upward: it is what the GPU package may consider proven, check by check of the pa
 | The GPU step and the CPU package's step build bit-identical trials from the same draws | 1g | [Kernels](Kernels/API.md) |
 | A generation writes slot i from parent i or trial i only; the objective's view cannot write | 2b, 2a | [Kernels](Kernels/API.md), [Objectives](Objectives/API.md) |
 | Every argument error of the package's API is raised where documented | B1 | [Builder](Builder/API.md) |
-| The device choice, the fallback reason and the math probe | D1, D2 | [Devices](Devices/API.md) |
+| The device choice, the fallback reason, the math probe, and CUDA math through libdevice: discovery, the post-link, no toolkit, a bad library, the ILGPU pin, every CUDA context of a process | D1, D2, L1–L7, L9 | [Devices](Devices/API.md) |
 | Initial sampling, convergence to known optima, reproducibility, one download per run, asynchrony, cancellation, ownership | 1a, 1h, 4a, 5b, 6a–6c, 7b | [EndToEnd](EndToEnd/API.md) |
 
 Claims do not scale up the ladder: a green whole run over a red step would mean "converges
@@ -27,5 +27,5 @@ for an unknown reason", not "correct".
 - [Kernels](Kernels/API.md) — the DE step's checks, scripted draws, the CPU parity.
 - [Objectives](Objectives/API.md) — the gene view's surface.
 - [Builder](Builder/API.md) — the argument errors.
-- [Devices](Devices/API.md) — device selection and the math probe.
+- [Devices](Devices/API.md) — device selection, the math probe, the libdevice port.
 - [EndToEnd](EndToEnd/API.md) — whole runs.
