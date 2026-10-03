@@ -31,6 +31,10 @@ public class DeVariantTests
 {
     private static SphereEvaluator Evaluator => new(dimension: 2);
 
+    /// <summary>
+    /// The jDE preset installs DE/rand/1 with greedy selection, one <see cref="JdeStrategy"/> serving
+    /// as both control-parameter provider and generation strategy, and no archive.
+    /// </summary>
     [Fact]
     public void JdeInstallsRandOneWithASingleObjectAsProviderAndGenerationStrategy()
     {
@@ -45,6 +49,11 @@ public class DeVariantTests
         Assert.Equal(0, context.ArchiveCapacity);
     }
 
+    /// <summary>
+    /// The JADE preset installs DE/current-to-pbest/1 with greedy selection, one
+    /// <see cref="JadeStrategy"/> as provider and generation strategy, and an archive whose capacity is
+    /// the archive size rate times the population size.
+    /// </summary>
     [Fact]
     public void JadeInstallsCurrentToPBestWithAnArchiveSizedFromThePopulation()
     {
@@ -59,6 +68,12 @@ public class DeVariantTests
         Assert.Equal(PopulationSize, context.ArchiveCapacity);
     }
 
+    /// <summary>
+    /// Each preset's selection strategy resolves a fitness tie by its own paper's rule: JADE keeps the
+    /// parent, SHADE and L-SHADE take the trial, and jDE keeps the engine default of taking the trial.
+    /// </summary>
+    /// <param name="preset">The preset under test.</param>
+    /// <param name="expected">The selection outcome the preset's rule prescribes for a tie.</param>
     [Theory]
     [InlineData("jde", SelectionOutcome.TrialAccepted)]
     [InlineData("jade", SelectionOutcome.ParentKept)]
@@ -101,6 +116,10 @@ public class DeVariantTests
         Assert.Equal(expected, outcome);
     }
 
+    /// <summary>
+    /// The SHADE preset installs DE/current-to-pbest/1 with one <see cref="ShadeStrategy"/> as provider
+    /// and generation strategy, and an archive sized from the population.
+    /// </summary>
     [Fact]
     public void ShadeInstallsCurrentToPBestBackedByTheSuccessHistoryMemory()
     {
@@ -114,6 +133,10 @@ public class DeVariantTests
         Assert.Equal(PopulationSize, context.ArchiveCapacity);
     }
 
+    /// <summary>
+    /// The L-SHADE preset installs DE/current-to-pbest/1 with one <see cref="LShadeStrategy"/> as
+    /// provider and generation strategy, and an archive of 2.6 times the population.
+    /// </summary>
     [Fact]
     public void LShadeInstallsCurrentToPBestWithTheLargerArchiveItsPaperSpecifies()
     {
@@ -130,6 +153,11 @@ public class DeVariantTests
         Assert.Equal(52, context.ArchiveCapacity);
     }
 
+    /// <summary>
+    /// Every preset records its mutation strategy's requirements on the context and, when the strategy
+    /// reads F and CR, installs a provider for them.
+    /// </summary>
+    /// <param name="preset">The preset under test.</param>
     [Theory]
     [InlineData("jde")]
     [InlineData("jade")]
@@ -160,6 +188,10 @@ public class DeVariantTests
         }
     }
 
+    /// <summary>
+    /// A variant defined outside the library is handed the population size, genome size and bounds of
+    /// the problem being built.
+    /// </summary>
     [Fact]
     public void AThirdPartyVariantIsConfiguredWithTheProblemDimensions()
     {
@@ -172,6 +204,10 @@ public class DeVariantTests
         Assert.Equal(2, variant.SeenConfiguration.Value.LowerBound.Length);
     }
 
+    /// <summary>
+    /// A third-party variant's <c>Validate</c> is called with the termination strategy chosen later in
+    /// the chain, so it can check the finished configuration.
+    /// </summary>
     [Fact]
     public void AThirdPartyVariantsValidateRunsAgainstTheCompletedConfiguration()
     {
@@ -183,6 +219,9 @@ public class DeVariantTests
         _ = Assert.IsType<LimitGenerationNumberTerminationStrategy>(variant.SeenTerminationStrategy);
     }
 
+    /// <summary>
+    /// An exception thrown from a variant's own <c>Validate</c> aborts the build.
+    /// </summary>
     [Fact]
     public void AThirdPartyVariantCanRejectTheConfigurationFromItsOwnValidate()
     {
@@ -192,6 +231,10 @@ public class DeVariantTests
         Assert.Contains("this variant refuses", exception.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A third-party variant that installs a strategy reading F and CR without a provider is refused by
+    /// the same check that guards the built-in configurations.
+    /// </summary>
     [Fact]
     public void AThirdPartyVariantGetsTheSameControlParameterCheckAsABuiltIn()
     {
@@ -204,6 +247,10 @@ public class DeVariantTests
         Assert.Contains("control", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// A third-party variant whose strategy needs more individuals than the configured population is
+    /// refused by the same minimum-population check as a built-in strategy.
+    /// </summary>
     [Fact]
     public void AThirdPartyVariantGetsTheSameMinimumPopulationCheckAsABuiltIn()
     {
@@ -225,6 +272,10 @@ public class DeVariantTests
         Assert.Contains("too small", exception.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A variant that leaves the selection strategy unset gets the engine's greedy
+    /// <see cref="SelectionStrategy"/>.
+    /// </summary>
     [Fact]
     public void AVariantThatChoosesNoSelectionStrategyGetsTheGreedyDefault()
     {
@@ -234,6 +285,9 @@ public class DeVariantTests
         _ = Assert.IsType<SelectionStrategy>(SelectionStrategyOf(de));
     }
 
+    /// <summary>
+    /// Passing a null variant to <c>WithVariant</c> throws <see cref="ArgumentNullException"/>.
+    /// </summary>
     [Fact]
     public void WithVariantRejectsNull()
     {
@@ -267,13 +321,15 @@ public class DeVariantTests
 
     private static IMutationStrategy MutationStrategyOf(
         DifferentialEvolution differentialEvolution)
-        => Assert.IsAssignableFrom<IMutationStrategy>(
-            PrivateField(typeof(AlgorithmExecutor), "_mutationStrategy").GetValue(ExecutorOf(differentialEvolution)));
+        => Assert.IsType<IMutationStrategy>(
+            PrivateField(typeof(AlgorithmExecutor), "_mutationStrategy").GetValue(ExecutorOf(differentialEvolution)),
+            exactMatch: false);
 
     private static ISelectionStrategy SelectionStrategyOf(
         DifferentialEvolution differentialEvolution)
-        => Assert.IsAssignableFrom<ISelectionStrategy>(
-            PrivateField(typeof(AlgorithmExecutor), "_selectionStrategy").GetValue(ExecutorOf(differentialEvolution)));
+        => Assert.IsType<ISelectionStrategy>(
+            PrivateField(typeof(AlgorithmExecutor), "_selectionStrategy").GetValue(ExecutorOf(differentialEvolution)),
+            exactMatch: false);
 
     /// <summary>
     /// Every worker shares one executor, so the first controller is as good as any. The engine's

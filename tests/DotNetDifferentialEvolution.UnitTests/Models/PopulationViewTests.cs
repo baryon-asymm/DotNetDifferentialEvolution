@@ -14,6 +14,9 @@ namespace DotNetDifferentialEvolution.UnitTests.Models;
 [Trait("Category", "Unit")]
 public class PopulationViewTests
 {
+    /// <summary>
+    /// The capacity is the number of allocated individuals, while the count is the number of live ones.
+    /// </summary>
     [Fact]
     public void CapacityIsTheAllocatedLengthAndCountIsTheLiveOne()
     {
@@ -27,6 +30,9 @@ public class PopulationViewTests
         Assert.Equal(2, view.Count);
     }
 
+    /// <summary>
+    /// <c>GenesOf</c> returns exactly the requested individual's genes from the shared gene arena.
+    /// </summary>
     [Fact]
     public void GenesOfSlicesTheIndividualOutOfTheArena()
     {
@@ -39,6 +45,9 @@ public class PopulationViewTests
         Assert.Equal([2.0, 3.0], view.GenesOf(1).ToArray());
     }
 
+    /// <summary>
+    /// The active gene and fitness spans cover the live individuals only, not the whole allocation.
+    /// </summary>
     [Fact]
     public void TheActiveSpansStopAtCountRatherThanAtCapacity()
     {
@@ -52,6 +61,9 @@ public class PopulationViewTests
         Assert.Equal([9.0, 1.0], view.ActiveFfValues.ToArray());
     }
 
+    /// <summary>
+    /// Reducing the context's population size narrows the current and the trial views together.
+    /// </summary>
     [Fact]
     public void NarrowingTheContextNarrowsBothViewsAtOnce()
     {
@@ -65,6 +77,9 @@ public class PopulationViewTests
         Assert.Equal(4, context.TrialPopulation.Count);
     }
 
+    /// <summary>
+    /// Swapping the current and trial populations keeps both views at the reduced size.
+    /// </summary>
     [Fact]
     public void SwappingKeepsBothViewsNarrowed()
     {
@@ -78,6 +93,10 @@ public class PopulationViewTests
         Assert.Equal(4, context.TrialPopulation.Count);
     }
 
+    /// <summary>
+    /// Reducing the population size narrows the views but leaves both buffers allocated at full
+    /// capacity.
+    /// </summary>
     [Fact]
     public void NarrowingLeavesTheBuffersAllocatedAtFullCapacity()
     {

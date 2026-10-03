@@ -12,6 +12,10 @@ namespace DotNetDifferentialEvolution.UnitTests.RandomProviders;
 [Trait("Category", "Unit")]
 public class SeededRandomProviderGaussianTests
 {
+    /// <summary>
+    /// The second Gaussian draw is the sine half of the same Box–Muller pair whose cosine half was the
+    /// first draw.
+    /// </summary>
     [Fact]
     public void TheCachedValueIsTheOtherHalfOfTheSameTransform()
     {
@@ -28,6 +32,9 @@ public class SeededRandomProviderGaussianTests
         Assert.Equal(radius * Math.Sin(angle), second, 1e-12);
     }
 
+    /// <summary>
+    /// Two Gaussian draws advance the stream by exactly two uniforms.
+    /// </summary>
     [Fact]
     public void APairOfDrawsConsumesTwoUniformsNotFour()
     {
@@ -44,29 +51,36 @@ public class SeededRandomProviderGaussianTests
         Assert.Equal(afterTwoGaussians.NextULong(), random.NextULong());
     }
 
+    /// <summary>
+    /// The sample mean and variance of many draws match the requested mean and the square of the
+    /// requested standard deviation.
+    /// </summary>
     [Fact]
     public void MeanAndDeviationAreApplied()
     {
-        const int Samples = 200_000;
+        const int samples = 200_000;
 
         var random = new SeededRandomProvider(seed: 17);
         var sum = 0.0;
         var sumOfSquares = 0.0;
 
-        for (var i = 0; i < Samples; i++)
+        for (var i = 0; i < samples; i++)
         {
             var value = random.NextGaussian(mean: 3.0, standardDeviation: 2.0);
             sum += value;
             sumOfSquares += value * value;
         }
 
-        var mean = sum / Samples;
-        var variance = sumOfSquares / Samples - mean * mean;
+        var mean = sum / samples;
+        var variance = sumOfSquares / samples - mean * mean;
 
         Assert.Equal(3.0, mean, 0.03);
         Assert.Equal(4.0, variance, 0.06);
     }
 
+    /// <summary>
+    /// The cached sampler's output passes a Kolmogorov–Smirnov test against the standard normal CDF.
+    /// </summary>
     [Fact]
     public void TheOutputStillMatchesTheNormalDistribution()
     {
@@ -74,11 +88,11 @@ public class SeededRandomProviderGaussianTests
         // transform is only legitimate because that half is itself standard normal and
         // independent of the cosine half; if the caching were wrong — say it returned a stale
         // value, or the same value twice — this is what would catch it.
-        const int Samples = 200_000;
+        const int samples = 200_000;
 
         var random = new SeededRandomProvider(seed: 2024);
-        var values = new double[Samples];
-        for (var i = 0; i < Samples; i++)
+        var values = new double[samples];
+        for (var i = 0; i < samples; i++)
         {
             values[i] = random.NextGaussian(mean: 0.0, standardDeviation: 1.0);
         }
@@ -86,30 +100,34 @@ public class SeededRandomProviderGaussianTests
         Array.Sort(values);
 
         var deviation = 0.0;
-        for (var i = 0; i < Samples; i++)
+        for (var i = 0; i < samples; i++)
         {
             var theoretical = NormalCdf(values[i]);
-            deviation = Math.Max(deviation, Math.Abs((i + 1.0) / Samples - theoretical));
-            deviation = Math.Max(deviation, Math.Abs(theoretical - (double)i / Samples));
+            deviation = Math.Max(deviation, Math.Abs((i + 1.0) / samples - theoretical));
+            deviation = Math.Max(deviation, Math.Abs(theoretical - (double)i / samples));
         }
 
         // The 0.999 quantile of the KS statistic is about 1.95/sqrt(n).
-        var critical = 1.95 / Math.Sqrt(Samples);
+        var critical = 1.95 / Math.Sqrt(samples);
 
         Assert.True(deviation < critical, $"KS statistic {deviation:E3} exceeded {critical:E3}");
     }
 
+    /// <summary>
+    /// The two draws of each pair are uncorrelated, which a cache returning the same value twice would
+    /// fail.
+    /// </summary>
     [Fact]
     public void ConsecutiveDrawsAreNotCorrelated()
     {
         // The cheap way to get this wrong is to return the same normal twice, which would pass a
         // distribution test on its own but shows up immediately as correlation between pairs.
-        const int Pairs = 100_000;
+        const int pairs = 100_000;
 
         var random = new SeededRandomProvider(seed: 8);
         var sumOfProducts = 0.0;
 
-        for (var i = 0; i < Pairs; i++)
+        for (var i = 0; i < pairs; i++)
         {
             var first = random.NextGaussian(0.0, 1.0);
             var second = random.NextGaussian(0.0, 1.0);
@@ -117,12 +135,16 @@ public class SeededRandomProviderGaussianTests
         }
 
         // For independent standard normals the mean product is 0 with standard error 1/sqrt(n).
-        var correlation = sumOfProducts / Pairs;
+        var correlation = sumOfProducts / pairs;
 
-        Assert.True(Math.Abs(correlation) < 4.0 / Math.Sqrt(Pairs),
+        Assert.True(Math.Abs(correlation) < 4.0 / Math.Sqrt(pairs),
             $"paired draws correlated at {correlation:E3}");
     }
 
+    /// <summary>
+    /// Two identically seeded providers drawn from in alternation produce the same sequence, so one
+    /// provider's cached value never serves another's draw.
+    /// </summary>
     [Fact]
     public void TheCacheTravelsWithTheInstanceNotTheThread()
     {
@@ -144,6 +166,10 @@ public class SeededRandomProviderGaussianTests
         Assert.Equal(straight, interleaved);
     }
 
+    /// <summary>
+    /// For a provider the engine did not create, the helper keeps the uncached transform that takes two
+    /// uniforms per draw.
+    /// </summary>
     [Fact]
     public void AThirdPartyProviderStillGetsThePlainTransform()
     {
@@ -159,6 +185,10 @@ public class SeededRandomProviderGaussianTests
         Assert.Equal(2, scripted.DoubleDrawCount);
     }
 
+    /// <summary>
+    /// The distribution helper gives the engine's provider the same values as calling its cached
+    /// sampler directly.
+    /// </summary>
     [Fact]
     public void TheHelperRoutesTheEnginesProviderThroughTheCache()
     {
@@ -183,15 +213,15 @@ public class SeededRandomProviderGaussianTests
         var sign = Math.Sign(x);
         x = Math.Abs(x);
 
-        const double A1 = 0.254829592;
-        const double A2 = -0.284496736;
-        const double A3 = 1.421413741;
-        const double A4 = -1.453152027;
-        const double A5 = 1.061405429;
-        const double P = 0.3275911;
+        const double a1 = 0.254829592;
+        const double a2 = -0.284496736;
+        const double a3 = 1.421413741;
+        const double a4 = -1.453152027;
+        const double a5 = 1.061405429;
+        const double p = 0.3275911;
 
-        var t = 1.0 / (1.0 + P * x);
-        var y = 1.0 - ((((A5 * t + A4) * t + A3) * t + A2) * t + A1) * t * Math.Exp(-x * x);
+        var t = 1.0 / (1.0 + p * x);
+        var y = 1.0 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.Exp(-x * x);
 
         return sign * y;
     }

@@ -18,6 +18,10 @@ public class JdeStrategyTests
 {
     private const int PopulationSize = 4;
 
+    /// <summary>
+    /// With both adaptation probabilities at zero, the strategy hands back the initial F and CR
+    /// stored for the individual instead of regenerating them.
+    /// </summary>
     [Fact]
     public void WithoutAdaptationReturnsTheStoredPerIndividualParameters()
     {
@@ -37,6 +41,10 @@ public class JdeStrategyTests
         Assert.Equal(0.9, cr);
     }
 
+    /// <summary>
+    /// When adaptation fires, F is redrawn as <c>minF + u * range</c> and CR as a plain uniform
+    /// draw, each from its own value draw following the decision draw.
+    /// </summary>
     [Fact]
     public void WhenAdaptationTriggersRegeneratesFWithinRangeAndCrUniformly()
     {
@@ -57,6 +65,10 @@ public class JdeStrategyTests
         Assert.Equal(0.3, cr, 1e-12);
     }
 
+    /// <summary>
+    /// An individual whose trial improved adopts the F and CR that trial used, while an individual
+    /// whose parent was kept retains its previous parameters.
+    /// </summary>
     [Fact]
     public void AfterGenerationKeepsParametersOfSuccessfulTrialsPerIndividual()
     {
@@ -85,6 +97,10 @@ public class JdeStrategyTests
         Assert.Equal(0.9, cr1);
     }
 
+    /// <summary>
+    /// A trial that survives on a tie replaces its parent, so the individual adopts the trial's
+    /// parameters exactly as it would after a strict improvement.
+    /// </summary>
     [Fact]
     public void AfterGenerationKeepsParametersOfATrialAcceptedOnATie()
     {

@@ -26,6 +26,10 @@ public class JadeStrategyTests
     // u_cr1 = anything (multiplied by 0), u_cr2 = 0.75 → Gaussian = μCR; u_f = 0.5 → Cauchy = μF.
     private static double[] MeanRevealingDraws => [0.5, 0.75, 0.5];
 
+    /// <summary>
+    /// Two improving trials move μCR a tenth of the way toward their arithmetic mean of CR and μF
+    /// a tenth of the way toward their Lehmer mean of F.
+    /// </summary>
     [Fact]
     public void AfterGenerationNudgesMeansTowardSuccessfulParameters()
     {
@@ -47,6 +51,10 @@ public class JadeStrategyTests
         Assert.Equal(0.9 * 0.5 + 0.1 * 0.68, f, 1e-9);   // μF  = 0.518
     }
 
+    /// <summary>
+    /// A generation in which every parent was kept carries no evidence, so both means stay at
+    /// their initial value.
+    /// </summary>
     [Fact]
     public void AfterGenerationWithNoSuccessesLeavesMeansUnchanged()
     {
@@ -67,6 +75,10 @@ public class JadeStrategyTests
         Assert.Equal(0.5, f, 1e-9);
     }
 
+    /// <summary>
+    /// A trial accepted on equal fitness is not a success: it moves neither mean and puts no
+    /// parent in the archive.
+    /// </summary>
     [Fact]
     public void AfterGenerationIgnoresATrialAcceptedOnATie()
     {
@@ -102,6 +114,10 @@ public class JadeStrategyTests
         Assert.Equal(0, context.ArchiveSize);
     }
 
+    /// <summary>
+    /// A negative archive capacity is treated as a disabled archive: successful trials archive
+    /// nothing and the update does not throw.
+    /// </summary>
     [Fact]
     public void AfterGenerationWithANegativeArchiveCapacityLeavesTheArchiveAlone()
     {

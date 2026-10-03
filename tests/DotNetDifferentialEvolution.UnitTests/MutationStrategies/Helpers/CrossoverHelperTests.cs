@@ -14,6 +14,15 @@ public class CrossoverHelperTests
 {
     private const double Precision = 1e-12;
 
+    private static readonly double[] ExpectedMixedAndRepairedTrial = [5.0, 200.0, 7.0, 205.0];
+    private static readonly double[] ExpectedParentWithTheGuaranteedGene = [10.0, 2.0, 30.0];
+    private static readonly double[] ExpectedUnchangedMutant = [1.0, 2.0, 3.0];
+    private static readonly double[] ExpectedReflectedTrial = [50.0, 5.0, 300.0, 205.0];
+
+    /// <summary>
+    /// Binomial crossover takes each gene from the mutant or the parent according to its draw, and
+    /// repairs an out-of-bounds mutant gene only when that gene is actually taken.
+    /// </summary>
     [Fact]
     public void MixesMutantAndParentGenesAndRepairsOutOfBounds()
     {
@@ -42,9 +51,13 @@ public class CrossoverHelperTests
             upperBound: upper,
             randomSource: new ProviderRandomSource(random));
 
-        Assert.Equal(new[] { 5.0, 200.0, 7.0, 205.0 }, trial, new DoubleComparer(Precision));
+        Assert.Equal(ExpectedMixedAndRepairedTrial, trial, new DoubleComparer(Precision));
     }
 
+    /// <summary>
+    /// With CR = 0, every gene comes from the parent except the guaranteed gene, which still comes from
+    /// the mutant.
+    /// </summary>
     [Fact]
     public void GuaranteedGeneAlwaysComesFromMutantEvenWhenCrossoverNeverFires()
     {
@@ -70,9 +83,12 @@ public class CrossoverHelperTests
 
         // Genes 0 and 2 copied from parent; gene 1 (jrand) kept from mutant — the trial
         // differs from its parent in at least one dimension, the canonical guarantee.
-        Assert.Equal(new[] { 10.0, 2.0, 30.0 }, trial, new DoubleComparer(Precision));
+        Assert.Equal(ExpectedParentWithTheGuaranteedGene, trial, new DoubleComparer(Precision));
     }
 
+    /// <summary>
+    /// With CR = 1 and every gene in bounds, the trial equals the mutant.
+    /// </summary>
     [Fact]
     public void InBoundsMutantGenesAreKeptWhenCrossoverAlwaysFires()
     {
@@ -96,9 +112,13 @@ public class CrossoverHelperTests
             upperBound: upper,
             randomSource: new ProviderRandomSource(random));
 
-        Assert.Equal(new[] { 1.0, 2.0, 3.0 }, trial, new DoubleComparer(Precision));
+        Assert.Equal(ExpectedUnchangedMutant, trial, new DoubleComparer(Precision));
     }
 
+    /// <summary>
+    /// An out-of-bounds gene is repaired to the midpoint between the violated bound and the parent's
+    /// gene, deterministically, without consuming a random draw.
+    /// </summary>
     [Fact]
     public void RepairReflectsOutOfBoundGenesHalfwayTowardTheParent()
     {
@@ -126,11 +146,17 @@ public class CrossoverHelperTests
             upperBound: upper,
             randomSource: new ProviderRandomSource(random));
 
-        Assert.Equal(new[] { 50.0, 5.0, 300.0, 205.0 }, trial, new DoubleComparer(Precision));
+        Assert.Equal(ExpectedReflectedTrial, trial, new DoubleComparer(Precision));
         // Midpoint repair is deterministic: it consumes no random draws beyond the CR tests.
         Assert.Equal(3, random.DoubleDrawCount);
     }
 
+    /// <summary>
+    /// Over many trials, the share of genes taken from the mutant matches CR + (1 - CR) / D within
+    /// about 3.5 standard errors.
+    /// </summary>
+    /// <param name="crossoverProbability">The crossover probability CR.</param>
+    /// <param name="genomeSize">The genome size D.</param>
     [Theory]
     [InlineData(0.0, 5)]
     [InlineData(0.1, 5)]
@@ -145,7 +171,7 @@ public class CrossoverHelperTests
         // a floating-point one against a fresh uniform. Whether that is the same algorithm is
         // decided here: a gene comes from the mutant if the crossover fires or it is jrand, so
         // the rate is CR + (1 - CR)/D, and nothing about the reformulation may move it.
-        const int Trials = 20_000;
+        const int trials = 20_000;
 
         var random = new SeededRandomProvider(seed: genomeSize);
         var population = new double[genomeSize];      // parent: all zeros
@@ -156,7 +182,7 @@ public class CrossoverHelperTests
         Array.Fill(upperBound, 1_000.0);
 
         var fromMutant = 0L;
-        for (var t = 0; t < Trials; t++)
+        for (var t = 0; t < trials; t++)
         {
             Array.Fill(trial, 1.0);                   // mutant: all ones, all in bounds
 
@@ -175,33 +201,37 @@ public class CrossoverHelperTests
             }
         }
 
-        var observed = (double)fromMutant / (Trials * (long)genomeSize);
+        var observed = (double)fromMutant / (trials * (long)genomeSize);
         var expected = crossoverProbability + (1.0 - crossoverProbability) / genomeSize;
 
         // ~3.5 standard errors of the binomial at this sample size, so a real shift in the rate
         // fails while sampling noise does not.
-        var standardError = Math.Sqrt(expected * (1.0 - expected) / (Trials * (double)genomeSize));
+        var standardError = Math.Sqrt(expected * (1.0 - expected) / (trials * (double)genomeSize));
         Assert.Equal(expected, observed, 3.5 * standardError + 1e-12);
     }
 
+    /// <summary>
+    /// With CR = 0, exactly one gene per trial comes from the mutant, and which gene it is passes a
+    /// chi-square test for uniformity over the genome.
+    /// </summary>
     [Fact]
     public void TheGuaranteedGeneIsUniformlyDistributedOverTheGenome()
     {
         // jrand is drawn with Next(genomeSize). If that were biased, the crossover rate above
         // would still be met on average while some genes were systematically favoured.
-        const int GenomeSize = 16;
-        const int Trials = 32_000;
+        const int genomeSize = 16;
+        const int trials = 32_000;
 
         var random = new SeededRandomProvider(seed: 99);
-        var population = new double[GenomeSize];
-        var trial = new double[GenomeSize];
-        var lowerBound = new double[GenomeSize];
-        var upperBound = new double[GenomeSize];
+        var population = new double[genomeSize];
+        var trial = new double[genomeSize];
+        var lowerBound = new double[genomeSize];
+        var upperBound = new double[genomeSize];
         Array.Fill(lowerBound, -1_000.0);
         Array.Fill(upperBound, 1_000.0);
 
-        var counts = new int[GenomeSize];
-        for (var t = 0; t < Trials; t++)
+        var counts = new int[genomeSize];
+        for (var t = 0; t < trials; t++)
         {
             Array.Fill(trial, 1.0);
 
@@ -215,7 +245,7 @@ public class CrossoverHelperTests
                 upperBound: upperBound,
                 randomSource: new SeededRandomSource(random));
 
-            for (var i = 0; i < GenomeSize; i++)
+            for (var i = 0; i < genomeSize; i++)
             {
                 if (trial[i] == 1.0)
                 {
@@ -224,13 +254,13 @@ public class CrossoverHelperTests
             }
         }
 
-        var expected = (double)Trials / GenomeSize;
+        var expected = (double)trials / genomeSize;
         var chiSquare = counts.Sum(count => (count - expected) * (count - expected) / expected);
 
-        var degreesOfFreedom = GenomeSize - 1;
+        var degreesOfFreedom = genomeSize - 1;
         var critical = degreesOfFreedom + 4.0 * Math.Sqrt(2.0 * degreesOfFreedom);
 
-        Assert.Equal(Trials, counts.Sum());   // exactly one gene per trial, never zero or two
+        Assert.Equal(trials, counts.Sum());   // exactly one gene per trial, never zero or two
         Assert.True(chiSquare < critical, $"chi-square {chiSquare:F2} exceeded {critical:F2}");
     }
 

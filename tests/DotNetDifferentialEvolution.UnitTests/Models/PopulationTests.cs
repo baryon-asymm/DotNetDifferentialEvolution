@@ -9,6 +9,10 @@ namespace DotNetDifferentialEvolution.UnitTests.Models;
 [Trait("Category", "Unit")]
 public class PopulationTests
 {
+    /// <summary>
+    /// The population size is the length of the fitness buffer and the genome size is the gene buffer
+    /// divided by it.
+    /// </summary>
     [Fact]
     public void DerivesPopulationAndGenomeSizeFromBuffers()
     {
@@ -19,6 +23,9 @@ public class PopulationTests
         Assert.Equal(2, population.GenomeSize);
     }
 
+    /// <summary>
+    /// Moving the cursor to an index exposes that individual's fitness value and genes.
+    /// </summary>
     [Fact]
     public void MoveCursorToPointsCursorAtTheRequestedIndividual()
     {
@@ -31,6 +38,9 @@ public class PopulationTests
         Assert.Equal([4.0, 5.0], population.IndividualCursor.Genes.ToArray());
     }
 
+    /// <summary>
+    /// Moving the cursor to the best individual uses the recorded best index.
+    /// </summary>
     [Fact]
     public void MoveCursorToBestIndividualUsesBestIndividualIndex()
     {
@@ -43,6 +53,9 @@ public class PopulationTests
         Assert.Equal([2.0, 3.0], population.IndividualCursor.Genes.ToArray());
     }
 
+    /// <summary>
+    /// A new population's active size equals its capacity.
+    /// </summary>
     [Fact]
     public void APopulationStartsFullyActive()
     {
@@ -52,6 +65,9 @@ public class PopulationTests
         Assert.Equal(population.Capacity, population.PopulationSize);
     }
 
+    /// <summary>
+    /// Shrinking the active population keeps the capacity and the genome size unchanged.
+    /// </summary>
     [Fact]
     public void GenomeSizeStaysDerivedFromTheCapacityWhenThePopulationShrinks()
     {
@@ -64,6 +80,11 @@ public class PopulationTests
         Assert.Equal(2, population.GenomeSize);
     }
 
+    /// <summary>
+    /// After the population is reduced, the cursor refuses an index that is negative or outside the
+    /// active individuals, even when the slot is still allocated.
+    /// </summary>
+    /// <param name="individualIndex">The index outside the active population.</param>
     [Theory]
     [InlineData(-1)]
     [InlineData(1)]

@@ -10,6 +10,9 @@ namespace DotNetDifferentialEvolution.UnitTests.PopulationSampling;
 [Trait("Category", "Unit")]
 public class UniformRandomSamplingMakerTests
 {
+    /// <summary>
+    /// Every sampled gene lies within the bounds of its own dimension.
+    /// </summary>
     [Fact]
     public void SamplesEveryGeneWithinItsPerDimensionBounds()
     {
@@ -30,6 +33,9 @@ public class UniformRandomSamplingMakerTests
         }
     }
 
+    /// <summary>
+    /// Sampling overwrites every element of the population buffer.
+    /// </summary>
     [Fact]
     public void FillsTheEntireBuffer()
     {

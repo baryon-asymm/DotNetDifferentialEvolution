@@ -13,6 +13,10 @@ public class RandomDistributionHelperTests
 {
     private const double Precision = 1e-9;
 
+    /// <summary>
+    /// The Gaussian sampler returns the Box–Muller value for the scripted uniforms, scaled and shifted,
+    /// and consumes exactly two uniforms.
+    /// </summary>
     [Fact]
     public void NextGaussianMatchesBoxMullerClosedForm()
     {
@@ -27,6 +31,9 @@ public class RandomDistributionHelperTests
         Assert.Equal(2, random.DoubleDrawCount); // consumes exactly two uniforms
     }
 
+    /// <summary>
+    /// With a standard deviation of zero, the Gaussian sampler returns the mean.
+    /// </summary>
     [Fact]
     public void NextGaussianWithZeroDeviationReturnsMean()
     {
@@ -37,6 +44,9 @@ public class RandomDistributionHelperTests
         Assert.Equal(5.0, value, Precision);
     }
 
+    /// <summary>
+    /// A uniform draw of 0.5 maps to the Cauchy location.
+    /// </summary>
     [Fact]
     public void NextCauchyAtMedianDrawReturnsLocation()
     {
@@ -48,6 +58,9 @@ public class RandomDistributionHelperTests
         Assert.Equal(2.0, value, Precision);
     }
 
+    /// <summary>
+    /// A uniform draw of 0.75 maps to the Cauchy location plus one scale.
+    /// </summary>
     [Fact]
     public void NextCauchyAtUpperQuartileReturnsLocationPlusScale()
     {

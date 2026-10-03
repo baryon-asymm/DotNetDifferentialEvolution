@@ -13,6 +13,10 @@ public class SelectionStrategyTests
 {
     private const int GenomeSize = 2;
 
+    /// <summary>
+    /// A strictly better trial replaces its parent in the next generation and is reported as an
+    /// improvement.
+    /// </summary>
     [Fact]
     public void AcceptsTrialWhenStrictlyBetter()
     {
@@ -34,6 +38,9 @@ public class SelectionStrategyTests
         Assert.Equal(1.0, nextFf[1]);
     }
 
+    /// <summary>
+    /// A worse trial is rejected and the parent is carried into the next generation.
+    /// </summary>
     [Fact]
     public void KeepsParentWhenTrialIsWorse()
     {
@@ -55,6 +62,9 @@ public class SelectionStrategyTests
         Assert.Equal(9.0, nextFf[1]);
     }
 
+    /// <summary>
+    /// A trial of equal fitness replaces its parent but is reported as accepted, not as an improvement.
+    /// </summary>
     [Fact]
     public void TakesTheTrialWhenFitnessIsEqualButDoesNotCallItAnImprovement()
     {
@@ -79,6 +89,9 @@ public class SelectionStrategyTests
         Assert.Equal(9.0, nextFf[1]);
     }
 
+    /// <summary>
+    /// With ties rejected, a trial of equal fitness loses and the parent is kept.
+    /// </summary>
     [Fact]
     public void WithTiesRejectedKeepsTheParentOnEqualFitness()
     {
@@ -102,6 +115,10 @@ public class SelectionStrategyTests
         Assert.Equal(9.0, nextFf[1]);
     }
 
+    /// <summary>
+    /// With ties rejected, a strictly better trial still replaces its parent and is reported as an
+    /// improvement.
+    /// </summary>
     [Fact]
     public void WithTiesRejectedStillTakesAStrictlyBetterTrial()
     {
@@ -124,6 +141,9 @@ public class SelectionStrategyTests
         Assert.Equal(1.0, nextFf[1]);
     }
 
+    /// <summary>
+    /// With ties rejected, a real-valued trial still replaces a parent scored NaN, as an improvement.
+    /// </summary>
     [Fact]
     public void WithTiesRejectedAParentScoredNaNIsStillReplaced()
     {
@@ -146,6 +166,10 @@ public class SelectionStrategyTests
         Assert.Equal(9.0, nextFf[1]);
     }
 
+    /// <summary>
+    /// A parent scored NaN counts as worse than any real value, so a real-valued trial replaces it as an
+    /// improvement.
+    /// </summary>
     [Fact]
     public void AcceptsTrialWhenParentFitnessIsNaN()
     {
@@ -170,6 +194,9 @@ public class SelectionStrategyTests
         Assert.Equal(50.0, nextFf[1]);
     }
 
+    /// <summary>
+    /// A trial scored NaN is rejected in favour of a real-valued parent.
+    /// </summary>
     [Fact]
     public void KeepsParentWhenTrialFitnessIsNaN()
     {
@@ -192,6 +219,9 @@ public class SelectionStrategyTests
         Assert.Equal(9.0, nextFf[1]);
     }
 
+    /// <summary>
+    /// When parent and trial are both NaN, the parent is kept rather than treating the pair as a tie.
+    /// </summary>
     [Fact]
     public void KeepsParentWhenBothFitnessValuesAreNaN()
     {

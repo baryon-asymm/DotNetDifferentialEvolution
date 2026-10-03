@@ -12,6 +12,10 @@ namespace DotNetDifferentialEvolution.UnitTests.MutationStrategies.Helpers;
 [Trait("Category", "Unit")]
 public class RandomIndexSelectorTests
 {
+    /// <summary>
+    /// A drawn candidate at or above the excluded index is shifted up by one, so the excluded index is
+    /// skipped without a redraw.
+    /// </summary>
     [Fact]
     public void ShiftsCandidatesPastExcludedIndex()
     {
@@ -24,6 +28,9 @@ public class RandomIndexSelectorTests
         Assert.Equal([0, 4, 1], indices.ToArray());
     }
 
+    /// <summary>
+    /// A candidate that collides with an index already chosen is redrawn until it is distinct.
+    /// </summary>
     [Fact]
     public void RetriesUntilCandidateIsDistinct()
     {
@@ -37,6 +44,13 @@ public class RandomIndexSelectorTests
         Assert.Equal([1, 2], indices.ToArray());
     }
 
+    /// <summary>
+    /// Over many seeded fills, the indices are always in range, mutually distinct and never the
+    /// excluded index.
+    /// </summary>
+    /// <param name="populationSize">The population size the indices are drawn from.</param>
+    /// <param name="excludeIndex">The index that must never be drawn.</param>
+    /// <param name="count">The number of indices to draw.</param>
     [Theory]
     [InlineData(10, 0, 3)]
     [InlineData(10, 9, 3)]
