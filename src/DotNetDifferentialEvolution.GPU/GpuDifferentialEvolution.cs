@@ -253,6 +253,9 @@ public sealed class GpuDifferentialEvolution : IDisposable
         using (_lease.Accelerator.BindScoped())
         {
             ReleaseBuffers();
+
+            // Null only when building failed before the kernels were loaded.
+            _launcher?.Dispose();
         }
 
         _lease.Dispose();

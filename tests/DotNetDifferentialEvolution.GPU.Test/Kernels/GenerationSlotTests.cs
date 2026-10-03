@@ -38,7 +38,7 @@ public class GenerationSlotTests
         using var lowerBuffer = step.Upload(lower);
         using var upperBuffer = step.Upload(upper);
         var views = new PopulationViews(current.View, currentFitness.View, next.View, nextFitness.View, trial.View, lowerBuffer.View, upperBuffer.View);
-        var launcher = new KernelLauncher<ShiftedSphere>(accelerator, default);
+        using var launcher = new KernelLauncher<ShiftedSphere>(accelerator, default);
         var parameters = new StepParameters(Seed, 0, PopulationSize, GenomeSize, MutationForce, DeStep.CrossoverThreshold(CrossoverProbability));
 
         launcher.Initialize(parameters, views);

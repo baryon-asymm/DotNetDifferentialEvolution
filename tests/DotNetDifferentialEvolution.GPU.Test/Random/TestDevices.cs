@@ -13,13 +13,16 @@ namespace DotNetDifferentialEvolution.GPU.Test.Random;
 /// </summary>
 internal static class TestDevices
 {
-    /// <summary>A context with the one backend of <paramref name="device"/> and ILGPU.Algorithms enabled.</summary>
+    /// <summary>
+    /// A context with the one backend of <paramref name="device"/>. The kernels launched through it use integer arithmetic
+    /// only, so no libdevice is needed on CUDA; a kernel with math goes through the package's <c>DeviceSelector</c>.
+    /// </summary>
     /// <param name="device"><see cref="GpuDevice.Cpu"/>, <see cref="GpuDevice.Cuda"/> or <see cref="GpuDevice.OpenCL"/>.</param>
     /// <returns>The context; the caller disposes it.</returns>
     public static Context CreateContext(GpuDevice device) => device switch
     {
-        GpuDevice.Cuda => Context.Create(builder => builder.Cuda().EnableAlgorithms()),
-        GpuDevice.OpenCL => Context.Create(builder => builder.OpenCL().EnableAlgorithms()),
+        GpuDevice.Cuda => Context.Create(builder => builder.Cuda()),
+        GpuDevice.OpenCL => Context.Create(builder => builder.OpenCL()),
         GpuDevice.Cpu => Context.Create(builder => builder.CPU()),
         GpuDevice.Auto => throw new ArgumentOutOfRangeException(nameof(device), device, "Not a single backend."),
         _ => throw new ArgumentOutOfRangeException(nameof(device), device, "Not a defined backend."),

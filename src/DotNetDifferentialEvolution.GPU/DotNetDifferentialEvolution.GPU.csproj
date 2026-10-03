@@ -34,10 +34,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="ILGPU" Version="1.5.3" />
-      <!-- EnableAlgorithms: the math functions PTX has no instruction for (Exp, Log, Pow) compile
-           on CUDA from ILGPU.Algorithms' implementations (BOOT.md, Constraints). -->
-      <PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
+      <!-- Exactly 1.5.3: the libdevice post-link reads ILGPU internals and asserts this version
+           (Devices/LibDevice/BOOT.md). No ILGPU.Algorithms: CUDA math comes from libdevice. -->
+      <PackageReference Include="ILGPU" Version="[1.5.3]" />
       <!-- ISolution, the result contract shared with the CPU package (BOOT.md, v1 decisions). -->
       <PackageReference Include="DotNetOptimization.Abstractions" Version="1.0.0" />
     </ItemGroup>

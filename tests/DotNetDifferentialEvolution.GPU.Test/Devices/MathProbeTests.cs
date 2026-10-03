@@ -9,8 +9,9 @@ namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 /// Check D2 of the GPU package's ACCEPTANCE.md: the package's math probe kernel
 /// (<see cref="MathProbe.Probe"/>) on CUDA agrees with <see cref="Math"/> within 4 ULP for
 /// <c>Exp</c>, <c>Log</c>, <c>Pow(x, 1.37)</c> and <c>Sqrt</c> on 10⁴ positive arguments. The
-/// device is opened through the package's own <see cref="DeviceSelector"/>, so the kernel compiles
-/// with the context options a run uses (<c>EnableAlgorithms</c>). The arguments are a
+/// device is opened through the package's own <see cref="DeviceSelector"/> and the kernel loaded
+/// through its <see cref="KernelLoader"/>, so on CUDA it compiles against libdevice and is completed
+/// by the post-link, as a run's kernels are. The arguments are a
 /// log-spaced grid over [1e-3, 700], where all four functions are finite. The same probe on
 /// OpenCL is measured and reported, not held to a tolerance: D2 names CUDA only.
 /// </summary>
@@ -88,10 +89,11 @@ public class MathProbeTests(ITestOutputHelper output)
         {
             var accelerator = lease.Accelerator;
             deviceName = accelerator.Name;
-            var probe = accelerator.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<double>>(MathProbe.Probe);
+            using var kernel = KernelLoader.Load(accelerator, typeof(MathProbe).GetMethod(nameof(MathProbe.Probe))!);
+            var probe = kernel.CreateLauncherDelegate<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<double>>>();
             using var inputs = accelerator.Allocate1D(arguments);
             using var outputs = accelerator.Allocate1D<double>(arguments.Length * MathProbe.FunctionCount);
-            probe(arguments.Length, inputs.View, outputs.View);
+            probe(accelerator.DefaultStream, arguments.Length, inputs.View, outputs.View);
             accelerator.Synchronize();
             results = outputs.GetAsArray1D();
         }

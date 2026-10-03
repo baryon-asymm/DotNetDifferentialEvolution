@@ -88,7 +88,7 @@ public class InitialSamplingTests(ITestOutputHelper output)
 
     private static double[] SampleInitialPopulation()
     {
-        using var context = Context.Create(builder => builder.CPU().EnableAlgorithms());
+        using var context = Context.Create(builder => builder.CPU());
         using var accelerator = context.CreateCPUAccelerator(0);
         using var current = accelerator.Allocate1D<double>(PopulationSize * GenomeSize);
         using var currentFitness = accelerator.Allocate1D<double>(PopulationSize);
@@ -100,7 +100,7 @@ public class InitialSamplingTests(ITestOutputHelper output)
         var views = new PopulationViews(current.View, currentFitness.View, next.View, nextFitness.View, trial.View, lower.View, upper.View);
         var parameters = new StepParameters(Seed, 0, PopulationSize, GenomeSize, 0.5, DeStep.CrossoverThreshold(0.9));
 
-        var launcher = new KernelLauncher<Sphere>(accelerator, default);
+        using var launcher = new KernelLauncher<Sphere>(accelerator, default);
         launcher.Initialize(parameters, views);
         accelerator.Synchronize();
 
