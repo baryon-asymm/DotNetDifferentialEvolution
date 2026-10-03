@@ -23,9 +23,16 @@ public class ShadeStrategyTests
     private static ScriptedRandomProvider CellRevealingDraws() =>
         new(ints: [0], doubles: [0.5, 0.75, 0.5]);
 
+    /// <summary>
+    /// A success-history memory needs at least one slot, so a memory size of zero is rejected.
+    /// </summary>
     [Fact]
     public void ConstructorThrowsWhenMemorySizeIsNotPositive() => _ = Assert.Throws<ArgumentOutOfRangeException>(() => new ShadeStrategy(PopulationSize, memorySize: 0));
 
+    /// <summary>
+    /// The memory slot receives the improvement-weighted arithmetic mean of the successful CR values
+    /// and the improvement-weighted Lehmer mean of the successful F values.
+    /// </summary>
     [Fact]
     public void AfterGenerationStoresImprovementWeightedMeans()
     {
@@ -49,6 +56,9 @@ public class ShadeStrategyTests
         Assert.Equal((2 * 0.04 + 4 * 0.25) / (2 * 0.2 + 4 * 0.5), f, 1e-9);
     }
 
+    /// <summary>
+    /// A generation without a single improving trial leaves the memory slot at its initial value.
+    /// </summary>
     [Fact]
     public void AfterGenerationWithNoSuccessesLeavesMemoryUnchanged()
     {
@@ -69,6 +79,10 @@ public class ShadeStrategyTests
         Assert.Equal(0.5, f, 1e-9);
     }
 
+    /// <summary>
+    /// With the terminal rule on, a generation whose successful trials all used CR = 0 marks the slot
+    /// terminal: it then yields CR = 0 without drawing the Gaussian, while F is still updated.
+    /// </summary>
     [Fact]
     public void AfterGenerationWithTerminalCrEnabledFixesSlotToZeroWhenAllSuccessfulCrAreZero()
     {
@@ -93,6 +107,10 @@ public class ShadeStrategyTests
         Assert.Equal(0.5, f, 1e-9); // weighted Lehmer of F: (2*0.25 + 4*0.25)/(2*0.5 + 4*0.5) = 0.5
     }
 
+    /// <summary>
+    /// Once a slot has become terminal, a later generation of successes with non-zero CR does not
+    /// revive it.
+    /// </summary>
     [Fact]
     public void AfterGenerationTerminalCrSlotStaysTerminalEvenAfterNonZeroSuccessfulCr()
     {
@@ -119,6 +137,10 @@ public class ShadeStrategyTests
         Assert.Equal(0.0, cr, 1e-12);
     }
 
+    /// <summary>
+    /// Without the terminal rule, an all-zero successful CR is stored as an ordinary mean of zero, so CR
+    /// is still sampled from the Gaussian.
+    /// </summary>
     [Fact]
     public void AfterGenerationWithTerminalCrDisabledKeepsZeroMeanAsAnOrdinaryValue()
     {
@@ -143,6 +165,10 @@ public class ShadeStrategyTests
         Assert.Equal(3, draws.DoubleDrawCount);
     }
 
+    /// <summary>
+    /// A success over a parent scored NaN has a NaN improvement and is left out of the weighted means,
+    /// so it cannot turn the memory into NaN.
+    /// </summary>
     [Fact]
     public void AfterGenerationIgnoresASuccessWhoseImprovementIsNotMeasurable()
     {
@@ -170,6 +196,10 @@ public class ShadeStrategyTests
         Assert.Equal(0.5, f, 1e-9);
     }
 
+    /// <summary>
+    /// A success over a parent with infinite fitness has an infinite improvement and is left out of the
+    /// weighted means, so it cannot swamp them.
+    /// </summary>
     [Fact]
     public void AfterGenerationIgnoresASuccessOverAnInfiniteParent()
     {

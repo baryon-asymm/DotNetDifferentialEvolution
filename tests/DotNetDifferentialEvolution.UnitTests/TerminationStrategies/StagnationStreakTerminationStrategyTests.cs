@@ -10,6 +10,10 @@ namespace DotNetDifferentialEvolution.UnitTests.TerminationStrategies;
 [Trait("Category", "Unit")]
 public class StagnationStreakTerminationStrategyTests
 {
+    /// <summary>
+    /// After the baseline generation, each generation without improvement extends the streak, and the
+    /// strategy terminates when the streak reaches its maximum.
+    /// </summary>
     [Fact]
     public void AccumulatesStreakAndTerminatesAfterMaxStagnantGenerations()
     {
@@ -28,6 +32,9 @@ public class StagnationStreakTerminationStrategyTests
         Assert.Equal(3, strategy.CurrentStagnationStreak);
     }
 
+    /// <summary>
+    /// An improvement larger than the threshold resets the streak and becomes the new baseline.
+    /// </summary>
     [Fact]
     public void ImprovementGreaterThanThresholdResetsTheStreak()
     {
@@ -47,6 +54,9 @@ public class StagnationStreakTerminationStrategyTests
         Assert.Equal(5.0, strategy.LastBestFitnessFunctionValue);
     }
 
+    /// <summary>
+    /// An improvement smaller than the threshold counts as stagnation and does not move the baseline.
+    /// </summary>
     [Fact]
     public void ImprovementSmallerThanThresholdDoesNotResetTheStreak()
     {

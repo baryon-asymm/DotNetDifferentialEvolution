@@ -13,6 +13,10 @@ public class ProblemContextTests
 {
     private const int PopulationSize = 4;
 
+    /// <summary>
+    /// A new context sizes its population, trial-record and ranking buffers from the population size and
+    /// takes the genome size from the evaluator.
+    /// </summary>
     [Fact]
     public void ConstructorInitializesDerivedState()
     {
@@ -24,6 +28,9 @@ public class ProblemContextTests
         Assert.Equal(3, context.GenomeSize); // SphereEvaluator(3)
     }
 
+    /// <summary>
+    /// Swapping exchanges both the gene and the fitness buffers of the current and trial populations.
+    /// </summary>
     [Fact]
     public void SwapPopulationsExchangesCurrentAndTrialBuffers()
     {
@@ -42,6 +49,10 @@ public class ProblemContextTests
         Assert.Equal(11.0, context.TrialPopulation.FfValues.Span[0]);
     }
 
+    /// <summary>
+    /// The representative population carries the given generation number and best index and the
+    /// context's evaluation count.
+    /// </summary>
     [Fact]
     public void GetRepresentativePopulationStampsGenerationBestAndEvaluationCount()
     {

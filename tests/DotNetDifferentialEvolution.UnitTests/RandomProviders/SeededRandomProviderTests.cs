@@ -10,6 +10,10 @@ namespace DotNetDifferentialEvolution.UnitTests.RandomProviders;
 [Trait("Category", "Unit")]
 public class SeededRandomProviderTests
 {
+    /// <summary>
+    /// Two providers with the same seed produce identical raw, floating-point and bounded integer
+    /// streams.
+    /// </summary>
     [Fact]
     public void SameSeedProducesTheSameStream()
     {
@@ -24,6 +28,9 @@ public class SeededRandomProviderTests
         }
     }
 
+    /// <summary>
+    /// Providers with adjacent seeds share no raw output across a thousand draws.
+    /// </summary>
     [Fact]
     public void DifferentSeedsProduceDifferentStreams()
     {
@@ -44,6 +51,9 @@ public class SeededRandomProviderTests
         Assert.Equal(0, collisions);
     }
 
+    /// <summary>
+    /// <c>NextDouble</c> always returns a value in [0, 1).
+    /// </summary>
     [Fact]
     public void NextDoubleStaysInTheUnitInterval()
     {
@@ -56,6 +66,10 @@ public class SeededRandomProviderTests
         }
     }
 
+    /// <summary>
+    /// <c>Next(maxValue)</c> stays in [0, maxValue) and passes a chi-square test for uniformity.
+    /// </summary>
+    /// <param name="maxValue">The exclusive upper bound of the draws.</param>
     [Theory]
     [InlineData(2)]
     [InlineData(7)]
@@ -64,11 +78,11 @@ public class SeededRandomProviderTests
     public void NextIsUniformOverTheRequestedRange(
         int maxValue)
     {
-        const int DrawsPerBucket = 2_000;
+        const int drawsPerBucket = 2_000;
 
         var random = new SeededRandomProvider(seed: maxValue);
         var counts = new int[maxValue];
-        var draws = maxValue * DrawsPerBucket;
+        var draws = maxValue * drawsPerBucket;
 
         for (var i = 0; i < draws; i++)
         {
@@ -89,11 +103,18 @@ public class SeededRandomProviderTests
         Assert.True(chiSquare < critical, $"chi-square {chiSquare:F2} exceeded {critical:F2}");
     }
 
+    /// <summary>
+    /// A negative upper bound is rejected.
+    /// </summary>
     [Fact]
     public void NextRejectsANegativeBound()
         => Assert.Throws<ArgumentOutOfRangeException>(
             () => new SeededRandomProvider(seed: 1).Next(-1));
 
+    /// <summary>
+    /// Across a thousand raw draws from seed 0, every bit is set at least once and cleared at least
+    /// once.
+    /// </summary>
     [Fact]
     public void RawOutputHasNoStuckBits()
     {

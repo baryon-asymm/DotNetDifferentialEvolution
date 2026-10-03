@@ -21,6 +21,13 @@ public class LShadeStrategyTests
     private const int InitialPopulationSize = 10;
     private const long MaxEvaluations = 100;
 
+    /// <summary>
+    /// The active population follows the linear reduction schedule of the consumed evaluation
+    /// budget, from the initial size down to the minimum, and never below it once the budget is
+    /// overrun.
+    /// </summary>
+    /// <param name="evaluationCount">The evaluations consumed so far.</param>
+    /// <param name="expectedPopulationSize">The population size the schedule prescribes.</param>
     [Theory]
     // N = round((minN - initN)/maxEvals * evals + initN), minN = 4, initN = 10, maxEvals = 100.
     [InlineData(0L, 10)]     // no budget consumed → no reduction
@@ -40,6 +47,10 @@ public class LShadeStrategyTests
         Assert.Equal(expectedPopulationSize, context.CurrentPopulationSize);
     }
 
+    /// <summary>
+    /// Shrinking the population keeps exactly the best individuals and leaves them ordered from
+    /// best to worst.
+    /// </summary>
     [Fact]
     public void AfterGenerationKeepsTheBestSurvivorsInAscendingFitnessOrder()
     {
@@ -58,6 +69,14 @@ public class LShadeStrategyTests
         Assert.Equal(expectedSurvivors, actualSurvivors); // best `newSize`, ascending
     }
 
+    /// <summary>
+    /// A scheduled population size that falls exactly halfway between two integers is rounded
+    /// half away from zero, as the papers do, not to the even neighbour.
+    /// </summary>
+    /// <param name="initialPopulationSize">The population size the run starts with.</param>
+    /// <param name="maxEvaluationNumber">The total evaluation budget.</param>
+    /// <param name="evaluationCount">The evaluations consumed so far.</param>
+    /// <param name="expectedPopulationSize">The population size rounded half up.</param>
     [Theory]
     // Inputs for which N = round((minN - initN)/maxEvals * evals + initN) lands on an exact
     // midpoint (minN = 4). The papers round half away from zero; .NET's default
@@ -84,6 +103,10 @@ public class LShadeStrategyTests
         Assert.Equal(expectedPopulationSize, context.CurrentPopulationSize);
     }
 
+    /// <summary>
+    /// The archive capacity rescaled to the reduced population is rounded half away from zero
+    /// when it lands on a midpoint.
+    /// </summary>
     [Fact]
     public void AfterGenerationRoundsAMidpointArchiveCapacityHalfUp()
     {
@@ -103,6 +126,10 @@ public class LShadeStrategyTests
         Assert.Equal(11, context.ArchiveCapacity);
     }
 
+    /// <summary>
+    /// L-SHADE writes the improvement-weighted Lehmer mean of the successful CR values into the
+    /// memory, which sits above the arithmetic mean plain SHADE uses on the same inputs.
+    /// </summary>
     [Fact]
     public void AfterGenerationUpdatesMemoryCrWithTheWeightedLehmerMean()
     {
@@ -146,6 +173,10 @@ public class LShadeStrategyTests
         Assert.Equal((2 * 0.04 + 4 * 0.25) / (2 * 0.2 + 4 * 0.5), f, 1e-9);
     }
 
+    /// <summary>
+    /// When every successful CR is zero, the terminal rule fixes the memory slot so that it yields
+    /// CR = 0 without a Gaussian draw, instead of computing a 0/0 Lehmer mean.
+    /// </summary>
     [Fact]
     public void AfterGenerationTerminalCrRuleWinsOverTheLehmerMean()
     {
@@ -182,6 +213,11 @@ public class LShadeStrategyTests
         Assert.Equal(0.0, cr, 1e-12);
     }
 
+    /// <summary>
+    /// A zero or negative evaluation budget is rejected at construction, since it would divide the
+    /// reduction schedule by a non-positive number.
+    /// </summary>
+    /// <param name="maxEvaluationNumber">The invalid evaluation budget.</param>
     [Theory]
     [InlineData(0L)]
     [InlineData(-1L)]
@@ -198,6 +234,9 @@ public class LShadeStrategyTests
             memorySize: 5));
     }
 
+    /// <summary>
+    /// A negative archive size rate is rejected at construction.
+    /// </summary>
     [Fact]
     public void ConstructorRejectsANegativeArchiveSizeRate()
     {
@@ -208,6 +247,11 @@ public class LShadeStrategyTests
             memorySize: 5));
     }
 
+    /// <summary>
+    /// The constructor rejects a minimum population size below the floor of four, and one that
+    /// exceeds the initial population size.
+    /// </summary>
+    /// <param name="minPopulationSize">The invalid minimum population size.</param>
     [Theory]
     [InlineData(3)]                       // below the floor of 4
     [InlineData(InitialPopulationSize)]   // equal handled separately; this checks > initial

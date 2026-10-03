@@ -9,6 +9,12 @@ namespace DotNetDifferentialEvolution.UnitTests.TerminationStrategies;
 [Trait("Category", "Unit")]
 public class LimitEvaluationNumberTerminationStrategyTests
 {
+    /// <summary>
+    /// The strategy terminates once the evaluation count reaches the budget, and not before.
+    /// </summary>
+    /// <param name="evaluationCount">The evaluations consumed so far.</param>
+    /// <param name="maxEvaluationNumber">The evaluation budget.</param>
+    /// <param name="expected">Whether the strategy should terminate.</param>
     [Theory]
     [InlineData(0L, 10_000L, false)]
     [InlineData(9_999L, 10_000L, false)]

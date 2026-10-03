@@ -10,6 +10,10 @@ namespace DotNetDifferentialEvolution.UnitTests.MutationStrategies;
 [Trait("Category", "Unit")]
 public class CurrentToPBestMutationStrategyTests
 {
+    /// <summary>
+    /// A p-best rate outside (0, 1] is rejected.
+    /// </summary>
+    /// <param name="pBestRate">The out-of-range p-best rate.</param>
     [Theory]
     [InlineData(0.0)]
     [InlineData(-0.1)]
@@ -17,6 +21,10 @@ public class CurrentToPBestMutationStrategyTests
     public void ConstructorThrowsWhenPBestRateIsOutOfRange(
         double pBestRate) => _ = Assert.Throws<ArgumentOutOfRangeException>(() => new CurrentToPBestMutationStrategy(pBestRate));
 
+    /// <summary>
+    /// Any p-best rate in (0, 1], including 1, is accepted.
+    /// </summary>
+    /// <param name="pBestRate">The valid p-best rate.</param>
     [Theory]
     [InlineData(0.05)]
     [InlineData(0.5)]
@@ -29,6 +37,11 @@ public class CurrentToPBestMutationStrategyTests
         Assert.NotNull(strategy);
     }
 
+    /// <summary>
+    /// The per-individual range constructor rejects a minimum or maximum rate outside (0, 1].
+    /// </summary>
+    /// <param name="pBestRateMin">The lower end of the range.</param>
+    /// <param name="pBestRateMax">The upper end of the range.</param>
     [Theory]
     [InlineData(0.0, 0.2)]    // min must be > 0
     [InlineData(-0.1, 0.2)]   // min out of range
@@ -41,6 +54,9 @@ public class CurrentToPBestMutationStrategyTests
             () => new CurrentToPBestMutationStrategy(pBestRateMin, pBestRateMax));
     }
 
+    /// <summary>
+    /// The range constructor rejects a minimum rate above the maximum.
+    /// </summary>
     [Fact]
     public void RangeConstructorThrowsWhenMinExceedsMax()
     {
@@ -48,6 +64,9 @@ public class CurrentToPBestMutationStrategyTests
             () => new CurrentToPBestMutationStrategy(pBestRateMin: 0.3, pBestRateMax: 0.2));
     }
 
+    /// <summary>
+    /// The range constructor accepts a valid range of rates.
+    /// </summary>
     [Fact]
     public void RangeConstructorAcceptsAValidPerIndividualRange()
     {
@@ -56,6 +75,12 @@ public class CurrentToPBestMutationStrategyTests
         Assert.NotNull(strategy);
     }
 
+    /// <summary>
+    /// The p-best pool holds <c>round(p * N)</c> individuals but never fewer than two, so the strategy
+    /// never degenerates into DE/current-to-best/1.
+    /// </summary>
+    /// <param name="populationSize">The population size.</param>
+    /// <param name="expectedPoolSize">The pool size the floored schedule prescribes.</param>
     [Theory]
     // p = 0.11 is the L-SHADE default. Tanabe's reference implementation sizes the pool as
     // pNP = max(round(p_best_rate * pop_size), 2) — "choose at least two best solutions" — so a
@@ -78,6 +103,9 @@ public class CurrentToPBestMutationStrategyTests
         Assert.Equal(expectedPoolSize, poolSize);
     }
 
+    /// <summary>
+    /// The p-best draw selects a rank in the fitness ranking, not a raw population index.
+    /// </summary>
     [Fact]
     public void MutateAddressesThePBestPoolThroughTheFitnessRanking()
     {

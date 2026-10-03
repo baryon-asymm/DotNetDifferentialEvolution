@@ -17,6 +17,10 @@ namespace DotNetDifferentialEvolution.UnitTests;
 [Trait("Category", "Unit")]
 public class PublicApiCompatibilityTests
 {
+    /// <summary>
+    /// The assembly still exposes a parameterless <c>RunAsync</c> returning a
+    /// <see cref="Task{TResult}"/> of <see cref="Population"/>, the method compiled 4.0.0 consumers bind to.
+    /// </summary>
     [Fact]
     public void RunAsyncKeepsAParameterlessOverloadInTheCompiledSurface()
     {
@@ -31,6 +35,10 @@ public class PublicApiCompatibilityTests
         Assert.Equal(typeof(Task<Population>), parameterless.ReturnType);
     }
 
+    /// <summary>
+    /// An overload of <c>RunAsync</c> that takes a <see cref="CancellationToken"/> exists alongside the
+    /// parameterless one.
+    /// </summary>
     [Fact]
     public void RunAsyncAlsoTakesACancellationToken()
     {

@@ -10,6 +10,10 @@ namespace DotNetDifferentialEvolution.UnitTests.ControlParameterProviders;
 [Trait("Category", "Unit")]
 public class DitheredControlParameterProviderTests
 {
+    /// <summary>
+    /// F is mapped linearly from the uniform draw onto [min, max], one draw per individual, while CR
+    /// stays at its configured value.
+    /// </summary>
     [Fact]
     public void SamplesMutationForceWithinRangeFromTheRandomDraw()
     {
@@ -29,6 +33,9 @@ public class DitheredControlParameterProviderTests
         Assert.Equal(0.85, cr1);
     }
 
+    /// <summary>
+    /// A minimum mutation force above the maximum is rejected.
+    /// </summary>
     [Fact]
     public void ConstructorThrowsWhenMinExceedsMax()
     {
@@ -36,6 +43,9 @@ public class DitheredControlParameterProviderTests
             new DitheredControlParameterProvider(minMutationForce: 0.9, maxMutationForce: 0.3, crossoverProbability: 0.5));
     }
 
+    /// <summary>
+    /// An empty range is allowed and always yields that single value, whatever the draw.
+    /// </summary>
     [Fact]
     public void AllowsEqualMinAndMax()
     {

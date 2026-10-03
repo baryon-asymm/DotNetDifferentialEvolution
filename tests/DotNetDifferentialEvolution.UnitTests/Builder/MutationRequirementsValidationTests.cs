@@ -19,24 +19,49 @@ public class MutationRequirementsValidationTests
 {
     private static SphereEvaluator Evaluator => new(dimension: 2);
 
-    public static TheoryData<IMutationStrategy> StrategiesNeedingControlParameters() =>
-        new(AllStrategiesNeedingControlParameters());
-
-    private static IMutationStrategy[] AllStrategiesNeedingControlParameters() =>
+    private static readonly string[] NamesOfStrategiesNeedingControlParameters =
     [
-        new RandMutationStrategy(),
-        new BestMutationStrategy(),
-        new CurrentToBestMutationStrategy(),
-        new RandTwoMutationStrategy(),
-        new BestTwoMutationStrategy(),
-        new CurrentToPBestMutationStrategy(0.1),
+        nameof(RandMutationStrategy),
+        nameof(BestMutationStrategy),
+        nameof(CurrentToBestMutationStrategy),
+        nameof(RandTwoMutationStrategy),
+        nameof(BestTwoMutationStrategy),
+        nameof(CurrentToPBestMutationStrategy),
     ];
 
+    /// <summary>
+    /// The type names of every built-in strategy that reads F and CR from the context, one theory
+    /// row each. The rows carry a name rather than the strategy itself because a string is
+    /// serializable, so Test Explorer can list every row; <see cref="CreateStrategy"/> builds the
+    /// instance.
+    /// </summary>
+    /// <returns>The strategy names.</returns>
+    public static TheoryData<string> StrategiesNeedingControlParameters() =>
+        [.. NamesOfStrategiesNeedingControlParameters];
+
+    private static IMutationStrategy CreateStrategy(
+        string strategyName) => strategyName switch
+        {
+            nameof(RandMutationStrategy) => new RandMutationStrategy(),
+            nameof(BestMutationStrategy) => new BestMutationStrategy(),
+            nameof(CurrentToBestMutationStrategy) => new CurrentToBestMutationStrategy(),
+            nameof(RandTwoMutationStrategy) => new RandTwoMutationStrategy(),
+            nameof(BestTwoMutationStrategy) => new BestTwoMutationStrategy(),
+            nameof(CurrentToPBestMutationStrategy) => new CurrentToPBestMutationStrategy(0.1),
+            _ => throw new ArgumentOutOfRangeException(nameof(strategyName))
+        };
+
+    /// <summary>
+    /// The builder refuses a strategy that reads F and CR from the context when no provider is paired
+    /// with it, and its message names the overload that fixes the configuration.
+    /// </summary>
+    /// <param name="strategyName">The type name of the strategy under test.</param>
     [Theory]
     [MemberData(nameof(StrategiesNeedingControlParameters))]
     public void BuildThrowsWhenAStrategyNeedingControlParametersHasNoProvider(
-        IMutationStrategy mutationStrategy)
+        string strategyName)
     {
+        var mutationStrategy = CreateStrategy(strategyName);
         var exception = Assert.Throws<InvalidOperationException>(
             () => Build(builder => builder.WithMutationStrategy(mutationStrategy)));
 
@@ -47,28 +72,42 @@ public class MutationRequirementsValidationTests
         Assert.Contains("WithMutationStrategy(strategy, provider)", exception.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The same strategies build once they are paired with a control-parameter provider.
+    /// </summary>
+    /// <param name="strategyName">The type name of the strategy under test.</param>
     [Theory]
     [MemberData(nameof(StrategiesNeedingControlParameters))]
     public void BuildSucceedsWhenTheSameStrategyIsPairedWithAProvider(
-        IMutationStrategy mutationStrategy)
+        string strategyName)
     {
+        var mutationStrategy = CreateStrategy(strategyName);
         using var de = Build(builder => builder.WithMutationStrategy(
             mutationStrategy, new ConstantControlParameterProvider(0.5, 0.9)));
 
         Assert.NotNull(de);
     }
 
+    /// <summary>
+    /// Every built-in strategy that reads F and CR from the context declares
+    /// <see cref="MutationRequirements.ControlParameters"/>.
+    /// </summary>
     [Fact]
     public void EveryStrategyNeedingControlParametersSaysSo()
     {
-        foreach (var mutationStrategy in AllStrategiesNeedingControlParameters())
+        foreach (var strategyName in NamesOfStrategiesNeedingControlParameters)
         {
+            var mutationStrategy = CreateStrategy(strategyName);
             Assert.True(
                 mutationStrategy.Requirements.HasFlag(MutationRequirements.ControlParameters),
                 $"{mutationStrategy.GetType().Name} reads F/CR from the context but does not declare it.");
         }
     }
 
+    /// <summary>
+    /// The legacy strategy declares no requirements and builds without a provider, since it takes F and
+    /// CR through its constructor.
+    /// </summary>
     [Fact]
     public void TheLegacyStrategyCarriesItsOwnParametersAndStillBuildsAlone()
     {
@@ -85,6 +124,9 @@ public class MutationRequirementsValidationTests
         Assert.NotNull(de);
     }
 
+    /// <summary>
+    /// A custom strategy that declares no requirements builds without a provider.
+    /// </summary>
     [Fact]
     public void ACustomStrategyThatDeclaresNoRequirementsBuildsAlone()
     {
@@ -93,6 +135,9 @@ public class MutationRequirementsValidationTests
         Assert.NotNull(de);
     }
 
+    /// <summary>
+    /// DE/current-to-pbest/1 declares that it reads the fitness ranking and the archive.
+    /// </summary>
     [Fact]
     public void TheCurrentToPBestStrategyDeclaresTheRankingAndArchiveItReads()
     {
@@ -102,6 +147,10 @@ public class MutationRequirementsValidationTests
         Assert.True(requirements.HasFlag(MutationRequirements.Archive));
     }
 
+    /// <summary>
+    /// Each preset variant builds, which shows that it provisions everything its own strategy requires.
+    /// </summary>
+    /// <param name="variant">The preset under test.</param>
     [Theory]
     [InlineData("jde")]
     [InlineData("jade")]

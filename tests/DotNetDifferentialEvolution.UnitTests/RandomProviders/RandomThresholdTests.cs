@@ -11,10 +11,14 @@ namespace DotNetDifferentialEvolution.UnitTests.RandomProviders;
 [Trait("Category", "Unit")]
 public class RandomThresholdTests
 {
+    /// <summary>
+    /// For many random pairs of draw and probability, the integer comparison of the scaled values gives
+    /// the same decision as the floating-point comparison it replaces.
+    /// </summary>
     [Fact]
     public void ScalingPreservesTheOrderOfTheComparisonItReplaces()
     {
-        var random = new Random(4242);
+        var random = new SeededRandomProvider(4242);
 
         for (var i = 0; i < 200_000; i++)
         {
@@ -28,6 +32,9 @@ public class RandomThresholdTests
         }
     }
 
+    /// <summary>
+    /// A probability of 1 scales to the largest <see cref="ulong"/>, so every draw passes the test.
+    /// </summary>
     [Fact]
     public void AProbabilityOfOneAcceptsEveryDraw()
     {
@@ -37,6 +44,10 @@ public class RandomThresholdTests
         Assert.True(RandomThreshold.Scale(Math.BitDecrement(1.0)) <= threshold);
     }
 
+    /// <summary>
+    /// Exactly 1.0 is clamped to the largest <see cref="ulong"/>, while the largest double below 1.0
+    /// scales exactly to 2^64 - 2^11.
+    /// </summary>
     [Fact]
     public void OneIsTheOnlyInRangeValueThatNeedsClamping()
     {
@@ -53,6 +64,10 @@ public class RandomThresholdTests
         Assert.True(RandomThreshold.Scale(largestBelowOne) < ulong.MaxValue);
     }
 
+    /// <summary>
+    /// A probability of 0 scales to zero, so only a zero draw passes and the smallest positive draw
+    /// fails.
+    /// </summary>
     [Fact]
     public void AProbabilityOfZeroAcceptsOnlyTheZeroDraw()
     {
@@ -64,6 +79,9 @@ public class RandomThresholdTests
         Assert.False(RandomThreshold.Scale(Math.Pow(2.0, -53)) <= RandomThreshold.Scale(0.0));
     }
 
+    /// <summary>
+    /// Values below 0 clamp to zero and values above 1 clamp to the largest <see cref="ulong"/>.
+    /// </summary>
     [Fact]
     public void NegativeAndOutOfRangeValuesAreClamped()
     {
