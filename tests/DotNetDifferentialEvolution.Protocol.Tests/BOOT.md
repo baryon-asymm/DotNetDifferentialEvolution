@@ -11,6 +11,10 @@ Installed 2026-10-03 from the kit `reference/dotnet/` of the `boot-api-protocol`
 (copied, not linked: the tree root is found by walking up from each source's
 `[CallerFilePath]` to `AGENTS.md`, and a linked file outside the tree would not find it).
 
+Since 2026-10-03 it also holds the guards that the GPU package's `ACCEPTANCE.md` places
+here (v1 checks 5a, 7a, 8a–8d): one transfer helper, no `GC.Collect`, and the kernel
+guards adapted from APT (`## Deviations from the kit`).
+
 ## Invariants
 
 - **Every fact refuses an empty walk.** A fact that found nothing to check fails with
@@ -27,7 +31,10 @@ None.
 
 Outside the tree: xUnit 2.9.3, Microsoft.NET.Test.Sdk 17.14.1, xunit.runner.visualstudio
 3.1.4; Python 3.8+ on `PATH` as `python` (the lint fact); the kit `reference/dotnet/` of
-the `boot-api-protocol` skill, as of 2026-10-02.
+the `boot-api-protocol` skill, as of 2026-10-02. Added 2026-10-03: Microsoft.CodeAnalysis.CSharp
+5.0.0, the semantic model of check 8c. It is the version APT pins
+(`AerospacePropellantThermodynamics`, `Directory.Packages.props`), and the NuGet audit of
+this repository, whose advisories fail the build, reports nothing against it.
 
 ## Constraints
 
@@ -73,6 +80,36 @@ Each one is marked in the code at the place it changes.
 - ⚠ **The kit's files were adapted to the repository's maximum diagnostics on
   2026-10-03** (namespace, generated regexes, naming, XML documentation): behaviour
   unchanged.
+- ⚠ **The GPU package's guards (added 2026-10-03), adapted from APT.** The source is
+  `AerospacePropellantThermodynamics`, commit `5fdd82c`, `tests/Protocol.Tests/`. Each
+  adapted file cites it in its doc comment. The GPU package's `ACCEPTANCE.md` (v1 checks
+  5a, 7a, 8a–8d) freezes the checks themselves.
+  - `KernelReachability.cs`, from APT's file of that name. The entry points are every
+    static method of the package whose first parameter is `ILGPU.Index1D`, not one
+    registry type. Each reached method is read as its generic definition, so that
+    `DrawOther<TDraws>` inside `BuildTrial<TDraws>` resolves. An interface method of the
+    tree, which a constrained call on a struct type parameter names, is followed into its
+    implementations in the interface's own assembly (`PhiloxDraws`). A call token that does
+    not resolve is a finding. The walk returns its methods, and 8a and 8b scan them.
+  - `ConstantLeftComparisons.cs`, from APT's file of that name. It compiles against the
+    host's trusted platform assemblies, which include ILGPU, instead of the assemblies
+    already loaded. It adds the SDK's implicit usings, parses as C# 12 (the package's), and
+    reports any compilation error, since an error type would read as not floating-point.
+  - `IlgpuTransfers.cs`: the private helpers of APT's
+    `NoSrcMethodPassesHostMemoryToAnIlgpuTransferByReference` (`InvariantTests.cs`), in a
+    class of their own so that 5a and 8d read one definition of a transfer.
+  - `GpuGuardTests.cs`: 5a is new here. 8b follows APT's
+    `NumericalNodesCallOnlyTheAllowedMathAndDoubleMembers`, but over the kernel-reachable
+    methods. Its frozen list is names only: APT's double-only overloads and its
+    `KernelMath`-only `IsNaN` are not adopted. 8c and 8d follow APT's facts of the same
+    subject.
+  - `GpuPackage.cs`: the package's node, assembly and sources, from
+    `ProtocolConfig.GpuPackagePath`. `ConfigTests` checks that path like the other node
+    paths of the configuration.
+  - 7a is a `ProtocolConfig.ForbiddenCallRules` entry over the package's node and its
+    descendants, held by the kit's `ForbiddenCallTests`.
+  - IL reuses this node's `IlBody`/`Instruction`, which match APT's but resolve more
+    defensively. APT's copies are not taken.
 - ⚠ **Omitted kit facts:**
   - `NoSuppressionGuardTests`: it would flag the repository's current analyzer policy,
     which is `WarningsNotAsErrors` for NU1901–NU1904 in `Directory.Build.props` and
@@ -112,6 +149,22 @@ Each one is marked in the code at the place it changes.
 
       The unmutated benchmark calls `Console` and stays green: the rule is scoped to
       `src/`.
+- [x] The GPU guards, each green on the unmutated tree and red once on its frozen mutation
+      (GPU `ACCEPTANCE.md`, v1), applied in `src/`, built, run alone, restored with `git
+      checkout` (2026-10-03, local):
+
+      | Check | Mutation | Red |
+      |---|---|---|
+      | 5a | `CopyToCPU` in the loop of `GpuDifferentialEvolution.Run` | `OnlyTheTransferHelperCallsAnIlgpuHostTransfer` |
+      | 7a | `GC.Collect()` in `GpuDifferentialEvolution.Dispose` | `ForbiddenCallTests.NoConfiguredForbiddenCallIsMade` |
+      | 8a | a `throw` in `DeStep.BuildTrial` | `KernelReachableCodeNeitherThrowsNorAllocatesNorBoxes` |
+      | 8a | a `throw` in `PhiloxDraws.NextIndex`, reached only through `IDrawSource` | the same fact |
+      | 8b | `Math.Cbrt` in `MathProbe.Probe` | `KernelReachableCodeCallsOnlyTheAllowedMathAndDoubleMembers` |
+      | 8c | `0.0 < inputs[i]` in `MathProbe.Probe` | `GpuSourcesPutNoConstantLeftOfAnOrderedFloatingComparison` |
+      | 8d | `CopyToCPU(ref hostFitness[0], length)` in `PopulationTransfers.Download` | `NoSrcMethodPassesHostMemoryToAnIlgpuTransferByReference` (5a stays green) |
+
+      Each GpuGuardTests fact also failed with "found nothing" on an emptied walk: entry
+      type `Index2D`, transfer prefix `CopyToGPU`, floating types read as `decimal`.
 - [x] Green in CI: 2026-10-03, GitHub Actions run 37090681168 on PR #12, commit `4b5d35b`, all steps green (the step "Integration tests (excluding slow and
       GPU)", which runs this node on ubuntu-latest). The job log needs a sign-in and was
       not read, so the per-test count in CI is not recorded.
