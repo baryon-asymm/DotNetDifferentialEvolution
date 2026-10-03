@@ -3,7 +3,7 @@
 ## Purpose
 
 The CPU Differential Evolution package, `DotNetDifferentialEvolution` on nuget.org
-(5.1.0 in the csproj): multi-threaded, SIMD-accelerated, classic DE with several
+(6.0.0 in the csproj, 5.1.0 the latest published): multi-threaded, SIMD-accelerated, classic DE with several
 mutation schemes plus jDE, JADE, SHADE and L-SHADE, built through a staged fluent
 builder. The objective contract and the solution type come from the shared
 `DotNetOptimization.Abstractions` package, so one objective drives every optimizer of
@@ -16,10 +16,11 @@ This node owns the two entry points, `DifferentialEvolutionBuilder` and
 
 - **Every public member carries XML documentation.** `GenerateDocumentationFile` is on
   and warnings are errors, so a missing comment fails the build. Held by the build.
-- **The public surface is diffed against the last released baseline (4.0.0) on every
+- **The public surface is diffed against the last released baseline (5.1.0) on every
   pack.** Deliberate breaks are listed, machine-generated, in
-  `CompatibilitySuppressions.xml` (19 entries on 2026-10-02). Held by package
-  validation and the CI "Pack" step.
+  `CompatibilitySuppressions.xml` (5 entries on 2026-10-03: the `SelectSurvivor` rename
+  and the two removed `MutationStrategy` constructors). Held by package validation and
+  the CI "Pack" step.
 - **Internals are visible to the unit-test assembly only** (`InternalsVisibleTo
   DotNetDifferentialEvolution.UnitTests`), so internal helpers are tested directly
   without becoming public.
@@ -77,9 +78,9 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       `WorkerLifecycleTests` (2), `CancellationTests` (5), `ResourceUsageTests` (1).
 - [x] The children are described: 2026-10-02, brownfield slices 3 to 5 (commits
       `1faf888`, `c293ccb`, `c8bf78f`).
-- [ ] ⚠ The validation baseline is 4.0.0 although 4.1.0 and 5.1.0 shipped; the csproj
-      explains that 4.1.0 was not yet downloadable when it was set, and the suppression
-      file therefore folds the 4.1.0 changes in a second time.
+- [x] ⚠ The validation baseline was 4.0.0 although 4.1.0 and 5.1.0 shipped, so the
+      suppression file folded the 4.1.0 changes in a second time. Closed 2026-10-03:
+      baseline 5.1.0, suppression file regenerated (`dotnet pack … -p:ApiCompatGenerateSuppressionFile=true`).
 - [ ] ⚠ `WithPopulationUpdateHandler` accepts `null` without a check, unlike every other
       `With…` that takes an object.
 - [ ] ⚠ A variant is configured when it is chosen, against the population size and
