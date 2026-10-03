@@ -85,6 +85,12 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
   (`Devices/LibDevice/BOOT.md`). No ILGPU.Algorithms. The package's own kernels call no
   `Exp`, `Log` or `Pow`; a caller's objective can.
 
+  Measured once, 2026-10-03, RTX 5070 Ti, CUDA Toolkit 13.4, a scratch program outside the
+  tree: an objective of `Exp(−x) + Log(x)² + Pow(x, 1.37)` per gene, N = 65 536, D = 10,
+  300 generations, seed 1, the run alone (`Build` excluded), median of three runs after a
+  warm-up: 2 864 ms with ILGPU.Algorithms (commit `860ba28`), 159.5 ms with libdevice
+  (about 18 times faster). The two results differed in the last bit.
+
   ⚠ 2026-10-03: was "every context is built with `EnableAlgorithms()`", which missed the
   4-ULP bound of check D2 on CUDA (Exp 195, Log 9 430, Pow 24 ULP), now libdevice →
   HISTORY.md#libdevice-port-2026-10-03
