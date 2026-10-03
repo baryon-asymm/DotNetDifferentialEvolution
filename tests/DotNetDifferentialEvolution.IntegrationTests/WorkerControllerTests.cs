@@ -2,6 +2,7 @@ using DotNetDifferentialEvolution.Controllers;
 using DotNetDifferentialEvolution.Controllers.WorkerControllerEventHandlers;
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.Models;
+using DotNetDifferentialEvolution.RandomProviders;
 using DotNetDifferentialEvolution.TerminationStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
 using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
@@ -18,6 +19,10 @@ public class WorkerControllerTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// A single seeded worker drives the 2-D Rosenbrock problem to its optimum, completes the
+    /// result task when the termination strategy fires, and is no longer running afterwards.
+    /// </summary>
     [Fact]
     public async Task ConvergesAndStopsOnTermination()
     {
@@ -37,6 +42,10 @@ public class WorkerControllerTests
         Assert.False(worker.IsRunning);
     }
 
+    /// <summary>
+    /// An exception thrown by the fitness function surfaces as the single inner exception of an
+    /// <see cref="AggregateException"/> on the result task, and the worker stops.
+    /// </summary>
     [Fact]
     public async Task PropagatesFitnessFunctionExceptionAndStops()
     {
@@ -59,9 +68,13 @@ public class WorkerControllerTests
         Assert.False(worker.IsRunning);
     }
 
-    // Bounded, deterministic replacement for the old 60-second wall-clock stop/start test:
-    // a fixed number of random (but seeded) start/stop commands walked against an expected
-    // state machine, then a clean termination. Slow because it still exercises real threads.
+    /// <summary>
+    /// A fixed number of random (but seeded) start/stop commands, walked against an expected state
+    /// machine, keep <see cref="WorkerController.IsRunning"/> consistent and throw exactly when the
+    /// contract says they must; the worker then terminates cleanly. Bounded, deterministic
+    /// replacement for the old 60-second wall-clock stop/start test. Slow because it still
+    /// exercises real threads.
+    /// </summary>
     [Fact]
     [Trait("Category", "Slow")]
     public async Task RandomStopAndStartKeepsConsistentStateThenTerminates()
@@ -77,7 +90,7 @@ public class WorkerControllerTests
         var handler = new OrchestratorWorkerHandler(Memory<WorkerController>.Empty, context);
         using var worker = new WorkerController(workerId: 0, executor, handler);
 
-        var random = new Random(20240601);
+        var random = new SeededRandomProvider(20240601);
         var state = BuildStateMachine();
 
         for (var i = 0; i < commandCount; i++)

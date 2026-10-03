@@ -22,6 +22,11 @@ public class SeededReproducibilityTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
 
+    /// <summary>
+    /// Two runs with the same seed and worker count report bit-identical best value, best genes and
+    /// population fitness values.
+    /// </summary>
+    /// <param name="workers">The number of worker threads both runs use.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
@@ -36,6 +41,11 @@ public class SeededReproducibilityTests
         Assert.Equal(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>
+    /// With zero generations the run reports the sampled initial population, and the same seed
+    /// samples it identically.
+    /// </summary>
+    /// <param name="workers">The number of worker threads both runs use.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
@@ -48,6 +58,10 @@ public class SeededReproducibilityTests
         Assert.Equal(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>
+    /// Two different seeds lead to different final populations.
+    /// </summary>
+    /// <param name="workers">The number of worker threads both runs use.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
@@ -60,6 +74,9 @@ public class SeededReproducibilityTests
         Assert.NotEqual(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>
+    /// Without <c>WithSeed</c> two runs differ, so the default builder chain stays unseeded.
+    /// </summary>
     [Fact]
     public async Task AnUnseededRunIsStillFreeToDiffer()
     {
@@ -71,6 +88,11 @@ public class SeededReproducibilityTests
         Assert.NotEqual(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>
+    /// A seeded JADE run, which also draws from the control-parameter provider and from the
+    /// orchestrator's archive eviction, reproduces its best value and population exactly.
+    /// </summary>
+    /// <param name="workers">The number of worker threads both runs use.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]

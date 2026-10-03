@@ -16,6 +16,11 @@ public class CancellationTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// Cancelling from inside generation 5 completes the run task as canceled at the next barrier,
+    /// before generation 6 starts.
+    /// </summary>
+    /// <param name="workers">The number of worker threads the run uses.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
@@ -35,6 +40,10 @@ public class CancellationTests
         Assert.Equal(5, observer.Generations);
     }
 
+    /// <summary>
+    /// A token that is already canceled when the run starts stops it before a single generation is
+    /// evolved.
+    /// </summary>
     [Fact]
     public async Task ATokenAlreadyCanceledStopsTheRunBeforeAnyGeneration()
     {
@@ -50,6 +59,10 @@ public class CancellationTests
         Assert.Equal(0, observer.Generations);
     }
 
+    /// <summary>
+    /// Disposing an optimizer whose run was canceled stops and joins every worker thread within the
+    /// timeout.
+    /// </summary>
     [Fact]
     public async Task ACanceledRunDisposesWithoutHanging()
     {
@@ -70,6 +83,10 @@ public class CancellationTests
         }
     }
 
+    /// <summary>
+    /// A token that is never canceled changes nothing: the run evolves every generation and returns
+    /// a population.
+    /// </summary>
     [Fact]
     public async Task AnUncanceledRunIsUnaffected()
     {
@@ -84,6 +101,10 @@ public class CancellationTests
         Assert.NotNull(result);
     }
 
+    /// <summary>
+    /// The overload without a token still runs to the termination condition and returns a
+    /// population.
+    /// </summary>
     [Fact]
     public async Task RunAsyncWithoutATokenStillWorks()
     {

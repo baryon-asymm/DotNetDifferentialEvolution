@@ -28,6 +28,10 @@ public class NaNFitnessTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// A worker whose scan starts at a NaN individual still reports the real-valued minimum as the
+    /// best.
+    /// </summary>
     [Fact]
     public async Task PerWorkerScanDoesNotReportANaNIndividualAsTheBest()
     {
@@ -43,6 +47,10 @@ public class NaNFitnessTests
         AssertBestIsTheLiveMinimum(result);
     }
 
+    /// <summary>
+    /// When one worker's stripe is all NaN, the reduction across workers still reports the other
+    /// worker's real-valued best.
+    /// </summary>
     [Fact]
     public async Task CrossWorkerReductionDoesNotReportANaNIndividualAsTheBest()
     {
@@ -62,6 +70,10 @@ public class NaNFitnessTests
         AssertBestIsTheLiveMinimum(result);
     }
 
+    /// <summary>
+    /// With a generation strategy installed, the orchestrator's whole-population scan passes over a
+    /// NaN individual and reports the real-valued minimum.
+    /// </summary>
     [Fact]
     public async Task PopulationScanDoesNotReportANaNIndividualAsTheBest()
     {
@@ -78,6 +90,10 @@ public class NaNFitnessTests
         AssertBestIsTheLiveMinimum(result);
     }
 
+    /// <summary>
+    /// When every individual is NaN the population scan still reports a valid index into the
+    /// population.
+    /// </summary>
     [Fact]
     public async Task PopulationScanWithAnAllNaNPopulationStillReportsAnInRangeIndex()
     {
@@ -94,6 +110,10 @@ public class NaNFitnessTests
         Assert.True(double.IsNaN(FitnessAt(result, result.BestIndividualIndex)));
     }
 
+    /// <summary>
+    /// The initial best the builder computes and hands to the first mutation is not the individual
+    /// whose evaluation returned NaN.
+    /// </summary>
     [Fact]
     public async Task BuilderDoesNotHandANaNIndividualToMutationAsTheInitialBest()
     {
@@ -120,6 +140,10 @@ public class NaNFitnessTests
         Assert.NotEqual(0, mutationStrategy.FirstSeenBestIndividualIndex);
     }
 
+    /// <summary>
+    /// End to end, a JADE run whose first initial evaluation returns NaN reports the real-valued
+    /// minimum of its final population as the best.
+    /// </summary>
     [Fact]
     public async Task JadeRunWithANaNInTheInitialPopulationReportsAFiniteBest()
     {

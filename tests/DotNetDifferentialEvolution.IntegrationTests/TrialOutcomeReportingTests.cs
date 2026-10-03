@@ -28,6 +28,10 @@ public class TrialOutcomeReportingTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// The built-in greedy selection accepts a tying trial and records it as
+    /// <see cref="SelectionOutcome.TrialAccepted"/>, not as an improvement.
+    /// </summary>
     [Fact]
     public async Task TheBuiltInStrategyTakesATieWithoutCreditingItAsAnImprovement()
     {
@@ -40,6 +44,10 @@ public class TrialOutcomeReportingTests
         Assert.All(recorder.Outcomes, outcome => Assert.Equal(SelectionOutcome.TrialAccepted, outcome));
     }
 
+    /// <summary>
+    /// Under a selection strategy that keeps every parent, every trial is recorded as
+    /// <see cref="SelectionOutcome.ParentKept"/>.
+    /// </summary>
     [Fact]
     public async Task ARejectEverythingSelectionStrategyIsReportedAsKeepingTheParent()
     {
@@ -50,6 +58,11 @@ public class TrialOutcomeReportingTests
         Assert.All(recorder.Outcomes, outcome => Assert.Equal(SelectionOutcome.ParentKept, outcome));
     }
 
+    /// <summary>
+    /// The executor records the outcome the selection strategy returns, even
+    /// <see cref="SelectionOutcome.TrialImproved"/> for a tie, instead of recomputing one of its
+    /// own.
+    /// </summary>
     [Fact]
     public async Task AStrategyThatCallsATieAnImprovementIsReportedAsItClaims()
     {

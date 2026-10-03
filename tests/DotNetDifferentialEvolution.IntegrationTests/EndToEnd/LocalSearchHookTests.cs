@@ -15,7 +15,13 @@ namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 public class LocalSearchHookTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
+    private static readonly int[] ExpectedRefinementGenerations = [2, 4, 6];
 
+    /// <summary>
+    /// A refiner registered for every second generation runs on generations 2, 4 and 6 of a
+    /// six-generation run, and the best individual it snaps to the origin is still the best in the
+    /// returned population.
+    /// </summary>
     [Fact]
     public async Task RefinerRunsOnConfiguredCadenceAndWriteBackSurvivesIntoResult()
     {
@@ -37,7 +43,7 @@ public class LocalSearchHookTests
         result.MoveCursorToBestIndividual();
 
         // Cadence: 6 generations, every 2nd → fired at 2, 4, 6.
-        Assert.Equal(new[] { 2, 4, 6 }, refiner.Generations);
+        Assert.Equal(ExpectedRefinementGenerations, refiner.Generations);
 
         // Write-back: the refiner snapped the best to the Sphere optimum (origin, value 0), and
         // that survived selection and termination into the final result.
@@ -48,6 +54,10 @@ public class LocalSearchHookTests
         }
     }
 
+    /// <summary>
+    /// The evaluations a refiner reports are added to the run's evaluation count, on top of the
+    /// initial population and one trial per individual per generation.
+    /// </summary>
     [Fact]
     public async Task RefinerEvaluationsAreFoldedIntoEvaluationCount()
     {
