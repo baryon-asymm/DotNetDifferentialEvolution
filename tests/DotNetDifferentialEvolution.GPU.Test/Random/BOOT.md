@@ -39,7 +39,7 @@ helper that check 1b ([Kernels](../Kernels/API.md)) uses.
   `GpuKernels.PhiloxBlocks`, `GpuKernels.DrawSequence`, `StepParameters`; public
   `GpuDevice` (InternalsVisibleTo).
 
-Outside the tree: ILGPU 1.5.3 and ILGPU.Algorithms (`Context`, CPU, CUDA and OpenCL
+Outside the tree: ILGPU 1.5.3 (`Context`, CPU, CUDA and OpenCL
 accelerators), xUnit.
 
 ## Constraints
