@@ -31,6 +31,7 @@ frozen; their numbers are copied, never chosen here.
 
 ## Dependencies
 
+- [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md)
   — the builder, `GpuDifferentialEvolution`, `GpuOptimizationResult`,
   `GpuPopulationSnapshot`, `IGpuPopulationUpdatedHandler`; internally

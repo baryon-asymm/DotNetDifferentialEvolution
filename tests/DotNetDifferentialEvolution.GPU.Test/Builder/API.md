@@ -11,7 +11,6 @@ population `Build` samples.
 | 1a: seeded, N = 1000, D = 3, box [−2, 5]: every gene is in [lower, upper) | `EveryGeneIsInTheBox` | ✅ |
 | 1a: per gene, χ² on 20 bins is under the 0.999 quantile (df = 19, computed) | `EachGenePassesAChiSquaredTestOnTwentyBins` | ✅ |
 | 1a: the evaluation count after `Build` is N | `BuildCostsNEvaluations` | ✅ |
-| The χ² quantile and Γ helper match closed forms (df = 2, df = 20, Γ(9.5)) | `ChiSquaredTests` | ✅ |
 | B1: bounds of different lengths, empty, lower > upper, non-finite → `ArgumentException` from `WithBounds` | the four bounds cases | ✅ |
 | B1: N < 4, N·D > `int.MaxValue` → `ArgumentOutOfRangeException` | the two population cases | ✅ |
 | B1: F not finite or ≤ 0; CR outside [0, 1] → `ArgumentOutOfRangeException` | the F and CR cases | ✅ |
@@ -30,12 +29,6 @@ public class InitialSamplingTests
     public void EveryGeneIsInTheBox();
     public void EachGenePassesAChiSquaredTestOnTwentyBins();
     public void BuildCostsNEvaluations();
-}
-public class ChiSquaredTests
-{
-    public void TheQuantileForTwoDegreesOfFreedomIsMinusTwoLnOfTheTail();
-    public void TheQuantileForTwentyDegreesOfFreedomSatisfiesTheFiniteSumForm();
-    public void GammaOfNineAndAHalfMatchesTheDoubleFactorialForm();
 }
 public class BuilderErrorTests
 {
@@ -61,6 +54,5 @@ public class BuilderErrorTests
 }
 ```
 
-Internal helpers: `ChiSquared` (statistic, CDF, quantile, ln Γ of half-integers),
-`Sphere`, `Throwing` (an objective with a `throw`), `IgnoringHandler`, and
+Internal helpers: `Sphere`, `Throwing` (an objective with a `throw`), `IgnoringHandler`, and
 `ForeignDevice`/`ForeignAccelerator` (an accelerator of type 99).

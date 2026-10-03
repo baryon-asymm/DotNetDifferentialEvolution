@@ -30,6 +30,8 @@ numbers (4 ULP, 10⁴ arguments) are copied, never chosen here.
 
 ## Dependencies
 
+- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector`, `AcceleratorLease`, `MathProbe` (internal).
+- [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md)
   — the builder, `GpuDeviceInfo`; internally `DeviceSelector`, `Backend`, `MathProbe`
   (its child documents do not exist yet).

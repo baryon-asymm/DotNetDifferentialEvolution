@@ -9,6 +9,30 @@ namespace DotNetDifferentialEvolution.GPU.Test.Random;
 [Trait("Category", "Unit")]
 public class ChiSquaredTests
 {
+    /// <summary>
+    /// Γ(9.5), the half-integer behind 19 degrees of freedom (check 1a), is <c>18! / (4⁹·9!)·√π</c>: the odd
+    /// branch of <see cref="ChiSquared.LogGammaOfHalf"/> against a closed form it shares no code with.
+    /// </summary>
+    [Fact]
+    public void GammaOfNineAndAHalfMatchesTheDoubleFactorialForm()
+    {
+        var factorial18 = 1.0;
+        for (var k = 2; k <= 18; k++)
+        {
+            factorial18 *= k;
+        }
+
+        var factorial9 = 1.0;
+        for (var k = 2; k <= 9; k++)
+        {
+            factorial9 *= k;
+        }
+
+        var expected = factorial18 / (Math.Pow(4.0, 9.0) * factorial9) * Math.Sqrt(Math.PI);
+
+        Assert.Equal(Math.Log(expected), ChiSquared.LogGammaOfHalf(19), 1e-12);
+    }
+
     /// <summary>df = 2: the 0.999 quantile is <c>−2 ln(0.001)</c> and the CDF is <c>1 − e^(−x/2)</c>.</summary>
     [Fact]
     public void TwoDegreesOfFreedomMatchTheClosedForm()

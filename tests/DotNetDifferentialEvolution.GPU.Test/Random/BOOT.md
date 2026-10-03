@@ -32,6 +32,8 @@ helper that check 1b ([Kernels](../Kernels/API.md)) uses.
 
 ## Dependencies
 
+- [Kernels](../../../src/DotNetDifferentialEvolution.GPU/Kernels/API.md) — the DE step and the kernels (internal).
+- [Random](../../../src/DotNetDifferentialEvolution.GPU/Random/API.md) — Philox4x32-10, the draw sources and conversions (internal).
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md) —
   internal `Philox4x32x10`, `PhiloxBlock`, `PhiloxDraws`, `DrawConversions`,
   `GpuKernels.PhiloxBlocks`, `GpuKernels.DrawSequence`, `StepParameters`; public

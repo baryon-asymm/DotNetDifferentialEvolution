@@ -19,10 +19,10 @@ frozen before the code; their numbers are copied, never chosen here.
   runs `GpuKernels.Initialize` on ILGPU's CPU accelerator into buffers laid out as
   `GpuDifferentialEvolution` lays them out (seed 1, N = 1000, D = 3, [−2, 5]). The
   evaluation count is read from `Build`'s optimizer (`EvaluationCount`, internal).
-- **The χ² threshold is computed, not typed**: `ChiSquared.Quantile(0.999, 19)` by
-  bisection on the series of the regularized incomplete gamma function, with Γ of
-  half-integers by exact recurrence. Its positive controls are closed forms: df = 2
-  (`−2·ln 0.001`), df = 20 (finite sum), Γ(9.5) (`18!/(4⁹·9!)·√π`).
+- **The χ² threshold is computed, not typed**: `ChiSquared.Quantile(0.999, 19)` of
+  [Random](../Random/API.md), whose closed-form controls include Γ(9.5), the
+  half-integer behind df = 19. (This node had its own copy of the helper until
+  2026-10-03; it was merged into Random's, the Γ(9.5) control with it.)
 - **An accelerator of another type is hand-made** (`ForeignAccelerator`, type 99,
   through ILGPU's public `DeviceTypeAttribute`): ILGPU 1.5.3 defines only CPU, Cuda
   and OpenCL. It is never run.
@@ -33,6 +33,9 @@ frozen before the code; their numbers are copied, never chosen here.
 
 ## Dependencies
 
+- [Kernels](../../../src/DotNetDifferentialEvolution.GPU/Kernels/API.md) — the DE step and the kernels (internal).
+- [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
+- [Random](../Random/API.md) — `ChiSquared`, the quantile helper.
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md)
   — the builder and `GpuDifferentialEvolution`; internally `KernelLauncher<TFunction>`,
   `PopulationViews`, `StepParameters`, `DeStep.CrossoverThreshold` (its child

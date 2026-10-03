@@ -1,4 +1,5 @@
 using DotNetDifferentialEvolution.GPU.Kernels;
+using DotNetDifferentialEvolution.GPU.Test.Random;
 using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
@@ -54,7 +55,7 @@ public class InitialSamplingTests(ITestOutputHelper output)
 
         for (var j = 0; j < GenomeSize; j++)
         {
-            var counts = new int[Bins];
+            var counts = new long[Bins];
             for (var i = 0; i < PopulationSize; i++)
             {
                 var position = (genes[i * GenomeSize + j] - LowerBound) / (UpperBound - LowerBound);

@@ -18,8 +18,7 @@ and the kernel writes only slot i.
 
 ## Dependencies
 
-- [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md) —
-  `GeneView`.
+- [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
 
 ## Constraints
 

@@ -312,8 +312,7 @@ readonly struct DotNetDifferentialEvolution.MutationStrategies.MutationContext
     Span<Double> TrialIndividual { get; init; }
 
 class DotNetDifferentialEvolution.MutationStrategies.MutationStrategy : IMutationStrategy
-    .ctor(Double mutationForce, Double crossoverProbability, Int32 populationSize, ReadOnlyMemory<Double> lowerBound, ReadOnlyMemory<Double> upperBound)
-    .ctor(Double mutationForce, Double crossoverProbability, Int32 populationSize, ReadOnlyMemory<Double> lowerBound, ReadOnlyMemory<Double> upperBound, BaseRandomProvider randomProvider)
+    .ctor(Double mutationForce, Double crossoverProbability)
     Int32 MinimumPopulationSize { get; }
     MutationRequirements Requirements { get; }
     Void Mutate(in MutationContext context)
@@ -349,7 +348,7 @@ sealed class DotNetDifferentialEvolution.RandomProviders.SeededRandomProvider : 
     UInt64 NextULong()
 
 interface DotNetDifferentialEvolution.SelectionStrategies.Interfaces.ISelectionStrategy
-    SelectionOutcome Select(Int32 individualIndex, Double trialIndividualFfValue, Span<Double> trialIndividual, Span<Double> populationFfValues, Span<Double> population, Span<Double> nextPopulationFfValues, Span<Double> nextPopulation)
+    SelectionOutcome SelectSurvivor(Int32 individualIndex, Double trialIndividualFfValue, Span<Double> trialIndividual, Span<Double> populationFfValues, Span<Double> population, Span<Double> nextPopulationFfValues, Span<Double> nextPopulation)
 
 enum DotNetDifferentialEvolution.SelectionStrategies.SelectionOutcome : Int32
     ParentKept = 0
@@ -359,7 +358,7 @@ enum DotNetDifferentialEvolution.SelectionStrategies.SelectionOutcome : Int32
 class DotNetDifferentialEvolution.SelectionStrategies.SelectionStrategy : ISelectionStrategy
     .ctor(Int32 genomeSize)
     .ctor(Int32 genomeSize, Boolean acceptsTies)
-    SelectionOutcome Select(Int32 individualIndex, Double trialIndividualFfValue, Span<Double> trialIndividual, Span<Double> populationFfValues, Span<Double> population, Span<Double> nextPopulationFfValues, Span<Double> nextPopulation)
+    SelectionOutcome SelectSurvivor(Int32 individualIndex, Double trialIndividualFfValue, Span<Double> trialIndividual, Span<Double> populationFfValues, Span<Double> population, Span<Double> nextPopulationFfValues, Span<Double> nextPopulation)
 
 interface DotNetDifferentialEvolution.TerminationStrategies.Interfaces.ITerminationStrategy
     Boolean ShouldTerminate(Population population)
@@ -426,118 +425,90 @@ class DotNetDifferentialEvolution.Benchmark.BenchmarkTesters.SimpleSumTester
 static class DotNetDifferentialEvolution.Benchmark.ConvergenceComparison
     static Void Run()
 
+== DotNetDifferentialEvolution.Benchmark.Runner
+
 == DotNetDifferentialEvolution.GPU
 
-interface DotNetDifferentialEvolution.GPU.Controllers.Kernels.Interfaces.IKernelController : IDisposable
-    HostPopulation? GetCurrentPopulationOrNull()
-    Void CompileAndGpuMemoryAlloc()
-    Void Init()
-    Void Run()
-    Void Run(CancellationToken cancellationToken)
+enum DotNetDifferentialEvolution.GPU.GpuDevice : Int32
+    Auto = 0
+    Cpu = 3
+    Cuda = 1
+    OpenCL = 2
 
-sealed class DotNetDifferentialEvolution.GPU.Controllers.Kernels.KernelController`4 : IDisposable, IKernelController
-    .ctor(Context context, Accelerator device, IPopulationSamplingMaker populationSamplingMaker, TFitnessFunctionInvoker fitnessFunction, TRandomGenerator randomGenerator, TMutationStrategy mutationStrategy, TSelectionStrategy selectionStrategy, ITerminationStrategy terminationStrategy, IUpdateOptimizerHandler? updatedPopulationHandler = null)
-    HostPopulation? GetCurrentPopulationOrNull()
-    Void CompileAndGpuMemoryAlloc()
-    Void Dispose()
-    Void Init()
-    Void Run()
-    Void Run(CancellationToken cancellationToken)
+sealed class (record) DotNetDifferentialEvolution.GPU.GpuDeviceInfo : IEquatable<GpuDeviceInfo>
+    .ctor(GpuDevice Kind, String Name, String? FallbackReason)
+    GpuDevice Kind { get; init; }
+    String Name { get; init; }
+    String? FallbackReason { get; init; }
 
-sealed class DotNetDifferentialEvolution.GPU.DifferentialEvolutionOptimizer : IDifferentialEvolutionOptimizer<OptimizationResult>, IDisposable
-    .ctor(IKernelController kernelController)
-    Task<OptimizationResult> RunAsync()
-    Task<OptimizationResult> RunAsync(CancellationToken cancellationToken)
+sealed class DotNetDifferentialEvolution.GPU.GpuDifferentialEvolution : IDisposable
+    GpuDeviceInfo Device { get; }
+    Task<GpuOptimizationResult> RunAsync(CancellationToken cancellationToken = null)
     Void Dispose()
 
-interface DotNetDifferentialEvolution.GPU.Interfaces.IDifferentialEvolutionOptimizer`1
-    Task<T> RunAsync()
-    Task<T> RunAsync(CancellationToken cancellationToken)
+static class DotNetDifferentialEvolution.GPU.GpuDifferentialEvolutionBuilder
+    static IGpuBoundsRequired<TFunction> ForFunction<TFunction>(TFunction function)
 
-interface DotNetDifferentialEvolution.GPU.Interfaces.IFitnessFunctionInvoker
-    Void Invoke(Int32 individualIndex, DevicePopulation devicePopulation)
+sealed class DotNetDifferentialEvolution.GPU.GpuOptimizationResult : ISolution
+    Double FitnessFunctionValue { get; }
+    GpuDeviceInfo Device { get; }
+    Int32 Generations { get; }
+    Int64 EvaluationCount { get; }
+    ReadOnlyMemory<Double> Genes { get; }
 
-interface DotNetDifferentialEvolution.GPU.Interfaces.IUpdateOptimizerHandler
-    Void Handle(OptimizerState state, Accelerator device, Int32 generation, HostPopulation population)
-
-enum DotNetDifferentialEvolution.GPU.Interfaces.OptimizerState : Int32
-    Running = 1
-    Starting = 0
-    Terminating = 2
-
-readonly struct DotNetDifferentialEvolution.GPU.Models.DevicePopulation
-    .ctor(ArrayView1D<Double, Stride1D.Dense> fitnessFunctionValues, ArrayView2D<Double, Stride2D.DenseX> individuals)
-    ArrayView1D<Double, Stride1D.Dense> FitnessFunctionValues { get; }
-    ArrayView2D<Double, Stride2D.DenseX> Individuals { get; }
+sealed class DotNetDifferentialEvolution.GPU.GpuPopulationSnapshot
+    Int32 Generation { get; }
+    Int32 GenomeSize { get; }
     Int32 PopulationSize { get; }
-    Int32 VectorSize { get; }
+    Int64 EvaluationCount { get; }
+    ReadOnlyMemory<Double> FitnessFunctionValues { get; }
+    ReadOnlyMemory<Double> Genes { get; }
 
-class DotNetDifferentialEvolution.GPU.Models.HostPopulation
-    .ctor(MemoryBuffer1D<Double, Stride1D.Dense> fitnessFunctionValues, MemoryBuffer2D<Double, Stride2D.DenseX> individuals)
-    DevicePopulation DevicePopulation { get; }
-    MemoryBuffer1D<Double, Stride1D.Dense> FitnessFunctionValues { get; }
-    MemoryBuffer2D<Double, Stride2D.DenseX> Individuals { get; }
+interface DotNetDifferentialEvolution.GPU.IGpuBoundsRequired`1
+    IGpuPopulationSizeRequired<TFunction> WithBounds(ReadOnlyMemory<Double> lowerBound, ReadOnlyMemory<Double> upperBound)
 
-class DotNetDifferentialEvolution.GPU.Models.Individual
-    .ctor(Double fitnessFunctionValue, IEnumerable<Double> vector)
-    Double FitnessFunctionValue { get; }
-    ReadOnlyCollection<Double> Vector { get; }
+interface DotNetDifferentialEvolution.GPU.IGpuDeviceRequired`1
+    IGpuDifferentialEvolutionBuilder<TFunction> OnAccelerator(Accelerator accelerator)
+    IGpuDifferentialEvolutionBuilder<TFunction> OnDevice(GpuDevice device)
 
-class DotNetDifferentialEvolution.GPU.Models.OptimizationResult
-    .ctor(Double fitnessFunctionValue, IEnumerable<Double> individual)
-    Double FitnessFunctionValue { get; }
-    ReadOnlyCollection<Double> Individual { get; }
+interface DotNetDifferentialEvolution.GPU.IGpuDifferentialEvolutionBuilder`1
+    GpuDifferentialEvolution Build()
+    IGpuDifferentialEvolutionBuilder<TFunction> WithPopulationUpdateHandler(IGpuPopulationUpdatedHandler handler, Int32 everyNGenerations = 1)
+    IGpuDifferentialEvolutionBuilder<TFunction> WithSeed(Int32 seed)
 
-interface DotNetDifferentialEvolution.GPU.MutationStrategies.Interfaces.IMutationStrategy`1
-    Void Mutate(Int32 index, DevicePopulation currentPopulation, DevicePopulation trialPopulation, TRandomGenerator random)
+interface DotNetDifferentialEvolution.GPU.IGpuMutationStrategyRequired`1
+    IGpuTerminationConditionRequired<TFunction> WithDefaultMutationStrategy(Double mutationForce, Double crossoverProbability)
 
-readonly struct DotNetDifferentialEvolution.GPU.MutationStrategies.MutationStrategy`1 : IMutationStrategy<TRandomGenerator>
-    .ctor(ArrayView<Double> lowerBound, ArrayView<Double> upperBound, Double mutationForce = 0.3, Double crossoverFactor = 0.8)
-    Void Mutate(Int32 index, DevicePopulation currentPopulation, DevicePopulation trialPopulation, TRandomGenerator random)
+interface DotNetDifferentialEvolution.GPU.IGpuPopulationSizeRequired`1
+    IGpuMutationStrategyRequired<TFunction> WithPopulationSize(Int32 populationSize)
 
-interface DotNetDifferentialEvolution.GPU.PopulationSamplingMakers.Interfaces.IPopulationSamplingMaker
-    Double[,] TakeSamples()
-    Int32 GetPopulationSize()
+interface DotNetDifferentialEvolution.GPU.IGpuPopulationUpdatedHandler
+    Void Handle(GpuPopulationSnapshot snapshot)
 
-class DotNetDifferentialEvolution.GPU.PopulationSamplingMakers.PopulationSamplingMaker : IPopulationSamplingMaker
-    .ctor(Int32 populationSize, IEnumerable<Double> upperBound, IEnumerable<Double> lowerBound)
-    Double[,] TakeSamples()
-    Int32 GetPopulationSize()
+interface DotNetDifferentialEvolution.GPU.IGpuTerminationConditionRequired`1
+    IGpuDeviceRequired<TFunction> WithEvaluationLimit(Int64 maxEvaluations)
+    IGpuDeviceRequired<TFunction> WithGenerationLimit(Int32 maxGenerations)
 
-interface DotNetDifferentialEvolution.GPU.RandomGenerators.Interfaces.IRandomGenerator
-    Double NextDouble(Int32 index)
-    Int32 Next(Int32 index)
-    Single NextFloat(Int32 index)
-    UInt32 NextUInt(Int32 index)
+readonly struct DotNetDifferentialEvolution.GPU.Objectives.GeneView : IEquatable<GeneView>
+    Boolean Equals(GeneView other)
+    Boolean Equals(Object? obj)
+    Double this[Int32 index] { get; }
+    Int32 GetHashCode()
+    Int32 Length { get; }
+    static Boolean op_Equality(GeneView left, GeneView right)
+    static Boolean op_Inequality(GeneView left, GeneView right)
 
-struct DotNetDifferentialEvolution.GPU.RandomGenerators.RandomGenerator : IRandomGenerator
-    .ctor(ArrayView<XorShift32> xorShifts)
-    Double NextDouble(Int32 index)
-    Int32 Next(Int32 index)
-    Single NextFloat(Int32 index)
-    UInt32 NextUInt(Int32 index)
+interface DotNetDifferentialEvolution.GPU.Objectives.IGpuFitnessFunction
+    Double Evaluate(GeneView genes)
 
-interface DotNetDifferentialEvolution.GPU.SelectionStrategies.Interfaces.ISelectionStrategy
-    Void Select(Int32 index, DevicePopulation currentPopulation, DevicePopulation nextPopulation, DevicePopulation trialPopulation)
+== DotNetDifferentialEvolution.Tests.Common
 
-readonly struct DotNetDifferentialEvolution.GPU.SelectionStrategies.SelectionStrategy : ISelectionStrategy
-    Void Select(Int32 index, DevicePopulation currentPopulation, DevicePopulation nextPopulation, DevicePopulation trialPopulation)
-
-interface DotNetDifferentialEvolution.GPU.TerminationStrategies.Interfaces.ITerminationStrategy
-    Boolean IsMustTerminate(Accelerator device, Int32 generation, HostPopulation population)
-
-class DotNetDifferentialEvolution.GPU.TerminationStrategies.MaxGenerationStrategy : ITerminationStrategy
-    .ctor(Int32 maxGenerationCount)
-    Boolean IsMustTerminate(Accelerator device, Int32 generation, HostPopulation population)
-
-== DotNetDifferentialEvolution.Tests.Shared
-
-sealed class DotNetDifferentialEvolution.Tests.Shared.Fakes.DeterministicRandomProvider : BaseRandomProvider
+sealed class DotNetDifferentialEvolution.Tests.Common.Fakes.DeterministicRandomProvider : BaseRandomProvider
     .ctor(Int32 seed = 0)
     Double NextDouble()
     Int32 Next(Int32 maxValue)
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.Fakes.ScriptedRandomProvider : BaseRandomProvider
+sealed class DotNetDifferentialEvolution.Tests.Common.Fakes.ScriptedRandomProvider : BaseRandomProvider
     .ctor(IEnumerable<Int32>? ints = null, IEnumerable<Double>? doubles = null)
     Boolean CycleWhenExhausted { get; init; }
     Double NextDouble()
@@ -545,7 +516,7 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.Fakes.ScriptedRandomProvid
     Int32 IntDrawCount { get; }
     Int32 Next(Int32 maxValue)
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.AckleyEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.AckleyEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -553,7 +524,7 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.BealeEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.BealeEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor()
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -561,11 +532,11 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-static class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.BenchmarkFunctionCatalog
+static class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.BenchmarkFunctionCatalog
     static BenchmarkFunctionEvaluator Create(String name, Int32 dimension)
     static IEnumerable<BenchmarkFunctionEvaluator> WithKnownMinimizer(Int32 dimension)
 
-abstract class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.BenchmarkFunctionEvaluator : IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+abstract class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.BenchmarkFunctionEvaluator : IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     Double Evaluate(Int32 workerIndex, ReadOnlySpan<Double> genes)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -575,7 +546,7 @@ abstract class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluator
     ReadOnlyMemory<Double> GetUpperBounds()
     String Name { get; }
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.BoothEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.BoothEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor()
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -583,19 +554,19 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.DixonPriceEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.DixonPriceEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.ExceptionRosenbrockEvaluator : RosenbrockEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.ExceptionRosenbrockEvaluator : RosenbrockEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 throwExceptionAt, Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Int32 ThrowExceptionAt { get; init; }
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.GriewankEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.GriewankEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -603,20 +574,20 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.HimmelblauEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.HimmelblauEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor()
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-interface DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces.ITestFitnessFunctionEvaluator : IFitnessFunctionEvaluator
+interface DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.Interfaces.ITestFitnessFunctionEvaluator : IFitnessFunctionEvaluator
     Double GetGlobalMinimumFfValue()
     ReadOnlyMemory<Double> GetGlobalMinimumGenes()
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.LevyEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.LevyEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -624,7 +595,7 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.NaNSphereEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.NaNSphereEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 firstNaNEvaluation, Int32 lastNaNEvaluation = 2147483647, Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -634,7 +605,7 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.RastriginEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.RastriginEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -642,7 +613,7 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.RosenbrockEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.RosenbrockEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -652,19 +623,19 @@ class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Rosenbr
     const Double A = 1
     const Double B = 100
 
-class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.RosenbrockException : Exception, ISerializable
+class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.RosenbrockException : Exception, ISerializable
     .ctor()
     .ctor(String message)
     .ctor(String message, Exception innerException)
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.SchwefelEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.SchwefelEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.SimpleSumEvaluator : IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.SimpleSumEvaluator : IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(ReadOnlyMemory<Double> lowerBounds, ReadOnlyMemory<Double> upperBounds)
     Double Evaluate(Int32 workerIndex, ReadOnlySpan<Double> genes)
     Double Evaluate(ReadOnlySpan<Double> genes)
@@ -673,7 +644,7 @@ class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.SimpleS
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.SphereEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.SphereEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -681,7 +652,7 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.StyblinskiTangEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.StyblinskiTangEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -691,7 +662,7 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     const Double Minimizer = -2.903534
     const Double MinimumValuePerDimension = -39.16599
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.SumOfDifferentPowersEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.SumOfDifferentPowersEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -699,7 +670,7 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.ZakharovEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
+sealed class DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.ZakharovEvaluator : BenchmarkFunctionEvaluator, IFitnessFunctionEvaluator, ITestFitnessFunctionEvaluator
     .ctor(Int32 dimension = 2)
     Double Evaluate(ReadOnlySpan<Double> genes)
     Double GetGlobalMinimumFfValue()
@@ -707,15 +678,15 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-class DotNetDifferentialEvolution.Tests.Shared.Helpers.PopulationHelper
+class DotNetDifferentialEvolution.Tests.Common.Helpers.PopulationHelper
     .ctor(Int32 populationSize, Int32 genomeSize)
     Memory<Double> Population { get; }
     Memory<Double> PopulationFfValues { get; }
     Memory<Double> TrialPopulation { get; }
     Memory<Double> TrialPopulationFfValues { get; }
     Void EvaluatePopulationFfValues(IFitnessFunctionEvaluator evaluator)
-    Void InitializePopulationWithRandomValues(ReadOnlySpan<Double> lowerBounds, ReadOnlySpan<Double> upperBounds, Random? random = null)
+    Void InitializePopulationWithRandomValues(ReadOnlySpan<Double> lowerBounds, ReadOnlySpan<Double> upperBounds, BaseRandomProvider? random = null)
 
-static class DotNetDifferentialEvolution.Tests.Shared.Helpers.ProblemContextHelper
+static class DotNetDifferentialEvolution.Tests.Common.Helpers.ProblemContextHelper
     static ProblemContext CreateContext(Int32 populationSize, ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator, ITerminationStrategy terminationStrategy, IControlParameterProvider? controlParameterProvider, Int32? seed = null)
     static ProblemContext CreateContext(Int32 populationSize, ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator, ITerminationStrategy terminationStrategy, Int32 workersCount = 1, Int32? seed = null, IGenerationStrategy? generationStrategy = null)

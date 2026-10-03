@@ -30,11 +30,10 @@ here. The tests of 0.x left with its code → HISTORY.md#tests-of-0x-2026-10-03.
 
 ## Dependencies
 
-- [DotNetDifferentialEvolution.GPU](../../src/DotNetDifferentialEvolution.GPU/API.md) — the
-  package under test, its internals included (`InternalsVisibleTo`).
+None.
 
-Each child declares the package nodes it checks. Outside the tree: xUnit 2.9.3,
-xunit.runner.visualstudio 3.1.4, Microsoft.NET.Test.Sdk 17.14.1, coverlet.collector 6.0.0;
+No type of this node's own directory refers to the package; each child declares the package
+nodes it checks. Outside the tree: xUnit 2.9.3, xunit.runner.visualstudio 3.1.4, Microsoft.NET.Test.Sdk 17.14.1, coverlet.collector 6.0.0;
 ILGPU 1.5.3. The project also references the CPU package, for check 1g only; the GPU package
 does not.
 
