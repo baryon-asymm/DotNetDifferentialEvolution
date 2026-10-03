@@ -88,7 +88,7 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 ## Decomposition
 
 One child per package area, mirroring `src/DotNetDifferentialEvolution`:
-[Algorithms](Algorithms/API.md), [Builder](Builder/API.md),
+[AlgorithmExecutors](AlgorithmExecutors/API.md) (since 2026-10-03), [Algorithms](Algorithms/API.md), [Builder](Builder/API.md),
 [ControlParameterProviders](ControlParameterProviders/API.md),
 [FitnessFunctions](FitnessFunctions/API.md) (checks the shared benchmark library, not the
 package), [Helpers](Helpers/API.md), [Models](Models/API.md),

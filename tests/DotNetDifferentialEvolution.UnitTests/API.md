@@ -13,12 +13,14 @@ points upward: it is what the CPU package may consider proven part by part.
 | jDE, JADE, SHADE and L-SHADE update their parameters as their papers specify | U0, [Algorithms](Algorithms/API.md) | ✅ |
 | The engine's generator is uniform, normal where it should be, seed-determined, with unrelated adjacent seeds | U1, [RandomProviders](RandomProviders/API.md) | ✅ |
 | The builder refuses incoherent configurations and assembles each preset as documented | U2, [Builder](Builder/API.md) | ✅ |
+| `AlgorithmExecutor` alone refuses a strategy that reads F and CR when the context has no provider | U0, [AlgorithmExecutors](AlgorithmExecutors/API.md) | ✅ |
 | The parameterless `RunAsync` stays in the compiled surface | Surface, this node | ✅ |
 | The engine's threads, barrier and cancellation | — | integration tests |
 
 ## Children
 
-[Algorithms](Algorithms/API.md), [Builder](Builder/API.md),
+[AlgorithmExecutors](AlgorithmExecutors/API.md), [Algorithms](Algorithms/API.md),
+[Builder](Builder/API.md),
 [ControlParameterProviders](ControlParameterProviders/API.md),
 [FitnessFunctions](FitnessFunctions/API.md), [Helpers](Helpers/API.md),
 [Models](Models/API.md), [MutationStrategies](MutationStrategies/API.md) and

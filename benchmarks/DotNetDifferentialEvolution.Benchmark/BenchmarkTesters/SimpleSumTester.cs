@@ -1,7 +1,6 @@
 using BenchmarkDotNet.Attributes;
 using DotNetDifferentialEvolution.AlgorithmExecutors;
 using DotNetDifferentialEvolution.AlgorithmExecutors.Interfaces;
-using DotNetDifferentialEvolution.Benchmark.RandomGenerators;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;

@@ -12,7 +12,8 @@ are the test projects' ([UnitTests](../../tests/DotNetDifferentialEvolution.Unit
 
 - **Every variant gets the same evaluation budget** in the comparison (300 000): four
   run with a fixed population of 100, L-SHADE with its paper's initial `18·D`.
-- **The throughput benchmark is seeded**; the comparison is not.
+- **Both modes are seeded.** The comparison since 2026-10-03, with seed 1 on all
+  processors, so it repeats on one machine.
 - **It builds with the solution**, so a breaking API change fails CI's build step here
   too, though CI never runs it.
 
@@ -24,6 +25,9 @@ are the test projects' ([UnitTests](../../tests/DotNetDifferentialEvolution.Unit
   each run.
 - [TerminationStrategies](../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — the evaluation limit.
+- [FitnessFunctionEvaluators](../../tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
+  — `RastriginEvaluator`, `AckleyEvaluator`, the comparison's objectives (2026-10-03;
+  before, the node's own copies in `Benchmark/Functions`).
 - [TerminationStrategies/Interfaces](../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 Outside the tree: BenchmarkDotNet 0.14.0; `DotNetOptimization.Abstractions` 1.0.0
@@ -46,12 +50,14 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       0.000E+000. Ackley: 3.997E-015 for all but SHADE (7.550E-015). One run: these
       are an observation, not a ranking.
 - [ ] The BenchmarkDotNet mode was not run in this reconstruction.
-- [ ] ⚠ The comparison is unseeded and runs once per cell, so its table cannot be
-      reproduced or compared across changes; `WithSeed` exists (`3f3d394`).
-- [ ] ⚠ `ConvergenceComparison.cs` imports `DotNetDifferentialEvolution.Interfaces` and
-      uses nothing from it.
-- [ ] ⚠ Dead or duplicated code in the children: see
-      [Functions](Functions/BOOT.md) and [RandomGenerators](RandomGenerators/BOOT.md).
+- [x] The comparison is seeded: 2026-10-03, `WithSeed(1)` on every variant. It is still
+      one run per cell, so a difference between two cells is an observation, not a
+      ranking.
+- [x] No dead or duplicated code: 2026-10-03. The children `Functions` (second copies of
+      the shared Rastrigin and Ackley, same formulas, read side by side 2026-10-02) and
+      `RandomGenerators` (`DeterminedRandomProvider`, constructed by nothing) are removed;
+      the comparison uses the shared evaluators. The unused import of
+      `DotNetDifferentialEvolution.Interfaces` in `ConvergenceComparison.cs` is gone too.
 
 ## Taboos
 
@@ -62,5 +68,5 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 ## Decomposition
 
 - This node: `Program.cs` (the mode switch) and `ConvergenceComparison`.
-- [BenchmarkTesters](BenchmarkTesters/API.md), [Functions](Functions/API.md),
-  [RandomGenerators](RandomGenerators/API.md).
+- [BenchmarkTesters](BenchmarkTesters/API.md). `Functions` and `RandomGenerators`
+  were removed on 2026-10-03 as dead or duplicated code.

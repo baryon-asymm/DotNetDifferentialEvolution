@@ -3,8 +3,8 @@
 ## Purpose
 
 Three ways to run the engine below the builder (one thread, one controller, master and
-slaves), one way to run it through the builder several times, and the one assertion
-of convergence. It holds no tests.
+slaves), one way to run it once through the builder, seeded, and the one assertion of
+convergence. It holds no tests.
 
 ## Invariants
 
@@ -44,14 +44,19 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 ## Acceptance criteria
 
 - [x] Used by the root node, `Concurrency` and `EndToEnd`: 2026-10-02, by search.
-- [ ] ⚠ `BestOfAsync` keeps the best of 3 or 4 unseeded attempts. Its summary justifies
-      this by "the public builder API seeds itself from `Random.Shared`", which was true
-      when it was written; `WithSeed` arrived later (`3f3d394`, 2026-07-28) and the
-      convergence tests could now be seeded. As
-      written, a variant that converged only one time in four would pass.
-- [ ] ⚠ `MultiWorkerHarness.StartAll` starts the master first and calls that the
-      production order; production starts it last
-      (`DifferentialEvolution.RunAsync`).
+- [x] One seeded run per convergence test, no best-of-N: 2026-10-03.
+      `BestOfAsync` (best of 3 or 4 unseeded attempts, written before `WithSeed`,
+      `3f3d394`) is replaced by `RunOnceAsync`, with the seed `BuilderOptimizer.Seed = 1`
+      fixed before any run. All 25 EndToEnd convergence cases (the 4 `Slow` ones
+      included) pass at seed 1. As a measurement, not a choice, seeds 2 to 21 were each
+      run once on the same build (local, Windows 11): all 20 passed
+      all 25 cases (500 runs, no failure). That bounds what one seed hides; it is no
+      proof for other seeds or engine versions. Still non-degenerate when seeded (2026-10-03,
+      scratch worktree): selection never taking an improvement turns all 25 red.
+- [x] `MultiWorkerHarness.StartAll` starts the slaves first and the master last, the
+      production order (`DifferentialEvolution.RunAsync`): 2026-10-03. It used to start
+      the master first while its summary called that the production order. No test was
+      shown to depend on the order; this is fidelity to production, not a fix seen red.
 - [ ] ⚠ `ExecutorFactory` silently drops a seed for more than one worker; its remark
       says why (reproducibility holds per worker count) but callers are not told.
 

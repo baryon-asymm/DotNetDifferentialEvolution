@@ -60,6 +60,7 @@ public class DeVariantTests
     }
 
     [Theory]
+    [InlineData("jde", SelectionOutcome.TrialAccepted)]
     [InlineData("jade", SelectionOutcome.ParentKept)]
     [InlineData("shade", SelectionOutcome.TrialAccepted)]
     [InlineData("lshade", SelectionOutcome.TrialAccepted)]
@@ -71,9 +72,12 @@ public class DeVariantTests
         // keeps the parent when f(x) <= f(u); SHADE Eq. (6) and L-SHADE Algorithm 2 line 12 take
         // the trial, as does Tanabe's reference implementation in its `==` branch. Checked through
         // the assembled preset rather than on SelectionStrategy directly, because the defect this
-        // guards against is a variant being wired to the wrong rule.
+        // guards against is a variant being wired to the wrong rule. jDE installs no rule of its
+        // own and keeps the engine default, which takes the trial; that row pins the current
+        // behaviour, not a paper (no source for jDE's tie rule is cited yet).
         using var de = BuildPreset(builder => preset switch
         {
+            "jde" => builder.WithJde(),
             "jade" => builder.WithJade(),
             "shade" => builder.WithShade(),
             _ => builder.WithLShade(EvaluationBudget)

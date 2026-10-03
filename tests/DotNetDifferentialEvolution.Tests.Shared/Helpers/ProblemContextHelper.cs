@@ -1,3 +1,4 @@
+using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
@@ -18,7 +19,33 @@ public static class ProblemContextHelper
         ITerminationStrategy terminationStrategy,
         int workersCount = 1,
         int? seed = null,
-        IGenerationStrategy? generationStrategy = null)
+        IGenerationStrategy? generationStrategy = null) =>
+        Create(populationSize, testFitnessFunctionEvaluator, terminationStrategy, workersCount, seed,
+            generationStrategy, controlParameterProvider: null);
+
+    /// <remarks>
+    /// <paramref name="controlParameterProvider"/> is init-only on the context, so it has to be
+    /// passed here. Passing null builds the context the builder would refuse for a strategy that
+    /// reads F and CR, which is what the executor's own guard is tested with. A separate overload,
+    /// not an optional parameter, so that callers of the other one do not name the provider type.
+    /// </remarks>
+    public static ProblemContext CreateContext(
+        int populationSize,
+        ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator,
+        ITerminationStrategy terminationStrategy,
+        IControlParameterProvider? controlParameterProvider,
+        int? seed = null) =>
+        Create(populationSize, testFitnessFunctionEvaluator, terminationStrategy, workersCount: 1, seed,
+            generationStrategy: null, controlParameterProvider);
+
+    private static ProblemContext Create(
+        int populationSize,
+        ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator,
+        ITerminationStrategy terminationStrategy,
+        int workersCount,
+        int? seed,
+        IGenerationStrategy? generationStrategy,
+        IControlParameterProvider? controlParameterProvider)
     {
         ArgumentNullException.ThrowIfNull(testFitnessFunctionEvaluator);
 
@@ -51,6 +78,7 @@ public static class ProblemContextHelper
             trialPopulationFfValues: populationHelper.TrialPopulationFfValues)
         {
             GenerationStrategy = generationStrategy,
+            ControlParameterProvider = controlParameterProvider,
             RandomSeed = seed
         };
 

@@ -29,7 +29,7 @@ public class MutationStrategyConvergenceTests
     {
         var evaluator = new SphereEvaluator(dimension: 5);
 
-        var best = await BuilderOptimizer.BestOfAsync(attempts: 3, Timeout, () => Build(strategy, evaluator));
+        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () => Build(strategy, evaluator));
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-3);
     }
@@ -58,6 +58,7 @@ public class MutationStrategyConvergenceTests
             .WithDefaultSelectionStrategy()
             .WithTerminationCondition(new StagnationStreakTerminationStrategy(2000, 1e-12))
             .UseProcessors(1)
+            .WithSeed(BuilderOptimizer.Seed)
             .Build();
     }
 }

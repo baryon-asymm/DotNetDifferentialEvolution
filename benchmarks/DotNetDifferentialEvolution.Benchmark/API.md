@@ -24,10 +24,11 @@ public static class ConvergenceComparison
 
 Runs DE/rand/1/bin, jDE, JADE and SHADE with population 100 and L-SHADE with
 `18·D = 540`, each on all processors and stopped at the same evaluation budget, and
-prints the best value reached (lower is better). Unseeded: each run prints new numbers.
+prints the best value reached (lower is better). The objectives are the shared library's
+`RastriginEvaluator` and `AckleyEvaluator` at 30 dimensions. Seeded (seed 1): the table
+repeats on one machine; a machine with another processor count runs other worker
+counts, hence other runs.
 
 ## Children
 
 - [BenchmarkTesters](BenchmarkTesters/API.md) — the BenchmarkDotNet class.
-- [Functions](Functions/API.md) — the two objectives of the comparison.
-- [RandomGenerators](RandomGenerators/API.md) — a seeded provider nothing uses.

@@ -61,9 +61,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
       improvement turned all 9 cases of `MutationStrategyConvergenceTests` and
       `AdaptiveVariantsConvergenceTests` red; a shifted local-search cadence turned
       `Refiner_RunsOnConfiguredCadence_AndWriteBackSurvivesIntoResult` red.
-- [ ] ⚠ The convergence tests are unseeded and keep the best of 3 or 4 attempts
-      ([TestSupport](../TestSupport/BOOT.md)); a variant that converges one time in four
-      passes.
+- [x] Each convergence test is one run seeded with `BuilderOptimizer.Seed` (2026-10-03,
+      [TestSupport](../TestSupport/BOOT.md)); it used to keep the best of 3 or 4 unseeded
+      attempts, so a variant converging one time in four passed.
 - [ ] ⚠ Two code blocks of `docs/AGENT_GUIDE.md` are compiled by no test: the objective
       contract's signatures (§2) and `RunAsync(cancellationToken)` (cancellation).
 - [ ] ⚠ `RandMutationStrategy` is reached only through jDE, and

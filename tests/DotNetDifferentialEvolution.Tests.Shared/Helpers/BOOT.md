@@ -22,6 +22,8 @@ test behind the whole engine. This node builds one from a test objective.
 - [Models](../../../src/DotNetDifferentialEvolution/Models/API.md) — `ProblemContext`.
 - [GenerationStrategies](../../../src/DotNetDifferentialEvolution/GenerationStrategies/API.md)
   — `IGenerationStrategy`.
+- [ControlParameterProviders](../../../src/DotNetDifferentialEvolution/ControlParameterProviders/API.md)
+  — `IControlParameterProvider`, the optional provider (2026-10-03).
 - [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md)
   — `ITerminationStrategy`.
 
@@ -43,13 +45,13 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 - [ ] ⚠ A seed here does not reproduce a builder run with the same seed: the helper
       samples with `System.Random(seed)`, the builder with `SeededRandomProvider(seed +
       W + 1)`.
-- [ ] ⚠ Dead code, checked 2026-10-02 by searching `tests/` and `benchmarks/`:
-      `GenerateBoundsHelper` has no caller, and neither has the parameterless
-      `PopulationHelper.InitializePopulationWithRandomValues`. `PopulationHelper` itself is
-      used only by `ProblemContextHelper`; the GPU test project has its own unrelated
-      class of the same name.
-- [ ] ⚠ The only XML documentation in this node is the remark on `CreateContext`; the
-      three classes and their other members have none.
+- [x] No dead code: 2026-10-03, `GenerateBoundsHelper` and the parameterless
+      `PopulationHelper.InitializePopulationWithRandomValues` removed. Both had no caller
+      in `tests/` or `benchmarks/` (searched 2026-10-02), and the build of the solution
+      confirmed it. `PopulationHelper` itself is used only by `ProblemContextHelper`; the
+      GPU test project has its own unrelated class of the same name.
+- [ ] ⚠ The only XML documentation in this node is the remarks on `CreateContext`; the
+      two classes and their other members have none.
 
 ## Taboos
 

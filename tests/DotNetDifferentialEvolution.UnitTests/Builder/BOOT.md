@@ -57,21 +57,26 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-- [x] Green: 2026-10-02, 53 cases in 3 classes (builder 15, requirements 20,
-      variants 18).
+- [x] Green: 2026-10-03, 54 cases in 3 classes (builder 15, requirements 20,
+      variants 19); 53 on 2026-10-02, before the jDE tie row.
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. Dropping the
       lower-above-upper check in `WithBounds` turned
       `WithBounds_ThrowsWhenLowerExceedsUpper` red; dropping both control-parameter
       guards turned 7 cases red, among them
       `BuildThrowsWhenAStrategyNeedingControlParametersHasNoProvider` and
       `AThirdPartyVariantGetsTheSameControlParameterCheckAsABuiltIn`.
-- [ ] ⚠ Two guards refuse a missing F/CR provider: the builder's in
-      `EnsureReadyStateToBuild` and `AlgorithmExecutor`'s constructor, which `Build`
-      also reaches. Measured on the same clone: removing either one alone leaves all 53
-      green. The suite proves that `Build` refuses, not which guard does; the
-      executor's guard for hand-built contexts is not tested here.
-- [ ] ⚠ `EachPresetInstallsItsOwnPapersRuleForATie` covers JADE, SHADE and L-SHADE;
-      jDE's tie rule is not pinned.
+- [x] Each of the two guards against a missing F/CR provider is pinned on its own
+      (2026-10-03). The builder's guard (`EnsureReadyStateToBuild`) is pinned here by its
+      message, which names `WithMutationStrategy(strategy, provider)`. The executor's
+      guard, which `Build` also reaches, is pinned in
+      [AlgorithmExecutors](../AlgorithmExecutors/BOOT.md). Until then, removing either
+      guard alone left all 53 cases green (measured 2026-10-02). Shown red 2026-10-03,
+      scratch worktree: the builder's guard disabled alone turns the 6 cases of
+      `BuildThrowsWhenAStrategyNeedingControlParametersHasNoProvider` red.
+- [x] `EachPresetInstallsItsOwnPapersRuleForATie` has a jDE row (2026-10-03): ties
+      accepted, the current behaviour. Shown red 2026-10-03: jDE built with
+      `acceptsTies: false` turns that row red. The source is still open
+      ([Variants](../../../src/DotNetDifferentialEvolution/Variants/BOOT.md)).
 - [ ] ⚠ The tests depend on five private field names; a rename fails them by design.
 
 ## Taboos

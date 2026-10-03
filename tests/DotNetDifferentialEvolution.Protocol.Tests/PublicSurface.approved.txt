@@ -426,21 +426,6 @@ class DotNetDifferentialEvolution.Benchmark.BenchmarkTesters.SimpleSumTester
 static class DotNetDifferentialEvolution.Benchmark.ConvergenceComparison
     static Void Run()
 
-class DotNetDifferentialEvolution.Benchmark.Functions.AckleyEvaluator : IFitnessFunctionEvaluator
-    .ctor()
-    Double Evaluate(Int32 workerIndex, ReadOnlySpan<Double> genes)
-    Double Evaluate(ReadOnlySpan<Double> genes)
-
-class DotNetDifferentialEvolution.Benchmark.Functions.RastriginEvaluator : IFitnessFunctionEvaluator
-    .ctor()
-    Double Evaluate(Int32 workerIndex, ReadOnlySpan<Double> genes)
-    Double Evaluate(ReadOnlySpan<Double> genes)
-
-class DotNetDifferentialEvolution.Benchmark.RandomGenerators.DeterminedRandomProvider : BaseRandomProvider
-    .ctor(Int32 Seed)
-    Double NextDouble()
-    Int32 Next(Int32 maxValue)
-
 == DotNetDifferentialEvolution.GPU
 
 interface DotNetDifferentialEvolution.GPU.Controllers.Kernels.Interfaces.IKernelController : IDisposable
@@ -722,9 +707,6 @@ sealed class DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.
     ReadOnlyMemory<Double> GetLowerBounds()
     ReadOnlyMemory<Double> GetUpperBounds()
 
-static class DotNetDifferentialEvolution.Tests.Shared.Helpers.GenerateBoundsHelper
-    static ReadOnlyMemory<Double> GenerateBounds(Int32 length, Double initialValue)
-
 class DotNetDifferentialEvolution.Tests.Shared.Helpers.PopulationHelper
     .ctor(Int32 populationSize, Int32 genomeSize)
     Memory<Double> Population { get; }
@@ -732,8 +714,8 @@ class DotNetDifferentialEvolution.Tests.Shared.Helpers.PopulationHelper
     Memory<Double> TrialPopulation { get; }
     Memory<Double> TrialPopulationFfValues { get; }
     Void EvaluatePopulationFfValues(IFitnessFunctionEvaluator evaluator)
-    Void InitializePopulationWithRandomValues()
     Void InitializePopulationWithRandomValues(ReadOnlySpan<Double> lowerBounds, ReadOnlySpan<Double> upperBounds, Random? random = null)
 
 static class DotNetDifferentialEvolution.Tests.Shared.Helpers.ProblemContextHelper
+    static ProblemContext CreateContext(Int32 populationSize, ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator, ITerminationStrategy terminationStrategy, IControlParameterProvider? controlParameterProvider, Int32? seed = null)
     static ProblemContext CreateContext(Int32 populationSize, ITestFitnessFunctionEvaluator testFitnessFunctionEvaluator, ITerminationStrategy terminationStrategy, Int32 workersCount = 1, Int32? seed = null, IGenerationStrategy? generationStrategy = null)

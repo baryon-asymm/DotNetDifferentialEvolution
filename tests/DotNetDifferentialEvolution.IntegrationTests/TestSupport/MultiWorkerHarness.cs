@@ -33,12 +33,14 @@ internal sealed class MultiWorkerHarness : IDisposable
 
     public OrchestratorWorkerHandler Handler { get; }
 
-    /// <summary>Starts the master first, then every slave (matching the production order).</summary>
+    /// <summary>Starts every slave, then the master (the production order:
+    /// <c>DifferentialEvolution.RunAsync</c> starts the workers in the order they were created,
+    /// the master last).</summary>
     public void StartAll()
     {
-        _master.Start();
         foreach (var slave in _slaves)
             slave.Start();
+        _master.Start();
     }
 
     /// <summary>Gets whether any worker (master or slave) is still running.</summary>

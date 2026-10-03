@@ -49,8 +49,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 - [ ] ⚠ Only the classic legacy scheme is measured; the p-best strategies, the adaptive
       hooks and the multi-worker barrier have no throughput benchmark.
 - [ ] ⚠ Three fields (`_mutationStrategy`, `_selectionStrategy`, `_context`) are kept
-      but never read after construction; `RandomProviders` and the `RandomGenerators`
-      namespace are imported and unused.
+      but never read after construction; `RandomProviders` is imported and unused.
+      (The unused import of `Benchmark.RandomGenerators` went with that node,
+      2026-10-03.)
 
 ## Taboos
 

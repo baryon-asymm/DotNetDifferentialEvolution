@@ -30,13 +30,6 @@ public class PopulationHelper
 
     public Memory<double> TrialPopulationFfValues => _memory[(2 * _populationSize * _genomeSize + _populationSize)..];
 
-    public void InitializePopulationWithRandomValues()
-    {
-        var random = Random.Shared;
-        for (var i = 0; i < _populationSize * _genomeSize; i++)
-            _memory.Span[i] = random.NextDouble();
-    }
-
     public void InitializePopulationWithRandomValues(
         ReadOnlySpan<double> lowerBounds,
         ReadOnlySpan<double> upperBounds,

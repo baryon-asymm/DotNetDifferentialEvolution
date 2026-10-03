@@ -39,6 +39,10 @@ public class MutationRequirementsValidationTests
             () => Build(builder => builder.WithMutationStrategy(mutationStrategy)));
 
         Assert.Contains("control", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        // The builder's own guard, not the executor's second one (UnitTests/AlgorithmExecutors):
+        // only the builder can name the overload that fixes the configuration.
+        Assert.Contains("WithMutationStrategy(strategy, provider)", exception.Message, StringComparison.Ordinal);
     }
 
     [Theory]

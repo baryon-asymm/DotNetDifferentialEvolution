@@ -72,7 +72,7 @@ Python 3.8+ (`tools/protocol-lint`).
       232 passed; `Category!=Slow&Category!=Gpu` 232 + 70 passed, exit code 0 for both.
 - [x] The GPU tests pass on a machine with an OpenCL device: 2026-10-02,
       `tests/DotNetDifferentialEvolution.GPU.Test`, 2 of 2 passed (local).
-- [x] The tree passes `protocol_lint` without errors or warnings: 2026-10-03, 76 nodes,
+- [x] The tree passes `protocol_lint` without errors or warnings: 2026-10-03, 75 nodes,
       `python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates`.
 - [x] Every test node of the repository was shown red once: 2026-10-02, mutations in
       scratch clones (GPU tests in slice 2, unit tests in slice 7, integration tests in
@@ -106,7 +106,7 @@ Python 3.8+ (`tools/protocol-lint`).
 
 ## Decomposition
 
-76 nodes. `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
+75 nodes. `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
 nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 
 | Node | Role | Nodes | Readiness defined by |
@@ -114,10 +114,10 @@ nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 | [DotNetDifferentialEvolution](src/DotNetDifferentialEvolution/API.md) | the CPU package | 28 | UnitTests (U0–U2, surface) and IntegrationTests (I0–I3) |
 | [DotNetDifferentialEvolution.GPU](src/DotNetDifferentialEvolution.GPU/API.md) | the GPU package | 15 | GPU.Test (L2 only) |
 | [Tests.Shared](tests/DotNetDifferentialEvolution.Tests.Shared/API.md) | CPU test support: benchmark functions, fakes, context helper | 5 | its consumers |
-| [UnitTests](tests/DotNetDifferentialEvolution.UnitTests/API.md) | the CPU package part by part | 14 | — |
+| [UnitTests](tests/DotNetDifferentialEvolution.UnitTests/API.md) | the CPU package part by part | 15 | — |
 | [IntegrationTests](tests/DotNetDifferentialEvolution.IntegrationTests/API.md) | the CPU engine as a whole | 4 | — |
 | [GPU.Test](tests/DotNetDifferentialEvolution.GPU.Test/API.md) | two end-to-end GPU runs | 3 | — |
-| [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/API.md) | throughput and convergence measurement, no assertions | 4 | — |
+| [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/API.md) | throughput and convergence measurement, no assertions | 2 | — |
 | [protocol-lint](tools/protocol-lint/API.md) | the tree's file-level checks | 1 | its own tests |
 | [Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/API.md) | the reflection checks (§13): documents against compiled code | 1 | mutations, once |
 
@@ -128,19 +128,12 @@ one cycle is inside the CPU package (`Models` and the hook contracts; see its
 
 The open findings with the most weight, each recorded in full in its node:
 
-- `AlgorithmExecutor`'s control-parameter guard is tested by nothing on its own
-  ([UnitTests/Builder](tests/DotNetDifferentialEvolution.UnitTests/Builder/BOOT.md)).
-- The convergence tests are unseeded best-of-3/4
-  ([IntegrationTests/TestSupport](tests/DotNetDifferentialEvolution.IntegrationTests/TestSupport/BOOT.md)).
-- jDE's tie rule has neither a source nor a test
+- jDE's tie rule is pinned by a test but has no cited source
   ([Variants](src/DotNetDifferentialEvolution/Variants/BOOT.md)).
 - Two documented divergences of L-SHADE from Tanabe's code
   ([Lshade](src/DotNetDifferentialEvolution/Algorithms/Lshade/BOOT.md),
   [Shade](src/DotNetDifferentialEvolution/Algorithms/Shade/BOOT.md)).
 - Approximate declared optima for Schwefel and Styblinski-Tang
   ([FitnessFunctionEvaluators](tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/BOOT.md)).
-- Dead or duplicated code in test support and benchmarks
-  ([Tests.Shared/Helpers](tests/DotNetDifferentialEvolution.Tests.Shared/Helpers/BOOT.md),
-  [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/BOOT.md)).
 - The GPU package diverges from the CPU package in semantics a user may carry over
   ([GPU](src/DotNetDifferentialEvolution.GPU/BOOT.md)).

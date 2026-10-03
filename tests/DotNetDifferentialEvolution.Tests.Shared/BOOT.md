@@ -44,10 +44,9 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - [x] Builds with 0 warnings: 2026-10-02, `dotnet build -c Release` of the project.
 - [x] Every child is used by at least one consumer, with the exceptions recorded in
       [Helpers](Helpers/BOOT.md): 2026-10-02, by searching `tests/` and `benchmarks/`.
-- [ ] ⚠ The taboo on second copies is already broken: the benchmark project defines its
-      own `AckleyEvaluator` and `RastriginEvaluator` (`Benchmark/Functions`, bare
-      `IFitnessFunctionEvaluator`, no bounds). Their formulas match the ones here as of
-      2026-10-02 (read side by side). Recorded for slice 9.
+- [x] No second copies: 2026-10-03, the benchmark's own `AckleyEvaluator` and
+      `RastriginEvaluator` (`Benchmark/Functions`) are removed and the comparison uses
+      the ones here.
 
 ## Taboos
 
