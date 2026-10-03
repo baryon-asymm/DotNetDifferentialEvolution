@@ -120,9 +120,12 @@ what this document recommends.
    F and CR buffers on the device and their update between launches, a design of its
    own.
 5. **Precision**: open. Recommendation: keep `double` for v1 (CPU parity, comparable
-   results). Measure `float` on the reference device (`gfx1036`) before offering it;
-   consumer GPUs run FP64 at a fraction of the FP32 rate, so the gain may be large, but
-   it is not measured here.
+   results). Measure `float` on both reference devices (`gfx1036` over OpenCL, RTX
+   5070 Ti over CUDA) before offering it. Consumer GPUs run FP64 at a fraction of the
+   FP32 rate, so the gain may be large, but nobody has measured it: not here, and not in
+   the two ILGPU projects on the same machine. Both use only `double`, for physics
+   reasons; CPM withdrew its "FP64 at 1/64 on GeForce" figure as unmeasured (CPM
+   `HISTORY.md`, 2026-09-27).
 6. **Objective interface**: open. Today `IFitnessFunctionInvoker.Invoke` writes into the
    population itself, so a buggy objective can write another individual's slot.
    Recommendation: a struct method that takes one individual's genes and returns the
@@ -142,3 +145,46 @@ what this document recommends.
    - the `*/Interfaces` subnodes stay separate. Merging them into their parents changes
      public namespaces, which only a breaking release may do (owner's decision of
      2026-10-02, under `## Decomposition`).
+
+Items 9–12 were added on 2026-10-03. They come from what two other ILGPU projects on the
+owner's machine established: APT (`C:\Projects\AerospacePropellantThermodynamics`) and
+CPM (`C:\Projects\CompositePropellantMicrostructure`). Both run CUDA plus ILGPU's CPU
+accelerator, and neither uses OpenCL. Their paths are cited from their own documents,
+read 2026-10-03, and not re-measured here.
+
+9. **CUDA as a first-class backend**: open, and the owner's machine has an RTX 5070 Ti.
+   The optimizer already takes any `Accelerator`, but only OpenCL (`gfx1036`) was
+   ever run; the tests hard-code `builder.OpenCL()`. Recommendation: test on CUDA
+   before v1, and let the builder choose the device like APT does. `Auto` falls back
+   to the CPU and reports why; an explicit CUDA request never falls back silently. A
+   risk to measure first: APT found that ILGPU 1.5.3 drops libdevice wrappers on
+   compute_100+ (Blackwell, which the 5070 Ti is) and fixes it with a post-link (APT
+   `src/Execution/BOOT.md`). This package pins ILGPU 1.5.1, so the ILGPU version is
+   part of this item.
+10. **The GPU tests in CI on ILGPU's CPU accelerator**: recommended. APT and CPM run the
+    same kernels on the CPU accelerator in hosted CI and on a GPU only locally or on a
+    self-hosted runner. That would close the root's "GPU tests run in no CI" item. The
+    CPU accelerator needs a device sized from `ProcessorCount` (its default is 16
+    threads). It is an oracle, not a production path: CPM measured it about 10× slower
+    than plain .NET threads (CPM `HISTORY.md`).
+11. **A counter-based device RNG**: recommended. Today each individual keeps its own
+    `XorShift32` state in device memory: 32 bits of state, so at most 2^32 distinct
+    doubles per stream. CPM measured that streams made by jumping one generator are
+    shifts of one sequence, not independent samples (CPM `src/Random/BOOT.md`,
+    2026-09-23). A counter-based generator gives a value as a pure function of (seed,
+    individual, generation, draw): reproducible, independent per individual, and with
+    no state buffer. That also gives item 3 its seed.
+12. **Kernel guard tests from APT**: recommended, in this node's protocol tests or its
+    own.
+    - An IL walk from the kernels that refuses `throw`, `newarr`, `newobj` and `box`,
+      so a kernel that cannot compile fails hosted CI, not the first GPU run.
+    - An allow-list of `Math` members.
+    - No constant on the left of an ordered floating comparison. ILGPU flips its NaN
+      ordering when it swaps the operands, so CUDA and CPU disagree (APT
+      `BOOT.md`, the ILGPU 1.5.3 constraint).
+    - `NaN` handled by explicit `IsNaN` tests, not by `<`. Today a `NaN` parent is
+      never replaced (selection uses `trial < parent`), while the CPU package ranks
+      `NaN` worst.
+    - Host transfers only through the pinning overloads. APT lost downloads through
+      `CopyToCPU(ref T, long)`. This package uses `GetAsArray1D`/`GetAsArray2D`,
+      which pin, so it is safe today; the guard keeps it that way.
