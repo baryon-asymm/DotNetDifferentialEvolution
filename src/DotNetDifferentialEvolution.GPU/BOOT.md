@@ -96,3 +96,49 @@ them (textual estimate, 2026-10-02).
 The `*/Interfaces` directories are nodes of their own, each with a single interface.
 Owner's decision, 2026-10-02: describe them as they are; merging each into its parent
 would break the public namespaces, and is left for the GPU redesign.
+
+## Redesign proposals ⏳
+
+Design mode, 2026-10-03: proposals only, no code. Nothing below is decided until the
+owner says so. "Agreed in principle" means the owner agreed on 2026-10-02 when the import
+was planned; "open" means it needs an answer. Each item says what it would change and
+what this document recommends.
+
+1. **Result contract**: agreed in principle. The optimizer returns
+   `DotNetOptimization.Abstractions`' solution type, as the CPU package does, and the
+   package takes that dependency. It still references nothing of the CPU package, so
+   the root taboo holds.
+2. **A fluent builder** shaped like the CPU one: agreed in principle. It replaces
+   constructing `KernelController<…>` with four generic struct arguments by hand. The
+   struct generics stay inside, because they are what keeps virtual calls off the device.
+3. **Classic DE aligned with `docs/ALGORITHMS.md`**: agreed in principle. That means
+   `jrand` (at least one gene from the mutant), ties keep the trial, and a seed. Open:
+   the bound rule. Today an out-of-box gene is re-drawn; the CPU package repairs.
+   Recommendation: the CPU's rule, so one seed-free description fits both packages.
+4. **v1 scope**: open. Recommendation: classic DE only in the first new release, jDE in
+   the next minor. Items 1–3 already make it a breaking release. jDE needs per-individual
+   F and CR buffers on the device and their update between launches, a design of its
+   own.
+5. **Precision**: open. Recommendation: keep `double` for v1 (CPU parity, comparable
+   results). Measure `float` on the reference device (`gfx1036`) before offering it;
+   consumer GPUs run FP64 at a fraction of the FP32 rate, so the gain may be large, but
+   it is not measured here.
+6. **Objective interface**: open. Today `IFitnessFunctionInvoker.Invoke` writes into the
+   population itself, so a buggy objective can write another individual's slot.
+   Recommendation: a struct method that takes one individual's genes and returns the
+   value, which the kernel writes. Then the race-freedom invariant is held by the
+   kernel, not by every user.
+7. **Release path and version**: open. Recommendation: a separate tag prefix (for
+   example `gpu-v*`) with its own job in `release.yml`, and a first version above 0.2.0
+   (1.0.0, since items 1–6 break the API). That clears the two ⚠ items of the root
+   `BOOT.md`. Then archive the old repository with a pointer here, since nuget.org's
+   project URLs lead to it, and fix `README.md`'s links.
+8. **Known defects to fix in the same release**, all recorded above under acceptance
+   criteria:
+   - `RunAsync` is synchronous;
+   - a `NaN` at individual 0 poisons the result;
+   - `Dispose` calls `GC.Collect()`;
+   - cancellation is not reported as such;
+   - the `*/Interfaces` subnodes stay separate. Merging them into their parents changes
+     public namespaces, which only a breaking release may do (owner's decision of
+     2026-10-02, under `## Decomposition`).
