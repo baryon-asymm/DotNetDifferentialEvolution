@@ -5,7 +5,7 @@ namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The guards the GPU package's ACCEPTANCE.md freezes for v1 and places here: 5a (one transfer helper), 8a–8d (kernel
-/// guards). Check 7a (no <c>GC.Collect</c>) is a rule of <see cref="ProtocolConfig.ForbiddenCallRules"/>, held by
+/// guards) and L8 (no ILGPU.Algorithms). Check 7a (no <c>GC.Collect</c>) is a rule of <see cref="ProtocolConfig.ForbiddenCallRules"/>, held by
 /// <see cref="ForbiddenCallTests"/>. Every fact refuses an empty walk.
 /// <para>Adapted from <c>AerospacePropellantThermodynamics</c>, commit <c>5fdd82c</c>,
 /// <c>tests/Protocol.Tests/InvariantTests.cs</c> (the facts <c>NumericalNodesCallOnlyTheAllowedMathAndDoubleMembers</c>,
@@ -105,6 +105,22 @@ public sealed class GpuGuardTests
         Assert.True(problems.Count == 0,
             "ACCEPTANCE.md 8d: host memory crosses into ILGPU only through an overload that pins it (Span or array), never as a ref T.\n" +
             string.Join("\n", problems));
+    }
+
+    /// <summary>
+    /// Check L8: CUDA math comes from libdevice, not from ILGPU.Algorithms' software implementations. The package's
+    /// assembly references no <c>ILGPU.Algorithms</c> (it does reference <c>ILGPU</c>, so the list read is not empty), and
+    /// its project has no package reference to it.
+    /// </summary>
+    [Fact]
+    public void TheGpuPackageUsesNoIlgpuAlgorithms()
+    {
+        var references = GpuPackage.Assembly.GetReferencedAssemblies().Select(name => name.Name).ToList();
+        Assert.Contains("ILGPU", references);
+        Assert.DoesNotContain("ILGPU.Algorithms", references);
+
+        var project = File.ReadAllText(Path.Combine(GpuPackage.Node.Directory, "DotNetDifferentialEvolution.GPU.csproj"));
+        Assert.DoesNotContain("Include=\"ILGPU.Algorithms\"", project, StringComparison.Ordinal);
     }
 
     /// <summary>The kernel walk, refused when it is empty: no entry point, or an entry point whose body the walk cannot read.</summary>

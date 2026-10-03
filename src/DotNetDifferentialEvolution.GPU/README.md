@@ -17,9 +17,12 @@ JADE, SHADE, L-SHADE) or host-side code, use the CPU package,
 dotnet add package DotNetDifferentialEvolution.GPU
 ```
 
-.NET 8 or later. For CUDA, an NVIDIA driver; for OpenCL, a GPU driver whose OpenCL device ILGPU
-accepts (Auto skips it, with the reason, when ILGPU does not).
-ILGPU comes with the package.
+.NET 8 or later. For CUDA, an NVIDIA driver and the
+[CUDA Toolkit](https://developer.nvidia.com/cuda-downloads): the package takes `Exp`, `Log` and
+`Pow` from its libdevice, found through `CUDA_PATH` or the toolkit's default directories (tested
+with 12.9 and 13.4). Without the toolkit, `GpuDevice.Auto` skips CUDA, with the reason. For
+OpenCL, a GPU driver whose OpenCL device ILGPU accepts (Auto skips it, with the reason, when
+ILGPU does not). ILGPU comes with the package.
 
 ## Quick start
 
@@ -69,9 +72,9 @@ read-only view of one individual's genes and returns its fitness: lower is bette
 - value types only; no classes, strings, arrays allocated in the body, exceptions or
   virtual calls;
 - `Math.Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`, `Max` and `double.IsNaN` compile
-  on every backend. On CUDA, `Exp`, `Log` and `Pow` come from ILGPU.Algorithms and are less
-  accurate than `System.Math`: measured up to 195, 9 430 and 24 units in the last place
-  (OpenCL and the CPU accelerator: at most 1);
+  on every backend. `Exp`, `Log`, `Pow` and `Sqrt` agree with `System.Math` within 1 unit in
+  the last place on CUDA (libdevice) and on OpenCL, measured on 10⁴ arguments in
+  [10⁻³, 700]; the CPU accelerator calls `System.Math` itself;
 - data the objective needs (fit points, constants) goes in its fields, as value types or
   as ILGPU `ArrayView`s allocated on the same accelerator (pass that accelerator with
   `OnAccelerator`);
@@ -86,11 +89,14 @@ ILGPU reports code it cannot compile when the optimizer is built, not when C# co
 ## Devices
 
 - `GpuDevice.Auto` tries CUDA, then OpenCL, then the CPU accelerator.
-  `result.Device.FallbackReason` says why it skipped each backend before the one it chose.
+  `result.Device.FallbackReason` says why it skipped each backend before the one it chose:
+  for CUDA, no device or no CUDA Toolkit, for instance.
 - `GpuDevice.Cuda`, `OpenCL` or `Cpu` uses that device, or `Build` throws
   `InvalidOperationException` naming it. An explicit device never falls back.
 - `OnAccelerator(accelerator)` runs on your own ILGPU accelerator, which the optimizer
-  never disposes.
+  never disposes. On CUDA, build its context with
+  `.Math(MathMode.Default).LibDevice(libnvvmPath, libdevicePath)` if the objective calls
+  `Exp`, `Log` or `Pow`.
 
 ## The run
 

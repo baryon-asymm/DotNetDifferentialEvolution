@@ -63,10 +63,11 @@ both packages depend on `DotNetOptimization.Abstractions`. Held by the csproj.
 
 None.
 
-Outside the tree: ILGPU 1.5.3 and ILGPU.Algorithms 1.5.3; `DotNetOptimization.Abstractions`
-1.0.0 (`ISolution`); .NET 8. ILGPU 1.5.3 is the version that passes on the RTX 5070 Ti
-(compute 12.0): 1.5.1 failed PTX JIT there (measured 2026-10-03,
-HISTORY.md#redesign-proposals-2026-10-03).
+Outside the tree: ILGPU, exactly 1.5.3; `DotNetOptimization.Abstractions` 1.0.0
+(`ISolution`); .NET 8; for CUDA, a CUDA Toolkit's libnvvm and `libdevice.10.bc`
+(`Devices/LibDevice/BOOT.md`; tested with 12.9 and 13.4). ILGPU 1.5.3 is the version that
+passes on the RTX 5070 Ti (compute 12.0): 1.5.1 failed PTX JIT there (measured 2026-10-03,
+HISTORY.md#redesign-proposals-2026-10-03); the post-link asserts it.
 
 ## Constraints
 
@@ -78,11 +79,15 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - **ILGPU must see every type a kernel touches.** It emits its launchers into a dynamic
   assembly named `ILGPURuntime`: the package grants it `InternalsVisibleTo`, and a
   caller's objective type must be public or do the same (`Objectives/API.md`).
-- **Every context is built with `EnableAlgorithms()`**, so `Exp`, `Log` and `Pow` have an
-  implementation on PTX. ⚠ 2026-10-03: that implementation misses APT's 4-ULP bound on CUDA
-  (measured: Exp 195, Log 9 430, Pow 24 ULP at worst; OpenCL 1), so check D2 is red and
-  waits for the owner's decision (ACCEPTANCE.md, D2). The package's own kernels call none
-  of the three.
+- **CUDA math is libdevice's**, as APThermo has it: a CUDA context is built with
+  `LibDevice`, and every kernel loads through `Devices.KernelLoader`, which completes the
+  libdevice wrappers ILGPU 1.5.3 leaves undefined for compute 10.0 and newer
+  (`Devices/LibDevice/BOOT.md`). No ILGPU.Algorithms. The package's own kernels call no
+  `Exp`, `Log` or `Pow`; a caller's objective can.
+
+  ⚠ 2026-10-03: was "every context is built with `EnableAlgorithms()`", which missed the
+  4-ULP bound of check D2 on CUDA (Exp 195, Log 9 430, Pow 24 ULP), now libdevice →
+  HISTORY.md#libdevice-port-2026-10-03
 - The package ships `README.md` and `ILGPU_LICENSE` from this directory and the
   repository's `LICENSE`. It is packed from a `gpu-v*` tag by `release.yml`; CI packs it
   without publishing.
@@ -108,7 +113,7 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 |---|---|---|
 | this node | yes | builder, optimizer, result, `GpuDevice`, observer and snapshot; `KernelLauncher`, `PopulationTransfers`, `BestPick`, `RunSettings` inside |
 | [Objectives](Objectives/API.md) | yes | `IGpuFitnessFunction`, `GeneView` |
-| [Devices](Devices/API.md) | no | device selection with fallback reasons, accelerator ownership, the math probe kernel |
+| [Devices](Devices/API.md) | no | device selection with fallback reasons, accelerator ownership, kernel loading, the math probe kernel; child [LibDevice](Devices/LibDevice/API.md): libdevice and the post-link |
 | [Kernels](Kernels/API.md) | no | the init and generation kernels, the DE step over a draw source |
 | [Random](Random/API.md) | no | Philox4x32-10, uniform doubles from 53 bits, Lemire index draws |
 

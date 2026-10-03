@@ -23,7 +23,13 @@ internal sealed class AcceleratorLease : IDisposable
 internal static class DeviceSelector
 {
     public static AcceleratorLease Open(Backend? requested);
+    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate);
     public static string NameOf(Backend backend);
+}
+
+internal static class KernelLoader
+{
+    public static Kernel Load(Accelerator accelerator, MethodInfo method);
 }
 
 internal static class MathProbe
@@ -36,11 +42,17 @@ internal static class MathProbe
 }
 ```
 
-- `Open(null)` is Auto: CUDA, OpenCL, CPU, the first whose context lists a device and
-  whose accelerator is created. `FallbackReason` joins `"<backend>: <reason>"` for each
-  skipped one with `"; "`. `Open(backend)` opens that one or throws
-  `InvalidOperationException` ("The CUDA device was requested and cannot be used: …").
+- `Open(null)` is Auto: CUDA, OpenCL, CPU, the first that opens. `FallbackReason` joins
+  `"<backend>: <reason>"` for each skipped one with `"; "`. `Open(backend)` opens that one
+  or throws `InvalidOperationException` ("The CUDA device was requested and cannot be
+  used: …"). CUDA opens only with libnvvm and libdevice found and the probe kernel loaded
+  (`BOOT.md`, Constraints); without a toolkit the reason is "libnvvm (nvvm64_40_0.dll) and
+  libdevice (libdevice.10.bc) of a CUDA Toolkit were not found; …". The overload with
+  `locate` is the seam of checks L6 and L7.
 - `Borrowed` throws `ArgumentException` for an accelerator other than CUDA, OpenCL or
   CPU; its lease never disposes the accelerator.
+- `Load` returns the kernel, implicitly grouped, for a closed kernel method; the caller
+  disposes it. On a `CudaAccelerator` it throws what the compile or the post-link throws
+  ([LibDevice](LibDevice/API.md)).
 - `Probe`: thread i writes `Exp(x)`, `Log(x)`, `Pow(x, 1.37)`, `Sqrt(x)` of input i to
   outputs `4i … 4i+3` (after APT's `src/Execution/MathProbe.cs`).

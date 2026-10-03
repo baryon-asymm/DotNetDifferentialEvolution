@@ -2,48 +2,69 @@
 
 ## Purpose
 
-The GPU package's device selection and its CUDA math probe: checks D1 and D2 of the
-package's [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md),
-and B1's row "an explicit device that is not present". The checks are frozen; their
-numbers (4 ULP, 10⁴ arguments) are copied, never chosen here.
+The GPU package's device selection, its CUDA math through libdevice, and its math probe:
+checks D1, D2 and L1–L7, L9 of the package's
+[ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md), and B1's row
+"an explicit device that is not present" (L8 lives in Protocol.Tests). The checks are
+frozen; their numbers (4 ULP, 10⁴ arguments, 64 MiB) are copied, never chosen here.
 
 ## Invariants
 
-- **The no-device cases follow the machine.** `DevicePresence` asks ILGPU, with the
-  options the package uses, whether a CUDA or an OpenCL device is present, and each case
-  asserts the branch that matches: on a hosted runner, D1's frozen assertions; on a
-  machine with the device, that the explicit request is honoured with no fallback.
-  These cases carry no category and run in CI.
+- **The no-device cases follow the machine.** `DevicePresence` asks ILGPU whether a CUDA
+  or an OpenCL device is present, and the package's locator whether a CUDA Toolkit is, and
+  each case asserts the branch that matches: on a hosted runner, D1's and L6's no-device
+  assertions; on a machine with the device, that the explicit request is honoured with no
+  fallback. These cases carry no category and run in CI.
 - **Both branches are exercised locally** by hiding the GPUs from the test process:
   `CUDA_VISIBLE_DEVICES=-1` hides CUDA (and NVIDIA's OpenCL device);
   `GPU_DEVICE_ORDINAL=7` hides AMD's OpenCL device. With both set, `Auto` gives the CPU
   accelerator. Measured 2026-10-03.
-- **The `Gpu` cases are specific to the owner's machine**: D1 names the RTX 5070 Ti
-  (CUDA) and `gfx1036` (OpenCL), as the check itself does. They fail elsewhere by design.
-- **D2 opens CUDA through the package's `DeviceSelector`**, so `MathProbe.Probe`
-  compiles with the options a run uses (`EnableAlgorithms`). The arguments are a
-  log-spaced grid of 10⁴ points over [1e-3, 700]; the distance is counted on the
-  ordered IEEE 754 bit patterns (`Ulp`), whose own positive controls use
-  `Math.BitIncrement`/`BitDecrement`.
+- **The `Gpu` cases are specific to the owner's machine**: D1, D2, L5 and L7 name the RTX
+  5070 Ti (CUDA) or `gfx1036` (OpenCL), as the checks do. They fail elsewhere by design.
+- **D2 opens CUDA through the package's `DeviceSelector` and loads the probe through its
+  `KernelLoader`**, so the kernel compiles against libdevice and is completed by the
+  post-link, as a run's kernels are. The arguments are a log-spaced grid of 10⁴ points over
+  [1e-3, 700]; the distance is counted on the ordered IEEE 754 bit patterns (`Ulp`), whose
+  own positive controls use `Math.BitIncrement`/`BitDecrement`.
 - **OpenCL is measured, not judged**: D2 names CUDA only, so the OpenCL case asserts
   only that every result is a number and reports the distances.
+- **The PTX texts of L2 are ILGPU's and libnvvm's output, not typed**, generated once on
+  2026-10-03 with ILGPU 1.5.3 and the libnvvm and `libdevice.10.bc` of CUDA Toolkit 13.4
+  (`v13.4\nvvm\bin\x64`), from `MathProbe.Probe`, line ends LF:
+  - `Ptx/probe.sm_120.ptx`: `PTXBackend.Compile` of the RTX 5070 Ti's accelerator
+    (`SM_120`, ISA 8.8), context with `Math(MathMode.Default)` and `LibDevice`; it calls
+    four wrappers and defines none. SHA-256 `854c3b70…02e2e30`.
+  - `Ptx/probe.sm_120.linked.ptx`: the same compiled kernel after
+    `LibDevicePostLink.Link`. SHA-256 `2a78a084…3afbd9eb`.
+  - `Ptx/probe.sm_89.ptx`: a `PTXBackend` built for `CudaArchitecture.SM_89` and
+    `CudaInstructionSet.ISA_85`, with libnvvm; ILGPU defined the four wrappers itself.
+    SHA-256 `abb55bfc…674e34`.
+
+  ILGPU 1.5.3 writes `.target sm_80` in all three: the files are named by the
+  architecture the backend was built for. No fact names a wrapper; each asserts a
+  relation the texts stand in.
 
 ## Dependencies
 
-- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector`, `AcceleratorLease`, `MathProbe` (internal).
+- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector`, `AcceleratorLease`, `KernelLoader`, `MathProbe` (internal).
+- [LibDevice](../../../src/DotNetDifferentialEvolution.GPU/Devices/LibDevice/API.md) — `LibDeviceLocator`, `LibDevicePostLink`, `CudaWslDevices` (internal).
 - [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md)
-  — the builder, `GpuDeviceInfo`; internally `DeviceSelector`, `Backend`, `MathProbe`
-  (its child documents do not exist yet).
+  — the builder, `GpuDeviceInfo`.
 
-Outside the tree: ILGPU 1.5.3 and ILGPU.Algorithms 1.5.3 (`Context`, CUDA, OpenCL),
-xUnit 2.9.3; for the `Gpu` cases, the owner's RTX 5070 Ti and `gfx1036`.
+Outside the tree: ILGPU 1.5.3 (`Context`, CUDA, OpenCL, `PTXBackend`, `NvvmAPI`,
+`CudaAPI`), xUnit 2.9.3; for the `Gpu` cases, the owner's RTX 5070 Ti, `gfx1036` and a CUDA
+Toolkit.
 
 ## Constraints
 
 Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 - A `Gpu` case is marked on the method; CI filters `Category!=Gpu`.
+- `IlgpuPinTests` sets a `DllImportResolver` on a fresh copy of
+  `DotNetOptimization.Abstractions.dll` in the temporary directory, never on an assembly
+  the tests use: a resolver cannot be removed once set. The copy stays loaded and is not
+  deleted.
 
 ## Acceptance criteria
 
@@ -62,12 +83,16 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 - [x] The ULP helper is right: 2026-10-03, 8 cases of `UlpTests`; the OpenCL probe gives
       at most 1 ULP for all four functions, so the measurement is not the source of D2's
       distances.
-- [ ] ⚠ **D2 is red** (2026-10-03, RTX 5070 Ti, ILGPU 1.5.3 with `EnableAlgorithms`):
-      largest distance from `System.Math` over the 10⁴ arguments — `Exp` 195 ULP
-      (x = 652.2457760772028; 2618 arguments over 4 ULP), `Log` 9430 ULP
-      (x = 0.9999920999476787; 520 over), `Pow(x, 1.37)` 24 ULP
-      (x = 0.0013455021986893204; 2807 over), `Sqrt` 0. OpenCL `gfx1036`: 1, 1, 1, 0.
-      Nothing was loosened; the check stops here until the owner decides.
+- [x] D2 is green (2026-10-03, RTX 5070 Ti, ILGPU 1.5.3, libdevice of CUDA 13.4 through
+      the post-link): largest distance from `System.Math` over the 10⁴ arguments — `Exp` 1
+      ULP (x = 0.00248219772137655), `Log` 1 (x = 0.6260184850703607), `Pow(x, 1.37)` 1
+      (x = 0.0010006731682568205), `Sqrt` 0; none over 4. OpenCL `gfx1036`: 1, 1, 1, 0.
+      Red with the post-link returning the kernel unchanged: CUDA no longer opens.
+      ⚠ 2026-10-03: was red with `EnableAlgorithms` (Exp 195, Log 9 430, Pow 24 ULP), now
+      green through libdevice; the check and its argument grid unchanged → the package's
+      [HISTORY.md](../../../src/DotNetDifferentialEvolution.GPU/HISTORY.md#libdevice-port-2026-10-03).
+- [x] L1–L7 and L9 are green and each was red once on its mutation: 2026-10-03, local,
+      listed per check in the package's `ACCEPTANCE.md`. L6 ran its device branch only.
 - [ ] ⚠ The hosted-runner branch was run here only with the GPUs hidden by environment
       variables, not yet on a hosted runner.
 
@@ -75,4 +100,5 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 - **No looser ULP tolerance and no narrower argument range** to make D2 green: the 4 ULP
   are APT's measurement for libdevice.
-- **No device name made generic** in the `Gpu` case: the check names the devices.
+- **No device name made generic** in the `Gpu` cases: the checks name the devices.
+- **No PTX text edited by hand**: a new one is generated and its provenance recorded here.

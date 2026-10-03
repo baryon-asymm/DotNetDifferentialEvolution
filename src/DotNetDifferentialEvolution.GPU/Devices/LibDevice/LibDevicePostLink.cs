@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using ILGPU;
 using ILGPU.Backends.PTX;
 using ILGPU.Runtime.Cuda;
@@ -19,7 +18,7 @@ namespace DotNetDifferentialEvolution.GPU.Devices.LibDevice;
 /// <c>src/Execution/LibDevice/LibDevicePostLink.cs</c>); here libnvvm is the one ILGPU's own CUDA backend loaded for the
 /// context, so a caller-owned accelerator is completed with its own.
 /// </summary>
-internal static partial class LibDevicePostLink
+internal static class LibDevicePostLink
 {
     /// <summary>The ILGPU version whose internals this post-link was written against.</summary>
     public const string ExpectedIlgpuVersion = "1.5.3.0";
@@ -72,13 +71,13 @@ internal static partial class LibDevicePostLink
     /// <param name="ptx">The PTX text.</param>
     /// <returns>The names called.</returns>
     public static IReadOnlyList<string> WrappersCalled(string ptx) =>
-        [.. WrapperCall().Matches(ptx).Select(match => match.Groups[1].Value[WrapperPrefix.Length..]).Distinct()];
+        [.. PtxText.CallSites(ptx).Select(name => name[WrapperPrefix.Length..]).Distinct()];
 
     /// <summary>The wrapper names a PTX text defines as its own <c>.func</c> headers, without the prefix, distinct.</summary>
     /// <param name="ptx">The PTX text.</param>
     /// <returns>The names defined.</returns>
     public static IReadOnlyList<string> WrappersDefined(string ptx) =>
-        [.. WrapperDefinition().Matches(ptx).Select(match => match.Groups[2].Value[WrapperPrefix.Length..]).Distinct()];
+        [.. PtxText.Definitions(ptx).Select(name => name[WrapperPrefix.Length..]).Distinct()];
 
     /// <summary>
     /// Completes the kernel's PTX with the wrappers it calls and ILGPU did not define, and trial-loads the result on either
@@ -169,23 +168,12 @@ internal static partial class LibDevicePostLink
     }
 
     /// <summary>
-    /// A wrapper name at a <c>call</c> instruction, never a parameter declaration or a <c>.func</c> header: only the callee
-    /// at a call site is followed by a comma. The lazy span from <c>call</c> never crosses a <c>;</c>.
+    /// The message: the post-link, the target, what failed, and a non-empty log where one exists, trimmed of white space
+    /// and of the NUL padding of ILGPU's log buffer.
     /// </summary>
-    [GeneratedRegex(@"\bcall(?:\.uni)?\b[^;]*?(__ilgpu__nv_[A-Za-z0-9_]+)\s*,")]
-    private static partial Regex WrapperCall();
-
-    /// <summary>A wrapper's own <c>.func</c> definition line; never a call site, which spells the name followed by a comma.</summary>
-    [GeneratedRegex(@"^\s*\.(visible|weak)?\s*\.func\b[^;]*?(__ilgpu__nv_[A-Za-z0-9_]+)\s*\(", RegexOptions.Multiline)]
-    private static partial Regex WrapperDefinition();
-
-    [GeneratedRegex(@"^\.target\s+sm_(\d+)", RegexOptions.Multiline)]
-    private static partial Regex Target();
-
-    /// <summary>The message: the post-link, the target, what failed, and a non-empty trimmed log where one exists.</summary>
     private static string FailureMessage(string outcome, string arch, string? log)
     {
-        var trimmed = log?.Trim('\0', ' ', '\t', '\r', '\n');
+        var trimmed = log?.AsSpan().Trim("\0 \t\r\n").ToString();
         return string.IsNullOrEmpty(trimmed)
             ? $"the libdevice post-link for {arch}: {outcome}."
             : $"the libdevice post-link for {arch}: {outcome}: {trimmed}";
@@ -194,9 +182,9 @@ internal static partial class LibDevicePostLink
     /// <summary>The kernel's own target, from its <c>.target sm_XX</c> line.</summary>
     private static string TargetArch(string ptx)
     {
-        var match = Target().Match(ptx);
-        return match.Success
-            ? "compute_" + match.Groups[1].Value
+        var sm = PtxText.TargetSm(ptx);
+        return sm is not null
+            ? "compute_" + sm
             : throw new InvalidOperationException("the kernel PTX has no .target line.");
     }
 

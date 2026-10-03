@@ -53,8 +53,13 @@ public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
 - **Devices.**
   - `OnDevice(Auto)` tries CUDA, then OpenCL, then the CPU accelerator.
   - An explicit `Cuda`, `OpenCL` or `Cpu` uses that device or makes `Build` throw.
+  - CUDA needs an installed CUDA Toolkit: its math is libdevice's (libnvvm and
+    `libdevice.10.bc`, found through `CUDA_PATH` or the toolkit's default directories).
+    Without one, an explicit `Cuda` throws and Auto skips CUDA with that reason.
   - `OnAccelerator` uses the caller's accelerator and never disposes it; the objective's
-    own `ArrayView`s must live on it.
+    own `ArrayView`s must live on it. For a CUDA accelerator, an objective that calls
+    `Exp`, `Log` or `Pow` needs a context built with `LibDevice(libnvvm, libdevice)`;
+    without it `Build` throws ILGPU's `InternalCompilerException` (measured 2026-10-03).
 - **`Build`** opens the device, compiles the kernels, samples the population on the
   device and evaluates it: it costs N evaluations and the compile time. Kernel compile
   errors surface here.
@@ -128,7 +133,7 @@ public sealed class GpuPopulationSnapshot
 | An undefined `GpuDevice` value | `ArgumentOutOfRangeException` from `OnDevice` |
 | `null` handler or accelerator | `ArgumentNullException` |
 | An accelerator other than CUDA, OpenCL or CPU | `ArgumentException` from `OnAccelerator` |
-| An explicit device that is not present | `InvalidOperationException` from `Build`, naming the device |
+| An explicit device that is not present, or `Cuda` without a CUDA Toolkit | `InvalidOperationException` from `Build`, naming the device and the reason |
 | The objective cannot be compiled by ILGPU | ILGPU's exception from `Build` |
 | `RunAsync` while a run is in progress | `InvalidOperationException` |
 | `RunAsync` after `Dispose` | `ObjectDisposedException` |

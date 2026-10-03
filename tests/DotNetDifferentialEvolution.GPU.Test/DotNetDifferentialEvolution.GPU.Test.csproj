@@ -23,6 +23,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- The PTX texts of check L2, read from the output directory (Devices/BOOT.md, their provenance). -->
+        <None Include="Devices\Ptx\*.ptx" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\src\DotNetDifferentialEvolution.GPU\DotNetDifferentialEvolution.GPU.csproj"/>
         <!-- The CPU package, for the parity check of the DE step (GPU ACCEPTANCE.md, check 1g):
              the test project references both packages, neither package the other. -->
