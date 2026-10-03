@@ -6,6 +6,11 @@ using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.Interfa
 
 namespace DotNetDifferentialEvolution.Tests.Common.Helpers;
 
+/// <summary>
+/// Builds a <see cref="ProblemContext"/> by hand, without the builder, for tests that drive the
+/// engine's parts directly: the population is sampled uniformly within the evaluator's bounds and
+/// evaluated once.
+/// </summary>
 public static class ProblemContextHelper
 {
     /// <remarks>

@@ -9,12 +9,21 @@ namespace DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 public class RosenbrockEvaluator(
     int dimension = 2) : BenchmarkFunctionEvaluator(dimension)
 {
-    /// <summary>The classic 2-D coefficients, retained for documentation: f = (A − x)² + B·(y − x²)².</summary>
+    /// <summary>
+    /// The coefficient <c>a</c> of the classic 2-D form f = (a − x)² + b·(y − x²)². The n-D formula
+    /// writes it as the literal 1, so it is retained for documentation.
+    /// </summary>
     public const double A = 1.0;
+
+    /// <summary>The coefficient <c>b</c> of the classic 2-D form, weighting the valley term in every dimension.</summary>
     public const double B = 100.0;
 
+    /// <summary>Gets 2: the Rosenbrock function couples consecutive genes, so it needs at least two.</summary>
     protected override int MinimumDimension => 2;
 
+    /// <summary>Evaluates the Rosenbrock function at <paramref name="genes"/>.</summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The function value at <paramref name="genes"/>.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -29,11 +38,15 @@ public class RosenbrockEvaluator(
         return sum;
     }
 
+    /// <summary>Returns the lower bound of the Rosenbrock domain: -5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => UniformBounds(-5.0);
 
+    /// <summary>Returns the upper bound of the Rosenbrock domain: 5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => UniformBounds(5.0);
 
+    /// <summary>Returns 0, the Rosenbrock global minimum value.</summary>
     public override double GetGlobalMinimumFfValue() => 0.0;
 
+    /// <summary>Returns the Rosenbrock global minimizer, <c>(1, …, 1)</c>.</summary>
     public override ReadOnlyMemory<double> GetGlobalMinimumGenes() => UniformMinimizer(1.0);
 }

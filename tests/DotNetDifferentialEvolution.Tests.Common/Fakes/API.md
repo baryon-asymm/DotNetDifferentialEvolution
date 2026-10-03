@@ -18,7 +18,7 @@ public sealed class ScriptedRandomProvider : BaseRandomProvider
 
 public sealed class DeterministicRandomProvider : BaseRandomProvider
 {
-    public DeterministicRandomProvider(int seed = 0);   // System.Random(seed)
+    public DeterministicRandomProvider(int seed = 0);   // SeededRandomProvider(seed)
     public override int Next(int maxValue);
     public override double NextDouble();
 }

@@ -7,13 +7,18 @@ namespace DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 /// </summary>
 public sealed class BealeEvaluator : BenchmarkFunctionEvaluator
 {
+    /// <summary>Initializes a new instance of the two-dimensional Beale function.</summary>
     public BealeEvaluator()
         : base(dimension: 2)
     {
     }
 
+    /// <summary>Gets 2: the Beale function is defined in two dimensions only.</summary>
     protected override int MinimumDimension => 2;
 
+    /// <summary>Evaluates the Beale function at <paramref name="genes"/>.</summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The function value at <paramref name="genes"/>.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -26,11 +31,15 @@ public sealed class BealeEvaluator : BenchmarkFunctionEvaluator
         return a * a + b * b + c * c;
     }
 
+    /// <summary>Returns the lower bound of the Beale domain: -4.5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => UniformBounds(-4.5);
 
+    /// <summary>Returns the upper bound of the Beale domain: 4.5 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => UniformBounds(4.5);
 
+    /// <summary>Returns 0, the Beale global minimum value.</summary>
     public override double GetGlobalMinimumFfValue() => 0.0;
 
+    /// <summary>Returns the Beale global minimizer, <c>(3, 0.5)</c>.</summary>
     public override ReadOnlyMemory<double> GetGlobalMinimumGenes() => new[] { 3.0, 0.5 };
 }

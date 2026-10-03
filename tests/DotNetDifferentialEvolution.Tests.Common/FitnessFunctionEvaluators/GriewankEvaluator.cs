@@ -8,6 +8,9 @@ namespace DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 public sealed class GriewankEvaluator(
     int dimension = 2) : BenchmarkFunctionEvaluator(dimension)
 {
+    /// <summary>Evaluates the Griewank function at <paramref name="genes"/>.</summary>
+    /// <param name="genes">The point to evaluate, one value per dimension.</param>
+    /// <returns>The function value at <paramref name="genes"/>.</returns>
     public override double Evaluate(
         ReadOnlySpan<double> genes)
     {
@@ -22,11 +25,15 @@ public sealed class GriewankEvaluator(
         return sum - product + 1.0;
     }
 
+    /// <summary>Returns the lower bound of the Griewank domain: -600 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetLowerBounds() => UniformBounds(-600.0);
 
+    /// <summary>Returns the upper bound of the Griewank domain: 600 in every dimension.</summary>
     public override ReadOnlyMemory<double> GetUpperBounds() => UniformBounds(600.0);
 
+    /// <summary>Returns 0, the Griewank global minimum value.</summary>
     public override double GetGlobalMinimumFfValue() => 0.0;
 
+    /// <summary>Returns the Griewank global minimizer, the origin.</summary>
     public override ReadOnlyMemory<double> GetGlobalMinimumGenes() => UniformMinimizer(0.0);
 }
