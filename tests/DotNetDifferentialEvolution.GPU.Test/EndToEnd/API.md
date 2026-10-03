@@ -17,10 +17,15 @@ accelerator, and the run errors of the v1 contract.
 | 6c: after the run a second `RunAsync` returns the same task; during it, `InvalidOperationException` (also B1's row) | `ASecondCallAfterTheRunReturnsTheSameTask`, `ACallDuringTheRunThrows` | ✅ |
 | 7b: a caller-owned accelerator still allocates, runs a kernel into and reads back a buffer after the optimizer's `Dispose` | `OwnershipTests`, CPU accelerator; CUDA and OpenCL under `Gpu` | ✅ |
 | B1: an observer that throws faults the task with that same exception | `AThrowingObserverFaultsTheTaskWithItsException` | ✅ |
+| The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 | `DocumentedExampleTests` | ✅ |
 
 ## Tests ✅
 
 ```csharp
+public class DocumentedExampleTests
+{
+    public Task TheQuickStartBuildsRunsAndReachesTheMinimum();
+}
 public class ConvergenceTests
 {
     public ConvergenceTests(ITestOutputHelper output);
