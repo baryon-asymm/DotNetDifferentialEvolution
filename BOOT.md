@@ -77,9 +77,8 @@ Python 3.8+ (`tools/protocol-lint`).
 - [x] Every test node of the repository was shown red once: 2026-10-02, mutations in
       scratch clones (GPU tests in slice 2, unit tests in slice 7, integration tests in
       slice 8); listed in each test node.
-- [ ] The linter and its self-tests run in CI (steps "Protocol lint" and "Protocol
-      linter self-tests" in `ci.yml`, added 2026-10-03); a first green run on GitHub
-      Actions has not been seen.
+- [x] The linter and its self-tests run in CI (steps "Protocol lint" and "Protocol
+      linter self-tests" in `ci.yml`): 2026-10-03, GitHub Actions run 37090681168 on PR #12, commit `4b5d35b`, all steps green.
 - [x] The reflection checks are written for this stack and each is proven
       non-degenerate (AGENTS.md §13): 2026-10-03,
       [Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/BOOT.md), 46 of

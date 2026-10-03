@@ -106,8 +106,9 @@ Each one is marked in the code at the place it changes.
 
       The unmutated benchmark calls `Console` and stays green: the rule is scoped to
       `src/`.
-- [ ] Green in CI. The tests are wired into the existing gate; a first green run on
-      GitHub Actions has not been seen.
+- [x] Green in CI: 2026-10-03, GitHub Actions run 37090681168 on PR #12, commit `4b5d35b`, all steps green (the step "Integration tests (excluding slow and
+      GPU)", which runs this node on ubuntu-latest). The job log needs a sign-in and was
+      not read, so the per-test count in CI is not recorded.
 
 ## Taboos
 
