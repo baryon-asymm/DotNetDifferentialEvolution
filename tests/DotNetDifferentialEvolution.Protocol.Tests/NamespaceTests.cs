@@ -1,7 +1,7 @@
 using System.Reflection;
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Namespace (AGENTS.md §1): every type of every assembly of the tree lives in exactly the namespace of a node, and

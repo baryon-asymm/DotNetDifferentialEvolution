@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Dependencies (AGENTS.md §6, §13): the <c>## Dependencies</c> of every node with code equals the nodes whose types its

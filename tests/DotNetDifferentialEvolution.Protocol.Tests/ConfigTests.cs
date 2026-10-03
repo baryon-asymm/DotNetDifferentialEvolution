@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The configuration itself: the tree has nodes, the root namespace is the tree's, and every node path

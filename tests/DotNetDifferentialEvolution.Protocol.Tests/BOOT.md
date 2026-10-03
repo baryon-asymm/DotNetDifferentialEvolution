@@ -64,9 +64,15 @@ Each one is marked in the code at the place it changes.
   IRandomGenerator` is a real dependency of the GPU kernel controller and of the GPU
   mutation contract. The kit's shape walk missed it and reported the documented link as
   unused. These two findings were false; the code was changed, not the documents.
-- ⚠ **The `ProtocolChecks` namespace exception** (`ProtocolConfig.NamespaceExceptions`)
-  is the kit's own §1 deviation: these sources keep the kit's namespace, so a future kit
-  version can be diffed and copied in.
+- ⚠ **The `ProtocolChecks` namespace exception was lifted on 2026-10-03.** It stood as the
+  kit's own §1 deviation (`ProtocolConfig.NamespaceExceptions`): these sources kept the
+  kit's namespace, so a future kit version could be diffed and copied in. Under the
+  maximum diagnostics IDE0130 requires the folder namespace, so the sources are now in
+  `DotNetDifferentialEvolution.Protocol.Tests` and the entry is removed. A future kit
+  version is diffed after renaming its namespace.
+- ⚠ **The kit's files were adapted to the repository's maximum diagnostics on
+  2026-10-03** (namespace, generated regexes, naming, XML documentation): behaviour
+  unchanged.
 - ⚠ **Omitted kit facts:**
   - `NoSuppressionGuardTests`: it would flag the repository's current analyzer policy,
     which is `WarningsNotAsErrors` for NU1901–NU1904 in `Directory.Build.props` and

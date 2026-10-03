@@ -1,4 +1,4 @@
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>The six levels a member's declared accessibility resolves to, ordered least to most visible so that
 /// <see cref="MemberAccessibility"/> can take the most visible of a property or event's own accessors with <c>Max()</c>.</summary>

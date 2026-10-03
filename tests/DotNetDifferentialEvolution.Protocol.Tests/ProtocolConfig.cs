@@ -1,10 +1,10 @@
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Everything tree-specific the reflection checks read, in one place. Every other file of this kit is generic and
 /// should be dropped into a tree unchanged; a tree adapts the kit by editing this file alone. Nothing here names a
-/// node of any particular tree except <see cref="NamespaceExceptions"/>, whose one default entry is the kit's own
-/// test node and is explained there.
+/// node of any particular tree except <see cref="NamespaceExceptions"/>, whose one default entry in the kit is the
+/// kit's own test node and is explained there.
 /// </summary>
 internal static class ProtocolConfig
 {
@@ -66,8 +66,9 @@ internal static class ProtocolConfig
     /// Normally the directory of this test node itself.</summary>
     public const string SnapshotDirectory = "tests/DotNetDifferentialEvolution.Protocol.Tests";
 
-    /// <summary>Whether the tree-contract snapshot fact runs (<see cref="TreeContractSnapshotTests"/>). Off by default:
-    /// a tree turns it on once some <c>API.md</c> carries a ✅ section whose heading holds <see cref="TreeContractMarker"/>.</summary>
+    /// <summary>Whether the tree-contract snapshot fact runs (<c>TreeContractSnapshotTests</c>, a kit fact this tree
+    /// omits). Off by default: a tree turns it on once some <c>API.md</c> carries a ✅ section whose heading holds
+    /// <see cref="TreeContractMarker"/>.</summary>
     public static bool TreeContractSnapshot => false;
 
     /// <summary>The text that marks an <c>API.md</c> section heading (a line starting <c>## </c>) as a tree contract:
@@ -84,13 +85,11 @@ internal static class ProtocolConfig
     /// the namespace it uses: a declared deviation of AGENTS.md §1 (§12). The node itself must say so in its own BOOT.md;
     /// the namespace fact skips the listed namespace in that node's own assembly and fails once no type uses it any
     /// more (a stale entry is a deviation that has been lifted and must be removed).
-    /// <para>The default entry is this kit itself: its files keep the neutral namespace <c>ProtocolChecks</c> so they can
-    /// be dropped in unchanged. A tree that renames them to <c>RootNamespace.Protocol.Tests</c> deletes the entry, and the
-    /// staleness check makes it do so.</para></summary>
-    public static readonly IReadOnlyDictionary<string, string> NamespaceExceptions = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        ["tests/DotNetDifferentialEvolution.Protocol.Tests"] = "ProtocolChecks",
-    };
+    /// <para>The kit's default entry is the kit itself: its files keep the neutral namespace <c>ProtocolChecks</c> so they
+    /// can be dropped in unchanged. A tree that renames them to <c>RootNamespace.Protocol.Tests</c> deletes the entry, and
+    /// the staleness check makes it do so. Empty in this tree since 2026-10-03: the files were renamed to
+    /// <c>DotNetDifferentialEvolution.Protocol.Tests</c> (IDE0130 under the maximum diagnostics; the node's BOOT.md).</para></summary>
+    public static readonly IReadOnlyDictionary<string, string> NamespaceExceptions = new Dictionary<string, string>(StringComparer.Ordinal);
 
     /// <summary>Rules against particular calls, read by <see cref="ForbiddenCallTests"/> through <see cref="ForbiddenCalls"/>.
     /// Empty by default; the fact then checks nothing and says so in its name only. A neutral example, forbidding console

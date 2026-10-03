@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Optional, behind <see cref="ProtocolConfig.ForbiddenCallRules"/> (empty by default): every configured rule holds

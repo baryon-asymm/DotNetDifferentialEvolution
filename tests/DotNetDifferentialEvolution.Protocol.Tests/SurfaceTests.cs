@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Surface (AGENTS.md §2, §13): the public surface of every library assembly of the tree equals the approved snapshot

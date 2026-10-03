@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The assembly each node's project builds, loaded by name from this test project's build output, and a type's own
