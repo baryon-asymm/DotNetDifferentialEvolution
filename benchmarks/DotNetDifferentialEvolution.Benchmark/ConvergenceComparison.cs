@@ -1,6 +1,5 @@
-using DotNetDifferentialEvolution.Benchmark.Functions;
-using DotNetDifferentialEvolution.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
+using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
 
 // DifferentialEvolutionBuilder and its staged interfaces (IMutationStrategyRequired,
 // IPopulationSamplingRequired, ...) live in the root DotNetDifferentialEvolution namespace.
@@ -14,11 +13,17 @@ namespace DotNetDifferentialEvolution.Benchmark;
 /// a convergence-quality comparison (lower is better), complementing the throughput
 /// micro-benchmark. Invoke with <c>dotnet run -c Release -- convergence</c>.
 /// </summary>
+/// <remarks>
+/// Seeded, so a table can be compared across changes on one machine. A seeded run is
+/// reproducible only for the same worker count, and every variant here uses all processors, so
+/// a table from a machine with another processor count is a different set of runs.
+/// </remarks>
 public static class ConvergenceComparison
 {
     private const int Dimensions = 30;
     private const long MaxEvaluationNumber = 300_000;
     private const int FixedPopulationSize = 100;
+    private const int Seed = 1;
 
     private sealed record Variant(string Name, Func<IFitnessFunctionEvaluator, double[], double[], DifferentialEvolution> Build);
 
@@ -28,8 +33,8 @@ public static class ConvergenceComparison
     {
         var problems = new[]
         {
-            new Problem("Rastrigin", new RastriginEvaluator(), -5.12, 5.12),
-            new Problem("Ackley", new AckleyEvaluator(), -32.768, 32.768),
+            new Problem("Rastrigin", new RastriginEvaluator(Dimensions), -5.12, 5.12),
+            new Problem("Ackley", new AckleyEvaluator(Dimensions), -32.768, 32.768),
         };
 
         var variants = new[]
@@ -37,23 +42,23 @@ public static class ConvergenceComparison
             new Variant("DE/rand/1/bin", (e, l, u) => Common(e, l, u, FixedPopulationSize)
                 .WithDefaultMutationStrategy(0.5, 0.9).WithDefaultSelectionStrategy()
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(MaxEvaluationNumber))
-                .UseAllProcessors().Build()),
+                .UseAllProcessors().WithSeed(Seed).Build()),
             new Variant("jDE", (e, l, u) => Common(e, l, u, FixedPopulationSize)
                 .WithJde()
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(MaxEvaluationNumber))
-                .UseAllProcessors().Build()),
+                .UseAllProcessors().WithSeed(Seed).Build()),
             new Variant("JADE", (e, l, u) => Common(e, l, u, FixedPopulationSize)
                 .WithJade()
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(MaxEvaluationNumber))
-                .UseAllProcessors().Build()),
+                .UseAllProcessors().WithSeed(Seed).Build()),
             new Variant("SHADE", (e, l, u) => Common(e, l, u, FixedPopulationSize)
                 .WithShade()
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(MaxEvaluationNumber))
-                .UseAllProcessors().Build()),
+                .UseAllProcessors().WithSeed(Seed).Build()),
             new Variant("L-SHADE", (e, l, u) => Common(e, l, u, 18 * Dimensions)
                 .WithLShade(MaxEvaluationNumber)
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(MaxEvaluationNumber))
-                .UseAllProcessors().Build()),
+                .UseAllProcessors().WithSeed(Seed).Build()),
         };
 
         Console.WriteLine($"Convergence comparison — {Dimensions}D, budget {MaxEvaluationNumber:N0} evaluations (best objective, lower is better)");

@@ -30,7 +30,7 @@ public class BenchmarkConvergenceTests
     {
         var evaluator = BenchmarkFunctionCatalog.Create(functionName, dimension);
 
-        var best = await BuilderOptimizer.BestOfAsync(attempts: 3, Timeout, () =>
+        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () =>
             DifferentialEvolutionBuilder.ForFunction(evaluator)
                 .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds())
                 .WithPopulationSize(60)
@@ -39,6 +39,7 @@ public class BenchmarkConvergenceTests
                 .WithDefaultSelectionStrategy()
                 .WithTerminationCondition(new StagnationStreakTerminationStrategy(2500, 1e-12))
                 .UseProcessors(1)
+                .WithSeed(BuilderOptimizer.Seed)
                 .Build());
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-6);
@@ -60,7 +61,7 @@ public class BenchmarkConvergenceTests
     {
         var evaluator = BenchmarkFunctionCatalog.Create(functionName, dimension);
 
-        var best = await BuilderOptimizer.BestOfAsync(attempts: 4, Timeout, () =>
+        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () =>
             DifferentialEvolutionBuilder.ForFunction(evaluator)
                 .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds())
                 .WithPopulationSize(50)
@@ -68,6 +69,7 @@ public class BenchmarkConvergenceTests
                 .WithShade()
                 .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(3000))
                 .UseProcessors(1)
+                .WithSeed(BuilderOptimizer.Seed)
                 .Build());
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-4);
@@ -88,7 +90,7 @@ public class BenchmarkConvergenceTests
         var evaluator = BenchmarkFunctionCatalog.Create(functionName, dimension);
         const long maxEvaluations = 300_000;
 
-        var best = await BuilderOptimizer.BestOfAsync(attempts: 4, Timeout, () =>
+        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () =>
             DifferentialEvolutionBuilder.ForFunction(evaluator)
                 .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds())
                 .WithPopulationSize(100)
@@ -96,6 +98,7 @@ public class BenchmarkConvergenceTests
                 .WithLShade(maxEvaluations)
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(maxEvaluations))
                 .UseProcessors(1)
+                .WithSeed(BuilderOptimizer.Seed)
                 .Build());
 
         // Looser tolerance: these landscapes are deceptive / dimension-scaled.

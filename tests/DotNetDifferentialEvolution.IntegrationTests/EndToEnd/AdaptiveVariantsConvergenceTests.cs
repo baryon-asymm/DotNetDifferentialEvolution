@@ -25,7 +25,7 @@ public class AdaptiveVariantsConvergenceTests
     {
         var evaluator = new RosenbrockEvaluator(dimension: 2);
 
-        var best = await BuilderOptimizer.BestOfAsync(attempts: 3, Timeout, () =>
+        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () =>
         {
             var withSampling = DifferentialEvolutionBuilder.ForFunction(evaluator)
                 .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds())
@@ -43,6 +43,7 @@ public class AdaptiveVariantsConvergenceTests
             return configured
                 .WithTerminationCondition(new StagnationStreakTerminationStrategy(2000, 1e-9))
                 .UseProcessors(1)
+                .WithSeed(BuilderOptimizer.Seed)
                 .Build();
         });
 
@@ -55,7 +56,7 @@ public class AdaptiveVariantsConvergenceTests
         var evaluator = new RosenbrockEvaluator(dimension: 2);
         const long maxEvaluations = 200_000;
 
-        var best = await BuilderOptimizer.BestOfAsync(attempts: 3, Timeout, () =>
+        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () =>
             DifferentialEvolutionBuilder.ForFunction(evaluator)
                 .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds())
                 .WithPopulationSize(50)
@@ -63,6 +64,7 @@ public class AdaptiveVariantsConvergenceTests
                 .WithLShade(maxEvaluations)
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(maxEvaluations))
                 .UseProcessors(1)
+                .WithSeed(BuilderOptimizer.Seed)
                 .Build());
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-6, geneTolerance: 1e-3);

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- Common settings (TFM, nullable, RollForward, …) come from tests/Directory.Build.props.
+         The reflection half of the protocol's machine checks (AGENTS.md §13). Every node project of the tree is
+         referenced so that its assembly lands in this build output and can be loaded by name; none of their types
+         is used (this node's BOOT.md, Dependencies: None). -->
+    <PropertyGroup>
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
+        <PackageReference Include="xunit" Version="2.9.3"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj"/>
+        <ProjectReference Include="..\..\src\DotNetDifferentialEvolution.GPU\DotNetDifferentialEvolution.GPU.csproj"/>
+        <ProjectReference Include="..\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj"/>
+        <ProjectReference Include="..\DotNetDifferentialEvolution.UnitTests\DotNetDifferentialEvolution.UnitTests.csproj"/>
+        <ProjectReference Include="..\DotNetDifferentialEvolution.IntegrationTests\DotNetDifferentialEvolution.IntegrationTests.csproj"/>
+        <ProjectReference Include="..\DotNetDifferentialEvolution.GPU.Test\DotNetDifferentialEvolution.GPU.Test.csproj"/>
+        <ProjectReference Include="..\..\benchmarks\DotNetDifferentialEvolution.Benchmark\DotNetDifferentialEvolution.Benchmark.csproj"/>
+    </ItemGroup>
+
+</Project>

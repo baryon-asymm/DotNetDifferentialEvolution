@@ -33,3 +33,16 @@ dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CA1303.severity = none
 # Interface-typed fields in test/benchmark helpers are deliberate; the micro-perf hint is irrelevant.
 dotnet_diagnostic.CA1859.severity = none
+
+# GPU package and its tests: kernel code compiled by ILGPU. Two rules do not fit it.
+[{src/DotNetDifferentialEvolution.GPU,tests/DotNetDifferentialEvolution.GPU.Test}/**.cs]
+
+# CA1815 (value types should override equality): the structs here are kernel parameters
+# (strategies, fitness functions, the device population, the random generator). They are
+# passed by value into a kernel and never compared; ILGPU cannot compile the virtual Equals
+# they would gain anyway.
+dotnet_diagnostic.CA1815.severity = none
+# CA1814 (prefer jagged arrays): the host-side population is double[,] because ILGPU's
+# Allocate2DDenseX copies exactly that shape into a dense 2D device buffer. A jagged array
+# would have to be flattened by hand to reach the device.
+dotnet_diagnostic.CA1814.severity = none

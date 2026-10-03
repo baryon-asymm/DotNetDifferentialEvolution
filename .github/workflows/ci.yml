@@ -19,6 +19,22 @@ jobs:
       - name: Documentation references
         run: ./scripts/check-doc-references.sh
 
+      # The BOOT.md/API.md tree (AGENTS.md) is checked twice: file by file here, by the protocol
+      # linter, and against the compiled code by tests/DotNetDifferentialEvolution.Protocol.Tests,
+      # which runs in the integration gate below and starts the same linter with --strict.
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Protocol lint
+        run: python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates
+
+      - name: Protocol linter self-tests
+        run: |
+          python -X utf8 tools/protocol-lint/test_protocol_lint.py
+          python -X utf8 tools/protocol-lint/test_history_guard.py
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -40,12 +56,13 @@ jobs:
           --filter "Category=Unit"
           --collect:"XPlat Code Coverage"
 
-      # Broader gate: unit + integration, excluding the long-running (Slow) tests.
-      - name: Integration tests (excluding slow)
+      # Broader gate: unit + integration, excluding the long-running (Slow) tests and the GPU
+      # tests, which need an OpenCL device the hosted runners do not have.
+      - name: Integration tests (excluding slow and GPU)
         run: >-
           dotnet test DotNetDifferentialEvolution.sln
           --configuration Release --no-build
-          --filter "Category!=Slow"
+          --filter "Category!=Slow&Category!=Gpu"
 
       # API gate: package validation only runs on pack, so pack here and throw the result away.
       # Without this the public-surface diff against the last release would first be seen by the
