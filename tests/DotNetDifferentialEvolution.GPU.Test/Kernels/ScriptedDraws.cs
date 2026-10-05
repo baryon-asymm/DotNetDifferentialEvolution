@@ -32,7 +32,7 @@ internal readonly record struct ScriptedDraw(DrawKind Kind, ulong Value, int Ran
 
 /// <summary>
 /// A draw source that replays a script, for the DE step called on the host (ACCEPTANCE.md, checks
-/// 1c, 1d, 1g). The script is consumed in order; a call of the wrong kind, an index outside
+/// 1c, 1d, 1g, S2–S4). The script is consumed in order; a call of the wrong kind, an index outside
 /// <c>[0, n)</c> or a range other than the scripted one throws, so the test sees the step consume
 /// exactly the draws it was given, in the order given. Host only: it holds an array.
 /// </summary>
@@ -46,6 +46,9 @@ internal struct ScriptedDraws(IReadOnlyList<ScriptedDraw> script) : IDrawSource
 
     /// <summary>Gets the number of 64-bit draws consumed so far.</summary>
     public int WordsConsumed { get; private set; }
+
+    /// <summary>Gets the number of unit doubles consumed so far.</summary>
+    public int UnitDoublesConsumed { get; private set; }
 
     /// <inheritdoc />
     public int NextIndex(int n)
@@ -69,8 +72,18 @@ internal struct ScriptedDraws(IReadOnlyList<ScriptedDraw> script) : IDrawSource
     /// <inheritdoc />
     public readonly uint NextUInt() => throw new NotSupportedException("The DE step draws no raw 32-bit word.");
 
-    /// <inheritdoc />
-    public readonly double NextUnitDouble() => throw new NotSupportedException("The DE step draws no unit double.");
+    /// <summary>
+    /// A uniform double from a scripted 64-bit draw: the word's top 53 bits times 2⁻⁵³. A
+    /// <see cref="RecordingRandomProvider"/> records each CPU <c>NextDouble</c> as that word, so the GPU step gets back
+    /// the double the CPU step drew, whether it uses it as a crossover threshold draw or as a number (ACCEPTANCE.md, S3,
+    /// S4).
+    /// </summary>
+    /// <returns>The double.</returns>
+    public double NextUnitDouble()
+    {
+        UnitDoublesConsumed++;
+        return (Take(DrawKind.ULong).Value >> 11) * DrawConversions.UnitDoubleScale;
+    }
 
     private ScriptedDraw Take(DrawKind kind)
     {

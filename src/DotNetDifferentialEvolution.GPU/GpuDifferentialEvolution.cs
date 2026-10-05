@@ -195,11 +195,19 @@ public sealed class GpuDifferentialEvolution : IDisposable
                 }
 
                 RunGeneration();
-                var observerDue = _settings.Handler is not null && _state.Generation % _settings.EveryNGenerations == 0;
+                var generation = _state.Generation;
+                var observerDue = _settings.Handler is not null && generation % _settings.EveryNGenerations == 0;
                 if (_settings.Stagnation is not null
-                    && (observerDue || _state.Generation % _settings.StopReadInterval == 0)
+                    && (observerDue || generation % _settings.StopReadInterval == 0)
                     && Stopped())
                 {
+                    // As in the CPU package, the observer sees the generation the rule stops at, when it is due there:
+                    // the stop word is read at every due generation, so an earlier stop was never due.
+                    if (observerDue && _state.Generation == generation)
+                    {
+                        _settings.Handler!.Handle(Snapshot());
+                    }
+
                     break;
                 }
 

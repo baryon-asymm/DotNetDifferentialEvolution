@@ -28,4 +28,19 @@ internal static class MathProbe
         outputs[FunctionCount * i + 2] = Math.Pow(x, PowExponent);
         outputs[FunctionCount * i + 3] = Math.Sqrt(x);
     }
+
+    /// <summary>
+    /// The trigonometric functions of the allow-list, as the samplers of JADE and SHADE call them (ACCEPTANCE.md, check
+    /// S15, D3): thread i writes <c>Cos(cosines[i])</c> and <c>Tan(tangents[i])</c> to outputs <c>2i</c> and <c>2i + 1</c>.
+    /// </summary>
+    /// <param name="index">The input.</param>
+    /// <param name="cosines">The arguments of <see cref="Math.Cos"/>.</param>
+    /// <param name="tangents">The arguments of <see cref="Math.Tan"/>.</param>
+    /// <param name="outputs">The results, two per input.</param>
+    public static void TrigProbe(Index1D index, ArrayView<double> cosines, ArrayView<double> tangents, ArrayView<double> outputs)
+    {
+        int i = index;
+        outputs[2 * i] = Math.Cos(cosines[i]);
+        outputs[2 * i + 1] = Math.Tan(tangents[i]);
+    }
 }

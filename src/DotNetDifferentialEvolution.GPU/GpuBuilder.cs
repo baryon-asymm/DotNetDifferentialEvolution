@@ -35,6 +35,7 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
     private int? _seed;
     private IGpuPopulationUpdatedHandler? _handler;
     private int _everyNGenerations = 1;
+    private int _stopReadInterval = RunSettings.DefaultStopReadInterval;
 
     /// <inheritdoc />
     public IGpuPopulationSizeRequired<TFunction> WithBounds(ReadOnlyMemory<double> lowerBound, ReadOnlyMemory<double> upperBound)
@@ -263,7 +264,10 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
             _stagnation,
             _seed ?? RandomNumberGenerator.GetInt32(int.MaxValue),
             _handler,
-            _everyNGenerations);
+            _everyNGenerations)
+        {
+            StopReadInterval = _stopReadInterval,
+        };
         var function = _function;
         KernelLauncher Compile(Accelerator accelerator) => new KernelLauncher<TFunction>(accelerator, function, strategy.Rule);
 
@@ -271,6 +275,20 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
         return _accelerator is { } callersAccelerator
             ? new GpuDifferentialEvolution(AcceleratorLease.Borrowed(callersAccelerator), settings, Compile)
             : new GpuDifferentialEvolution(DeviceSelector.Open(BackendOf(_device)), settings, Compile);
+    }
+
+    /// <summary>
+    /// Reads the stop word every <paramref name="interval"/> generations instead of every
+    /// <see cref="RunSettings.DefaultStopReadInterval"/>: for the tests that a stagnation limit ends a run at the same
+    /// generation whatever the interval (ACCEPTANCE.md, S12, S17).
+    /// </summary>
+    /// <param name="interval">The interval; at least 1.</param>
+    /// <returns>This builder.</returns>
+    internal GpuBuilder<TFunction> WithStopReadInterval(int interval)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(interval, 1);
+        _stopReadInterval = interval;
+        return this;
     }
 
     private static void RequireMutationForce(double mutationForce, string name)

@@ -216,17 +216,34 @@ internal sealed class GenerationBookkeeping : IDisposable
     {
         if (count <= CountingRankLimit)
         {
-            _rankByCounting ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>>(
-                nameof(BookkeepingKernels.RankByCounting));
-            _rankByCounting(_stream, count, fitness, count, Views.Ranking, Views.Stop);
-            return;
+            RankByCounting(fitness, count);
         }
+        else
+        {
+            RankByBitonicNetwork(fitness, count);
+        }
+    }
 
+    /// <summary>Ranks by counting, whatever N; the ranking buffer must hold N (ACCEPTANCE.md, S9).</summary>
+    /// <param name="fitness">The fitness values.</param>
+    /// <param name="count">N.</param>
+    internal void RankByCounting(ArrayView<double> fitness, int count)
+    {
+        _rankByCounting ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>>(
+            nameof(BookkeepingKernels.RankByCounting));
+        _rankByCounting(_stream, count, fitness, count, Views.Ranking, Views.Stop);
+    }
+
+    /// <summary>Ranks by the bitonic network, whatever N; the ranking and key buffers must hold N rounded up to a power of two (ACCEPTANCE.md, S9).</summary>
+    /// <param name="fitness">The fitness values.</param>
+    /// <param name="count">N.</param>
+    internal void RankByBitonicNetwork(ArrayView<double> fitness, int count)
+    {
         _loadSortKeys ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<double>, ArrayView<int>, ArrayView<int>>>(
             nameof(BookkeepingKernels.LoadSortKeys));
         _bitonicStep ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, int, int, ArrayView<int>>>(
             nameof(BookkeepingKernels.BitonicStep));
-        var length = SortLength(count);
+        var length = (int)System.Numerics.BitOperations.RoundUpToPowerOf2((uint)count);
         _loadSortKeys(_stream, length, fitness, count, _sortKeys, Views.Ranking, Views.Stop);
         for (var block = 2; block <= length; block <<= 1)
         {

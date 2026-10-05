@@ -55,6 +55,13 @@ kernel's slot discipline: ACCEPTANCE.md checks **1b** (donors), **1c** (crossove
 - [RandomProviders](../../../src/DotNetDifferentialEvolution/RandomProviders/API.md) —
   `SeededRandomProvider`, the source of 1g's cases and draws.
 - [Random](../Random/API.md) — `ChiSquared` (check 1b).
+- [Algorithms/Jade](../../../src/DotNetDifferentialEvolution/Algorithms/Jade/API.md) — the CPU package: `JadeStrategy` (S4)
+- [Algorithms/Jde](../../../src/DotNetDifferentialEvolution/Algorithms/Jde/API.md) — the CPU package: `JdeStrategy` (S4, S6)
+- [Algorithms/Lshade](../../../src/DotNetDifferentialEvolution/Algorithms/Lshade/API.md) — the CPU package: `LShadeStrategy` (S4)
+- [Algorithms/Shade](../../../src/DotNetDifferentialEvolution/Algorithms/Shade/API.md) — the CPU package: `ShadeStrategy` (S4)
+- [ControlParameterProviders](../../../src/DotNetDifferentialEvolution/ControlParameterProviders/API.md) — the CPU package: `IControlParameterProvider` (S4)
+- [MutationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/MutationStrategies/Interfaces/API.md) — the CPU package: `IMutationStrategy` (S2, S3)
+- [SelectionStrategies](../../../src/DotNetDifferentialEvolution/SelectionStrategies/API.md) — the CPU package: the CPU selection (S5)
 
 Outside the tree: ILGPU 1.5.3 (CPU accelerator), DotNetOptimization.Abstractions
 (`BaseRandomProvider`), xUnit.

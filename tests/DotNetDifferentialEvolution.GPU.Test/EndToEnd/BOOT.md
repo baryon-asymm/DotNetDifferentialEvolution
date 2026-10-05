@@ -36,6 +36,10 @@ frozen; their numbers are copied, never chosen here.
   — the builder, `GpuDifferentialEvolution`, `GpuOptimizationResult`,
   `GpuPopulationSnapshot`, `IGpuPopulationUpdatedHandler`; internally
   `PopulationDownloadCount` (its child documents do not exist yet).
+- [DotNetDifferentialEvolution](../../../src/DotNetDifferentialEvolution/API.md) — the CPU package: the builder and its run, held beside the GPU runs (S13, S14)
+- [Models](../../../src/DotNetDifferentialEvolution/Models/API.md) — the CPU package: `Population`, the CPU run's result
+- [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md) — the CPU package: `StagnationStreakTerminationStrategy`, the limits (S13, S17)
+- [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — the CPU package: `ITerminationStrategy`
 
 Outside the tree: ILGPU 1.5.3 (a caller-owned `Context` and accelerator for 7b),
 xUnit 2.9.3; for the `Gpu` cases, a CUDA and an OpenCL device.
