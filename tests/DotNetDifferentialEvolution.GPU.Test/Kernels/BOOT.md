@@ -61,7 +61,9 @@ kernel's slot discipline: ACCEPTANCE.md checks **1b** (donors), **1c** (crossove
 - [Algorithms/Shade](../../../src/DotNetDifferentialEvolution/Algorithms/Shade/API.md) — the CPU package: `ShadeStrategy` (S4)
 - [ControlParameterProviders](../../../src/DotNetDifferentialEvolution/ControlParameterProviders/API.md) — the CPU package: `IControlParameterProvider` (S4)
 - [MutationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/MutationStrategies/Interfaces/API.md) — the CPU package: `IMutationStrategy` (S2, S3)
-- [SelectionStrategies](../../../src/DotNetDifferentialEvolution/SelectionStrategies/API.md) — the CPU package: the CPU selection (S5)
+- [SelectionStrategies](../../../src/DotNetDifferentialEvolution/SelectionStrategies/API.md) — the CPU package: `SelectionStrategy`, the fixed schemes' selection (S5)
+- [SelectionStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/SelectionStrategies/Interfaces/API.md) — the CPU package: `ISelectionStrategy` (S5)
+- [Variants](../../../src/DotNetDifferentialEvolution/Variants/API.md) — the CPU package: the variants' selection for each configuration (S5)
 
 Outside the tree: ILGPU 1.5.3 (CPU accelerator), DotNetOptimization.Abstractions
 (`BaseRandomProvider`), xUnit.

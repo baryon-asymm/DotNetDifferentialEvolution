@@ -49,7 +49,7 @@ public sealed class RankingTests : IDisposable
             var distinct = array % 10 == 0;
             var values = Values(random, count, distinct);
             fitness.View.SubView(0, count).CopyFromCPU(values);
-            var expected = Enumerable.Range(0, count).OrderBy(i => FitnessOrder.KeyOf(values[i])).ThenBy(i => i).ToArray();
+            var expected = Enumerable.Range(0, count).OrderBy(i => double.IsNaN(values[i]) ? double.PositiveInfinity : values[i]).ThenBy(i => i).ToArray();
 
             bookkeeping.RankByBitonicNetwork(fitness.View, count);
             Assert.Equal(expected, Ranking(bookkeeping, count));
