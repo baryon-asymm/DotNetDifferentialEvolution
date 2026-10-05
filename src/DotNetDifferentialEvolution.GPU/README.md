@@ -143,8 +143,9 @@ trial when it is at least as good as its parent (JADE: strictly better). Details
 hand-assembled `KernelController`, the strategy structs and `XorShift32` states are
 replaced by the builder; the objective returns its value instead of writing into the
 population; the result is an `ISolution`; runs are seeded; `RunAsync` no longer blocks;
-`Dispose` no longer forces a garbage collection. Besides DE/rand/1/bin it has the CPU package's other
-four schemes, jDE, JADE, SHADE, L-SHADE and the stagnation stop rule, which 0.x had not.
+`Dispose` no longer forces a garbage collection. Besides DE/rand/1/bin it has the CPU
+package's other four schemes, jDE, JADE, SHADE, L-SHADE and the stagnation stop rule,
+which 0.x had not. Release notes: `CHANGELOG.md` beside this file.
 
 ## License
 

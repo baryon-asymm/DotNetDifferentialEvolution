@@ -287,6 +287,9 @@ Written 2026-10-03, before any v1 code.
       build without publishing; `release.yml` has a `publish-gpu` job that runs only for
       `gpu-v*` and a `publish-cpu` job only for `v*`. A local `dotnet pack` gives the DLL, the XML
       documentation, `README.md`, `LICENSE` and `ILGPU_LICENSE`. Not yet run on GitHub.
+      2026-10-05: `release.yml` rebuilt as one pipeline for both packages (check, test, pack,
+      publish, release), the package chosen by the tag family; the rule above unchanged. Its
+      proof on GitHub is the root `BOOT.md`'s open criterion of that date.
 
 ### CUDA math through libdevice — checks L1–L9 ✅
 
