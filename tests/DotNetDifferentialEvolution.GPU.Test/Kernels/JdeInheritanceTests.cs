@@ -11,7 +11,8 @@ namespace DotNetDifferentialEvolution.GPU.Test.Kernels;
 /// are the values trial i used exactly where the trial replaced its parent, ties included, and unchanged elsewhere. The
 /// expected values are recomputed on the host from <c>PhiloxDraws(seed, i, 1)</c>: <see cref="ControlParameters.Jde"/>,
 /// then the trial, then the objective and <see cref="Selection.Outcome"/>. The objective is stepped so that ties occur;
-/// improvements, ties and kept parents each occur, asserted.
+/// improvements, ties and kept parents each occur, and a tie whose trial drew a new F or CR, asserted: jDE keeps the
+/// parent's F and CR nine times in ten, so without such a tie an inheritance on improvement only would pass.
 /// </summary>
 [Trait("Category", "Integration")]
 public class JdeInheritanceTests
@@ -61,6 +62,7 @@ public class JdeInheritanceTests
         bookkeeping.Views.CrossoverProbabilities.CopyToCPU(crossovers);
 
         var outcomes = new int[3];
+        var tiesWithNewParameters = 0;
         for (var i = 0; i < PopulationSize; i++)
         {
             var draws = new PhiloxDraws(Seed, i, 1);
@@ -71,6 +73,10 @@ public class JdeInheritanceTests
             var trialFitness = default(SteppedSphere).Evaluate(new GeneView(hostTrialBuffer.View));
             var outcome = Selection.Outcome(trialFitness, parentFitness[i], acceptsTies: true);
             outcomes[outcome]++;
+            if (outcome == Selection.Accepted && (usedF != InitialMutationForce || usedCr != InitialCrossoverProbability))
+            {
+                tiesWithNewParameters++;
+            }
 
             var replaced = outcome != Selection.Kept;
             ParityCases.AssertSameBits(replaced ? usedF : InitialMutationForce, forces[i], $"F of individual {i} ({outcome})");
@@ -78,9 +84,10 @@ public class JdeInheritanceTests
         }
 
         Assert.True(outcomes.All(count => count > 0), $"kept {outcomes[0]}, tied {outcomes[1]}, improved {outcomes[2]}");
+        Assert.True(tiesWithNewParameters > 0, $"no tie drew a new F or CR (ties {outcomes[1]})");
     }
 
-    /// <summary>⌊Σ x_j²⌋: a sphere in steps of 1, so that a trial often ties its parent.</summary>
+    /// <summary>⌊Σ x_j² / 4⌋: a sphere in steps of 4, so that a trial often ties its parent.</summary>
     internal readonly struct SteppedSphere : IGpuFitnessFunction
     {
         /// <inheritdoc />
@@ -92,7 +99,7 @@ public class JdeInheritanceTests
                 sum += genes[j] * genes[j];
             }
 
-            return Math.Floor(sum);
+            return Math.Floor(sum / 4.0);
         }
     }
 }

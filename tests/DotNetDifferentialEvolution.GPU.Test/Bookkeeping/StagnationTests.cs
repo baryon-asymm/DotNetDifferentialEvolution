@@ -14,7 +14,8 @@ namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 /// and a first value of <see cref="double.MinValue"/> in some.</item>
 /// <item>A run whose objective stops improving ends at the generation the CPU rule gives for the best values its observer
 /// saw, on ILGPU's CPU accelerator; and runs that read the stop word every generation and every 16 end with the same
-/// generations, evaluations and result.</item>
+/// generations, evaluations and result. An observer ends any run that reaches generation 10 000, so a rule that never
+/// fires fails instead of hanging.</item>
 /// </list>
 /// </summary>
 [Trait("Category", "Integration")]
@@ -23,6 +24,9 @@ public class StagnationTests
     private const int SequenceCount = 100;
     private const int SequenceLength = 60;
     private const int CaseSeed = 20261012;
+
+    /// <summary>A generation no run here reaches: a run still going there failed to stop, and its observer ends it.</summary>
+    private const int GenerationGuard = 10000;
 
     private static readonly double[] Lower = [-3.0, -3.0, -3.0];
     private static readonly double[] Upper = [3.0, 3.0, 3.0];
@@ -88,8 +92,8 @@ public class StagnationTests
             Assert.Equal(expected, observed.Values.Count);
         }
 
-        using var everyGeneration = Builder(stopReadInterval: 1).Build();
-        using var everySixteen = Builder(stopReadInterval: RunSettings.DefaultStopReadInterval).Build();
+        using var everyGeneration = Builder(stopReadInterval: 1).WithPopulationUpdateHandler(new Guard(), GenerationGuard).Build();
+        using var everySixteen = Builder(stopReadInterval: RunSettings.DefaultStopReadInterval).WithPopulationUpdateHandler(new Guard(), GenerationGuard).Build();
         var first = await everyGeneration.RunAsync().ConfigureAwait(true);
         var second = await everySixteen.RunAsync().ConfigureAwait(true);
         Assert.Equal(first.Generations, second.Generations);
@@ -137,6 +141,25 @@ public class StagnationTests
         {
             ArgumentNullException.ThrowIfNull(snapshot);
             Values.Add(snapshot.FitnessFunctionValues.Span[BestPick.IndexOf(snapshot.FitnessFunctionValues.Span)]);
+            Guard.ThrowAtTheGuard(snapshot.Generation);
+        }
+    }
+
+    /// <summary>Ends a run that reached <see cref="GenerationGuard"/>: the observer's exception faults the run's task.</summary>
+    private sealed class Guard : IGpuPopulationUpdatedHandler
+    {
+        public static void ThrowAtTheGuard(int generation)
+        {
+            if (generation >= GenerationGuard)
+            {
+                throw new InvalidOperationException($"the run reached generation {generation} without stopping");
+            }
+        }
+
+        public void Handle(GpuPopulationSnapshot snapshot)
+        {
+            ArgumentNullException.ThrowIfNull(snapshot);
+            ThrowAtTheGuard(snapshot.Generation);
         }
     }
 }

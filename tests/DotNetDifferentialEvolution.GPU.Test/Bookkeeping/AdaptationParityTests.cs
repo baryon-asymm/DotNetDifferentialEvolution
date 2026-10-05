@@ -20,7 +20,8 @@ namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 /// random sets (N in [4, 1 024]; improved, accepted and kept; infinite and <see cref="double.NaN"/> parents; a first
 /// generation with no success in every tenth set; all-zero successful CR in some L-SHADE sets). The CPU state is read
 /// through <c>GetControlParameters</c> with draws that return it exactly (<c>ReadBack</c>).</item>
-/// <item>The device kernels equal the same rules summed in chunks of 1 024, bit for bit, for N up to 5 000.</item>
+/// <item>The device kernels equal the same rules summed in chunks of 1 024, bit for bit, for N up to 5 000, over three
+/// generations of which the first has no success: the memory index must not move then.</item>
 /// </list>
 /// </summary>
 [Trait("Category", "Integration")]
@@ -70,7 +71,7 @@ public class AdaptationParityTests
         Assert.True(noSuccessFirst > 0, "no set began with a generation without success");
     }
 
-    /// <summary>The device kernels equal the rules summed in chunks of 1 024, bit for bit, across several chunks.</summary>
+    /// <summary>The device kernels equal the rules summed in chunks of 1 024, bit for bit, across several chunks and after a generation without success.</summary>
     /// <param name="ruleName">JADE or SHADE, by name.</param>
     /// <param name="lShade">Whether L-SHADE's memory update applies.</param>
     /// <param name="populationSize">N.</param>
@@ -98,9 +99,9 @@ public class AdaptationParityTests
         using var survivors = accelerator.Allocate1D<double>(populationSize);
         using var genes = accelerator.Allocate1D<double>(populationSize);
         var state = new HostState(rule, lShade, memorySize, adaptationRate, AdaptationRules.InitialValue);
-        for (var generation = 1; generation <= 2; generation++)
+        for (var generation = 1; generation <= 3; generation++)
         {
-            var records = Records(random, populationSize, noSuccess: false, zeroCr: false);
+            var records = Records(random, populationSize, noSuccess: generation == 1, zeroCr: false);
             bookkeeping.Views.Outcomes.CopyFromCPU([.. records.Select(Outcome)]);
             bookkeeping.Views.MutationForces.CopyFromCPU([.. records.Select(record => record.UsedF)]);
             bookkeeping.Views.CrossoverProbabilities.CopyFromCPU([.. records.Select(record => record.UsedCr)]);
