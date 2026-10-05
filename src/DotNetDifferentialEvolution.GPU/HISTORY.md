@@ -2,6 +2,24 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="libdevice-kept-2026-10-05"></a>
+## 2026-10-05 — libdevice kept, though APThermo has left it
+
+APThermo, whose libdevice post-link this package adopted from its commit `5fdd82c`, left
+libdevice on 2026-10-05 (its merge `a8808127`; its `HISTORY.md`, `ilgpu-libdevice-retired`
+and `allow-list-own-math`): its own correctly rounded `exp`, `log` and `pow`
+(`src/Thermo/Elementary`), a post-link that marks every double `mul`, `add` and `sub`
+`.rn`, and CUDA equal to the CPU accelerator bit for bit, at a cost it measured of +74 % on
+its CUDA kernel. Doing the same here would need correctly rounded `Cos` and `Tan` as well,
+which APThermo does not have.
+
+The owner, told this: "если libdevice не ломает логику, то давай его оставим". It does not:
+the step, the samplers and the bookkeeping are held to the CPU package bit for bit on the
+host and the CPU accelerator (S2–S12); on CUDA, libdevice's `Exp`, `Log`, `Pow`, `Sqrt`,
+`Cos` and `Tan` are within 2 ULP of `System.Math` (D2, S15), every configuration converges
+(S13) and repeats bit for bit (S14). What it costs is invariant 4 as written since v1: across
+backends the draws are equal and the results may differ. Nothing changes.
+
 <a id="symmetry-built-2026-10-05"></a>
 ## 2026-10-05 — symmetry built; what the red runs found in the tests
 
