@@ -10,5 +10,5 @@ public interface IWorkerPassLoopDoneHandler
     /// </summary>
     /// <param name="masterWorker">The worker controller that sent the event.</param>
     /// <param name="shouldTerminate">A boolean indicating whether the process should terminate.</param>
-    public void Handle(WorkerController masterWorker, out bool shouldTerminate);
+    void Handle(WorkerController masterWorker, out bool shouldTerminate);
 }

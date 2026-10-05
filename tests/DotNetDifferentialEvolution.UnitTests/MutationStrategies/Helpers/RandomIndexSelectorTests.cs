@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.MutationStrategies.Helpers;
 using DotNetDifferentialEvolution.RandomProviders;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.MutationStrategies.Helpers;
 
@@ -12,6 +12,10 @@ namespace DotNetDifferentialEvolution.UnitTests.MutationStrategies.Helpers;
 [Trait("Category", "Unit")]
 public class RandomIndexSelectorTests
 {
+    /// <summary>
+    /// A drawn candidate at or above the excluded index is shifted up by one, so the excluded index is
+    /// skipped without a redraw.
+    /// </summary>
     [Fact]
     public void ShiftsCandidatesPastExcludedIndex()
     {
@@ -21,9 +25,12 @@ public class RandomIndexSelectorTests
 
         RandomIndexSelector.FillDistinctIndices(indices, populationSize: 5, excludeIndex: 2, new ProviderRandomSource(random));
 
-        Assert.Equal(new[] { 0, 4, 1 }, indices.ToArray());
+        Assert.Equal([0, 4, 1], indices.ToArray());
     }
 
+    /// <summary>
+    /// A candidate that collides with an index already chosen is redrawn until it is distinct.
+    /// </summary>
     [Fact]
     public void RetriesUntilCandidateIsDistinct()
     {
@@ -34,9 +41,16 @@ public class RandomIndexSelectorTests
 
         RandomIndexSelector.FillDistinctIndices(indices, populationSize: 4, excludeIndex: 0, new ProviderRandomSource(random));
 
-        Assert.Equal(new[] { 1, 2 }, indices.ToArray());
+        Assert.Equal([1, 2], indices.ToArray());
     }
 
+    /// <summary>
+    /// Over many seeded fills, the indices are always in range, mutually distinct and never the
+    /// excluded index.
+    /// </summary>
+    /// <param name="populationSize">The population size the indices are drawn from.</param>
+    /// <param name="excludeIndex">The index that must never be drawn.</param>
+    /// <param name="count">The number of indices to draw.</param>
     [Theory]
     [InlineData(10, 0, 3)]
     [InlineData(10, 9, 3)]
@@ -50,7 +64,7 @@ public class RandomIndexSelectorTests
         var random = new DeterministicRandomProvider(seed: populationSize + excludeIndex + count);
         Span<int> indices = stackalloc int[count];
 
-        for (int trial = 0; trial < 200; trial++)
+        for (var trial = 0; trial < 200; trial++)
         {
             RandomIndexSelector.FillDistinctIndices(indices, populationSize, excludeIndex, new ProviderRandomSource(random));
 

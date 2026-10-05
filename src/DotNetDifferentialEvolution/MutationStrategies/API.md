@@ -39,12 +39,7 @@ inline the draw; `null` when the context was not built by the engine).
 public class MutationStrategy : IMutationStrategy                  // DE/rand/1/bin, own F and CR
 {
     public const int NumberOfIndividualsToChoose = 3;
-    [Obsolete] public MutationStrategy(double mutationForce, double crossoverProbability,
-        int populationSize, ReadOnlyMemory<double> lowerBound,
-        ReadOnlyMemory<double> upperBound, BaseRandomProvider randomProvider);
-    public MutationStrategy(double mutationForce, double crossoverProbability,
-        int populationSize, ReadOnlyMemory<double> lowerBound,
-        ReadOnlyMemory<double> upperBound);
+    public MutationStrategy(double mutationForce, double crossoverProbability);
     public int MinimumPopulationSize { get; }                      // 4
     public MutationRequirements Requirements { get; }              // None
     public void Mutate(in MutationContext context);

@@ -9,23 +9,17 @@ namespace DotNetDifferentialEvolution.Variants;
 /// greedy selection. Each individual carries its own control parameters, which are re-sampled
 /// with small probability each generation and inherited by a successful trial.
 /// </summary>
-public sealed class JdeVariant : IDeVariant
+/// <remarks>
+/// Initializes a new instance of the <see cref="JdeVariant"/> class.
+/// </remarks>
+/// <param name="initialMutationForce">The initial mutation factor for every individual.</param>
+/// <param name="initialCrossoverProbability">The initial crossover probability for every individual.</param>
+public sealed class JdeVariant(
+    double initialMutationForce = JdeStrategy.DefaultInitialMutationForce,
+    double initialCrossoverProbability = JdeStrategy.DefaultInitialCrossoverProbability) : IDeVariant
 {
-    private readonly double _initialMutationForce;
-    private readonly double _initialCrossoverProbability;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JdeVariant"/> class.
-    /// </summary>
-    /// <param name="initialMutationForce">The initial mutation factor for every individual.</param>
-    /// <param name="initialCrossoverProbability">The initial crossover probability for every individual.</param>
-    public JdeVariant(
-        double initialMutationForce = JdeStrategy.DefaultInitialMutationForce,
-        double initialCrossoverProbability = JdeStrategy.DefaultInitialCrossoverProbability)
-    {
-        _initialMutationForce = initialMutationForce;
-        _initialCrossoverProbability = initialCrossoverProbability;
-    }
+    private readonly double _initialMutationForce = initialMutationForce;
+    private readonly double _initialCrossoverProbability = initialCrossoverProbability;
 
     /// <inheritdoc />
     public DeVariantSetup Configure(

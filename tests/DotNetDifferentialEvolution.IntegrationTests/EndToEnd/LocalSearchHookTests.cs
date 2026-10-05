@@ -1,8 +1,7 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.LocalSearch;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -16,9 +15,15 @@ namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 public class LocalSearchHookTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
+    private static readonly int[] ExpectedRefinementGenerations = [2, 4, 6];
 
+    /// <summary>
+    /// A refiner registered for every second generation runs on generations 2, 4 and 6 of a
+    /// six-generation run, and the best individual it snaps to the origin is still the best in the
+    /// returned population.
+    /// </summary>
     [Fact]
-    public async Task Refiner_RunsOnConfiguredCadence_AndWriteBackSurvivesIntoResult()
+    public async Task RefinerRunsOnConfiguredCadenceAndWriteBackSurvivesIntoResult()
     {
         var evaluator = new SphereEvaluator(dimension: 2);
         var refiner = new SnapToOriginRefiner(evaluationsPerCall: 7);
@@ -34,21 +39,27 @@ public class LocalSearchHookTests
             .WithLocalSearch(refiner, everyNGenerations: 2)
             .Build();
 
-        var result = await de.RunAsync().WaitAsync(Timeout);
+        var result = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
         result.MoveCursorToBestIndividual();
 
         // Cadence: 6 generations, every 2nd → fired at 2, 4, 6.
-        Assert.Equal(new[] { 2, 4, 6 }, refiner.Generations);
+        Assert.Equal(ExpectedRefinementGenerations, refiner.Generations);
 
         // Write-back: the refiner snapped the best to the Sphere optimum (origin, value 0), and
         // that survived selection and termination into the final result.
         Assert.Equal(0.0, result.IndividualCursor.FitnessFunctionValue);
         foreach (var gene in result.IndividualCursor.Genes.Span)
+        {
             Assert.Equal(0.0, gene);
+        }
     }
 
+    /// <summary>
+    /// The evaluations a refiner reports are added to the run's evaluation count, on top of the
+    /// initial population and one trial per individual per generation.
+    /// </summary>
     [Fact]
-    public async Task Refiner_EvaluationsAreFoldedIntoEvaluationCount()
+    public async Task RefinerEvaluationsAreFoldedIntoEvaluationCount()
     {
         var evaluator = new SphereEvaluator(dimension: 2);
         const int populationSize = 12;
@@ -67,11 +78,11 @@ public class LocalSearchHookTests
             .WithLocalSearch(refiner, everyNGenerations: 1)
             .Build();
 
-        var result = await de.RunAsync().WaitAsync(Timeout);
+        var result = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         // Initial population evaluation + one trial per individual per generation + the refiner's
         // own evaluations on every generation (it runs every generation here).
-        var expected = (long)populationSize                       // initial population
+        var expected = populationSize                       // initial population
                        + (long)populationSize * generations       // DE trials
                        + (long)evaluationsPerCall * generations;  // local search
         Assert.Equal(expected, result.EvaluationCount);
@@ -81,11 +92,9 @@ public class LocalSearchHookTests
     /// A test refiner that snaps the best individual to the origin (the Sphere optimum, value 0),
     /// records the generations it ran on, and reports a fixed number of evaluations per call.
     /// </summary>
-    private sealed class SnapToOriginRefiner : ILocalSearchRefiner
+    private sealed class SnapToOriginRefiner(int evaluationsPerCall) : ILocalSearchRefiner
     {
-        private readonly int _evaluationsPerCall;
-
-        public SnapToOriginRefiner(int evaluationsPerCall) => _evaluationsPerCall = evaluationsPerCall;
+        private readonly int _evaluationsPerCall = evaluationsPerCall;
 
         public List<int> Generations { get; } = [];
 

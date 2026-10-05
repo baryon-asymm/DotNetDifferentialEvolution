@@ -3,9 +3,9 @@ using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Algorithms;
 
@@ -18,8 +18,12 @@ public class JdeStrategyTests
 {
     private const int PopulationSize = 4;
 
+    /// <summary>
+    /// With both adaptation probabilities at zero, the strategy hands back the initial F and CR
+    /// stored for the individual instead of regenerating them.
+    /// </summary>
     [Fact]
-    public void WithoutAdaptation_ReturnsTheStoredPerIndividualParameters()
+    public void WithoutAdaptationReturnsTheStoredPerIndividualParameters()
     {
         var jde = new JdeStrategy(
             PopulationSize,
@@ -37,8 +41,12 @@ public class JdeStrategyTests
         Assert.Equal(0.9, cr);
     }
 
+    /// <summary>
+    /// When adaptation fires, F is redrawn as <c>minF + u * range</c> and CR as a plain uniform
+    /// draw, each from its own value draw following the decision draw.
+    /// </summary>
     [Fact]
-    public void WhenAdaptationTriggers_RegeneratesFWithinRangeAndCrUniformly()
+    public void WhenAdaptationTriggersRegeneratesFWithinRangeAndCrUniformly()
     {
         var jde = new JdeStrategy(
             PopulationSize,
@@ -57,8 +65,12 @@ public class JdeStrategyTests
         Assert.Equal(0.3, cr, 1e-12);
     }
 
+    /// <summary>
+    /// An individual whose trial improved adopts the F and CR that trial used, while an individual
+    /// whose parent was kept retains its previous parameters.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_KeepsParametersOfSuccessfulTrialsPerIndividual()
+    public void AfterGenerationKeepsParametersOfSuccessfulTrialsPerIndividual()
     {
         var jde = new JdeStrategy(
             PopulationSize,
@@ -85,8 +97,12 @@ public class JdeStrategyTests
         Assert.Equal(0.9, cr1);
     }
 
+    /// <summary>
+    /// A trial that survives on a tie replaces its parent, so the individual adopts the trial's
+    /// parameters exactly as it would after a strict improvement.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_KeepsParametersOfATrialAcceptedOnATie()
+    public void AfterGenerationKeepsParametersOfATrialAcceptedOnATie()
     {
         // jDE attaches the parameters to the individual, so what matters is survival, not
         // improvement: a trial taken on a tie *is* the individual in the next generation, and the

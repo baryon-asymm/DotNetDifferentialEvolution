@@ -33,9 +33,9 @@ optimum.
   [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md),
   [Models](../../../src/DotNetDifferentialEvolution/Models/API.md) — the rest of a
   context and an executor, and the parameter types of their constructors.
-- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md),
-  [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md),
-  [Helpers](../../DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) —
+- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md),
+  [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md),
+  [Helpers](../../DotNetDifferentialEvolution.Tests.Common/Helpers/API.md) —
   `SphereEvaluator`, `ProblemContextHelper`.
 
 ## Constraints

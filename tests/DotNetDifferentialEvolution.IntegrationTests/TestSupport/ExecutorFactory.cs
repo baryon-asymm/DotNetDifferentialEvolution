@@ -4,8 +4,8 @@ using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.Interfaces;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 
@@ -42,10 +42,7 @@ internal static class ExecutorFactory
 
         var mutationStrategy = new MutationStrategy(
             mutationForce: mutationForce,
-            crossoverProbability: crossoverProbability,
-            populationSize: populationSize,
-            lowerBound: context.GenesLowerBound,
-            upperBound: context.GenesUpperBound);
+            crossoverProbability: crossoverProbability);
         var selectionStrategy = new SelectionStrategy(context.GenomeSize);
         var executor = new AlgorithmExecutor(mutationStrategy, selectionStrategy, context);
 

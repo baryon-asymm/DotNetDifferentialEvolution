@@ -1,5 +1,4 @@
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetOptimization.Abstractions;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -15,6 +14,9 @@ namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 /// <para>
 /// Keep the bodies textually identical to the guide's snippets. If a snippet has to change, change
 /// it in both places in the same commit; the point is lost the moment they are allowed to differ.
+/// The one difference is <c>.ConfigureAwait(true)</c> after each <c>await</c>, which the analyzers
+/// require in this project (CA2007) and xUnit requires to be <see langword="true"/> (xUnit1030); a
+/// caller of the guide's code is not bound by either.
 /// </para>
 /// </summary>
 [Trait("Category", "Integration")]
@@ -30,7 +32,9 @@ public class DocumentedExampleTests
         {
             var sum = 0.0;
             foreach (var gene in genes)
+            {
                 sum += gene * gene;
+            }
 
             return sum;
         }
@@ -42,9 +46,12 @@ public class DocumentedExampleTests
     [Fact]
     public async Task TheShortestCompleteProgramBuildsRunsAndReportsAMinimum()
     {
+        double[] lowerBound = [-5.0, -5.0, -5.0];
+        double[] upperBound = [5.0, 5.0, 5.0];
+
         using var de = DifferentialEvolutionBuilder
             .ForFunction(new Sphere())
-            .WithBounds(new[] { -5.0, -5.0, -5.0 }, new[] { 5.0, 5.0, 5.0 })
+            .WithBounds(lowerBound, upperBound)
             .WithPopulationSize(50)
             .WithUniformPopulationSampling()
             .WithDefaultMutationStrategy(mutationForce: 0.5, crossoverProbability: 0.9)
@@ -53,7 +60,7 @@ public class DocumentedExampleTests
             .UseAllProcessors()
             .Build();
 
-        var population = await de.RunAsync();
+        var population = await de.RunAsync().ConfigureAwait(true);
 
         population.MoveCursorToBestIndividual();
         var best = population.IndividualCursor.GetSnapshot(deepCopy: true);
@@ -73,11 +80,11 @@ public class DocumentedExampleTests
     [Fact]
     public async Task TheLShadeExampleBuildsAndSpendsItsBudget()
     {
-        const long Budget = 300_000;
-        const int Dimensions = 30;
+        const long budget = 300_000;
+        const int dimensions = 30;
 
-        var lowerBound = new double[Dimensions];
-        var upperBound = new double[Dimensions];
+        var lowerBound = new double[dimensions];
+        var upperBound = new double[dimensions];
         Array.Fill(lowerBound, -100.0);
         Array.Fill(upperBound, 100.0);
 
@@ -86,18 +93,18 @@ public class DocumentedExampleTests
         using var de = DifferentialEvolutionBuilder
             .ForFunction(objective)
             .WithBounds(lowerBound, upperBound)
-            .WithPopulationSize(18 * Dimensions)   // r_N^init = 18 from the paper's Table II
+            .WithPopulationSize(18 * dimensions)   // r_N^init = 18 from the paper's Table II
             .WithUniformPopulationSampling()
-            .WithLShade(maxEvaluationNumber: Budget)
-            .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(Budget))
+            .WithLShade(maxEvaluationNumber: budget)
+            .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(budget))
             .UseAllProcessors()
             .Build();
 
-        var population = await de.RunAsync();
+        var population = await de.RunAsync().ConfigureAwait(true);
 
         Assert.True(
-            population.EvaluationCount >= Budget,
-            $"the run stopped after {population.EvaluationCount} of {Budget} evaluations");
+            population.EvaluationCount >= budget,
+            $"the run stopped after {population.EvaluationCount} of {budget} evaluations");
 
         // §7: the live population is what PopulationSize reports, and LPSR has taken it to the
         // floor by the time the budget is exhausted.
@@ -112,9 +119,12 @@ public class DocumentedExampleTests
     [Fact]
     public async Task TheResultIsReadThroughTheCursor()
     {
+        double[] lowerBound = [-5.0, -5.0, -5.0];
+        double[] upperBound = [5.0, 5.0, 5.0];
+
         using var de = DifferentialEvolutionBuilder
             .ForFunction(new Sphere())
-            .WithBounds(new[] { -5.0, -5.0, -5.0 }, new[] { 5.0, 5.0, 5.0 })
+            .WithBounds(lowerBound, upperBound)
             .WithPopulationSize(20)
             .WithUniformPopulationSampling()
             .WithShade()
@@ -122,7 +132,7 @@ public class DocumentedExampleTests
             .UseAllProcessors()
             .Build();
 
-        var population = await de.RunAsync();
+        var population = await de.RunAsync().ConfigureAwait(true);
 
         population.MoveCursorToBestIndividual();
         var best = population.IndividualCursor.GetSnapshot(deepCopy: true);

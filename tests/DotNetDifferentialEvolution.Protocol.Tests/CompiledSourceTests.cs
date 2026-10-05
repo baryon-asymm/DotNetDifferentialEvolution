@@ -1,9 +1,6 @@
-using System;
-using System.IO;
-using System.Linq;
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Placement (AGENTS.md §1, the tree invariant): every C# source the compiler actually read lives in a directory that

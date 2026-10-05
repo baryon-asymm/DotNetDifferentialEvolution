@@ -46,7 +46,7 @@ from private fields (`DifferentialEvolution._problemContext`, `_workerController
   [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md),
   [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md)
   — the parts passed in and asserted on.
-- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
+- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md)
   — Sphere.
 
 ## Constraints
@@ -61,7 +61,7 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       variants 19); 53 on 2026-10-02, before the jDE tie row.
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. Dropping the
       lower-above-upper check in `WithBounds` turned
-      `WithBounds_ThrowsWhenLowerExceedsUpper` red; dropping both control-parameter
+      `WithBoundsThrowsWhenLowerExceedsUpper` red; dropping both control-parameter
       guards turned 7 cases red, among them
       `BuildThrowsWhenAStrategyNeedingControlParametersHasNoProvider` and
       `AThirdPartyVariantGetsTheSameControlParameterCheckAsABuiltIn`.

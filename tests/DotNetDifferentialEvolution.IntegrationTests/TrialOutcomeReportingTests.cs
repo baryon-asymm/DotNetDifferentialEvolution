@@ -5,7 +5,7 @@ using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 using DotNetDifferentialEvolution.Variants;
 
 namespace DotNetDifferentialEvolution.IntegrationTests;
@@ -28,28 +28,41 @@ public class TrialOutcomeReportingTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// The built-in greedy selection accepts a tying trial and records it as
+    /// <see cref="SelectionOutcome.TrialAccepted"/>, not as an improvement.
+    /// </summary>
     [Fact]
     public async Task TheBuiltInStrategyTakesATieWithoutCreditingItAsAnImprovement()
     {
         // The papers' rule, and the reason the two thresholds are separate: SHADE (2013) Eq. (6)
         // and L-SHADE (2014) Algorithm 2 line 12 take the trial on f(u) <= f(x), so the tie
         // survives; line 16 records the success on the strict f(u) < f(x), so it is not a success.
-        var recorder = await RunOneGenerationAsync(selectionStrategy: null);
+        var recorder = await RunOneGenerationAsync(selectionStrategy: null).ConfigureAwait(true);
 
         Assert.NotEmpty(recorder.Outcomes);
         Assert.All(recorder.Outcomes, outcome => Assert.Equal(SelectionOutcome.TrialAccepted, outcome));
     }
 
+    /// <summary>
+    /// Under a selection strategy that keeps every parent, every trial is recorded as
+    /// <see cref="SelectionOutcome.ParentKept"/>.
+    /// </summary>
     [Fact]
     public async Task ARejectEverythingSelectionStrategyIsReportedAsKeepingTheParent()
     {
         // A strategy stricter than the built-in must not be credited with anything.
-        var recorder = await RunOneGenerationAsync(new RejectEverythingSelectionStrategy());
+        var recorder = await RunOneGenerationAsync(new RejectEverythingSelectionStrategy()).ConfigureAwait(true);
 
         Assert.NotEmpty(recorder.Outcomes);
         Assert.All(recorder.Outcomes, outcome => Assert.Equal(SelectionOutcome.ParentKept, outcome));
     }
 
+    /// <summary>
+    /// The executor records the outcome the selection strategy returns, even
+    /// <see cref="SelectionOutcome.TrialImproved"/> for a tie, instead of recomputing one of its
+    /// own.
+    /// </summary>
     [Fact]
     public async Task AStrategyThatCallsATieAnImprovementIsReportedAsItClaims()
     {
@@ -57,7 +70,7 @@ public class TrialOutcomeReportingTests
         // than recomputing one. This strategy is deliberately wrong about its ties — it calls them
         // improvements — and the record must say what it said, because a record that disagreed
         // with the population is the defect this test exists to prevent.
-        var recorder = await RunOneGenerationAsync(new OverstatingSelectionStrategy());
+        var recorder = await RunOneGenerationAsync(new OverstatingSelectionStrategy()).ConfigureAwait(true);
 
         Assert.NotEmpty(recorder.Outcomes);
         Assert.All(recorder.Outcomes, outcome => Assert.Equal(SelectionOutcome.TrialImproved, outcome));
@@ -78,24 +91,18 @@ public class TrialOutcomeReportingTests
             .UseProcessors(1)
             .Build();
 
-        await de.RunAsync().WaitAsync(Timeout);
+        _ = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         return recorder;
     }
 
     /// <summary>Builds trials that are exact copies of their parents, so every trial ties.</summary>
-    private sealed class ParentCopyingVariant : IDeVariant
+    private sealed class ParentCopyingVariant(
+        ISelectionStrategy? selectionStrategy,
+        IGenerationStrategy generationStrategy) : IDeVariant
     {
-        private readonly ISelectionStrategy? _selectionStrategy;
-        private readonly IGenerationStrategy _generationStrategy;
-
-        public ParentCopyingVariant(
-            ISelectionStrategy? selectionStrategy,
-            IGenerationStrategy generationStrategy)
-        {
-            _selectionStrategy = selectionStrategy;
-            _generationStrategy = generationStrategy;
-        }
+        private readonly ISelectionStrategy? _selectionStrategy = selectionStrategy;
+        private readonly IGenerationStrategy _generationStrategy = generationStrategy;
 
         public DeVariantSetup Configure(
             in DeVariantConfiguration configuration)
@@ -121,7 +128,7 @@ public class TrialOutcomeReportingTests
     /// <summary>Takes every trial and calls every acceptance an improvement, ties included.</summary>
     private sealed class OverstatingSelectionStrategy : ISelectionStrategy
     {
-        public SelectionOutcome Select(
+        public SelectionOutcome SelectSurvivor(
             int individualIndex,
             double trialIndividualFfValue,
             Span<double> trialIndividual,
@@ -141,7 +148,7 @@ public class TrialOutcomeReportingTests
     /// <summary>Never replaces a parent, whatever the trial scored.</summary>
     private sealed class RejectEverythingSelectionStrategy : ISelectionStrategy
     {
-        public SelectionOutcome Select(
+        public SelectionOutcome SelectSurvivor(
             int individualIndex,
             double trialIndividualFfValue,
             Span<double> trialIndividual,
@@ -169,8 +176,10 @@ public class TrialOutcomeReportingTests
         {
             ArgumentNullException.ThrowIfNull(context);
 
-            for (int i = 0; i < context.ActivePopulationSize; i++)
+            for (var i = 0; i < context.ActivePopulationSize; i++)
+            {
                 Outcomes.Add(trialRecords[i].Outcome);
+            }
         }
     }
 }

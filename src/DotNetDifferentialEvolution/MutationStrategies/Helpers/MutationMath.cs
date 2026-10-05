@@ -30,14 +30,18 @@ internal static class MutationMath
             var minuendVectors = MemoryMarshal.Cast<double, Vector<double>>(minuend);
             var subtrahendVectors = MemoryMarshal.Cast<double, Vector<double>>(subtrahend);
 
-            for (int i = 0; i < destinationVectors.Length; i++)
+            for (var i = 0; i < destinationVectors.Length; i++)
+            {
                 destinationVectors[i] = baseVectors[i] + mutationForce * (minuendVectors[i] - subtrahendVectors[i]);
+            }
 
             handledGenesCount = genomeSize - genomeSize % Vector<double>.Count;
         }
 
-        for (int i = handledGenesCount; i < genomeSize; i++)
+        for (var i = handledGenesCount; i < genomeSize; i++)
+        {
             destination[i] = baseVector[i] + mutationForce * (minuend[i] - subtrahend[i]);
+        }
     }
 
     /// <summary>
@@ -58,14 +62,18 @@ internal static class MutationMath
             var minuendVectors = MemoryMarshal.Cast<double, Vector<double>>(minuend);
             var subtrahendVectors = MemoryMarshal.Cast<double, Vector<double>>(subtrahend);
 
-            for (int i = 0; i < destinationVectors.Length; i++)
+            for (var i = 0; i < destinationVectors.Length; i++)
+            {
                 destinationVectors[i] += mutationForce * (minuendVectors[i] - subtrahendVectors[i]);
+            }
 
             handledGenesCount = genomeSize - genomeSize % Vector<double>.Count;
         }
 
-        for (int i = handledGenesCount; i < genomeSize; i++)
+        for (var i = handledGenesCount; i < genomeSize; i++)
+        {
             destination[i] += mutationForce * (minuend[i] - subtrahend[i]);
+        }
     }
 
     /// <summary>
@@ -77,8 +85,5 @@ internal static class MutationMath
         Span<double> destination,
         ReadOnlySpan<double> current,
         ReadOnlySpan<double> target,
-        double mutationForce)
-    {
-        AssignBasePlusScaledDifference(destination, current, target, current, mutationForce);
-    }
+        double mutationForce) => AssignBasePlusScaledDifference(destination, current, target, current, mutationForce);
 }

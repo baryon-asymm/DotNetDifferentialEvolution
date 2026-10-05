@@ -62,7 +62,7 @@ public class UniformRandomSamplingMaker : IPopulationSamplingMaker
         var genomeSize = _lowerBound.Length;
 
         var random = _randomProvider;
-        for (int i = 0; i < population.Length; i++)
+        for (var i = 0; i < population.Length; i++)
         {
             var geneIndex = i % genomeSize;
             population[i] = random.NextDouble() * (_upperBound.Span[geneIndex] - _lowerBound.Span[geneIndex])

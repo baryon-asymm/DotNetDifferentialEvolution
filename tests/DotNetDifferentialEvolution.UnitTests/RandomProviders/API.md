@@ -17,10 +17,10 @@ Nothing outward. What this node proves about the engine's randomness.
 [Trait("Category", "Unit")]
 public class RandomDistributionHelperTests
 {
-    public void NextGaussian_MatchesBoxMullerClosedForm();
-    public void NextGaussian_WithZeroDeviation_ReturnsMean();
-    public void NextCauchy_AtMedianDrawReturnsLocation();
-    public void NextCauchy_AtUpperQuartileReturnsLocationPlusScale();
+    public void NextGaussianMatchesBoxMullerClosedForm();
+    public void NextGaussianWithZeroDeviationReturnsMean();
+    public void NextCauchyAtMedianDrawReturnsLocation();
+    public void NextCauchyAtUpperQuartileReturnsLocationPlusScale();
 }
 [Trait("Category", "Unit")]
 public class RandomThresholdTests
@@ -35,11 +35,11 @@ public class RandomThresholdTests
 public class SeededRandomProviderGaussianTests
 {
     public void TheCachedValueIsTheOtherHalfOfTheSameTransform();
-    public void APairOfDrawsConsumesTwoUniforms_NotFour();
+    public void APairOfDrawsConsumesTwoUniformsNotFour();
     public void MeanAndDeviationAreApplied();
     public void TheOutputStillMatchesTheNormalDistribution();
     public void ConsecutiveDrawsAreNotCorrelated();
-    public void TheCacheTravelsWithTheInstance_NotTheThread();
+    public void TheCacheTravelsWithTheInstanceNotTheThread();
     public void AThirdPartyProviderStillGetsThePlainTransform();
     public void TheHelperRoutesTheEnginesProviderThroughTheCache();
 }

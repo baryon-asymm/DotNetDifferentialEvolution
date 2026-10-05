@@ -1,5 +1,5 @@
 using DotNetDifferentialEvolution.RandomProviders;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.RandomProviders;
 
@@ -13,8 +13,12 @@ public class RandomDistributionHelperTests
 {
     private const double Precision = 1e-9;
 
+    /// <summary>
+    /// The Gaussian sampler returns the Box–Muller value for the scripted uniforms, scaled and shifted,
+    /// and consumes exactly two uniforms.
+    /// </summary>
     [Fact]
-    public void NextGaussian_MatchesBoxMullerClosedForm()
+    public void NextGaussianMatchesBoxMullerClosedForm()
     {
         // Draws 0.75, 0.0 → u1 = 1 - 0.75 = 0.25, u2 = 1 - 0.0 = 1.0.
         // z = sqrt(-2 ln u1) * cos(2π u2) = sqrt(-2 ln 0.25) * cos(2π) = 1.66510922...
@@ -27,8 +31,11 @@ public class RandomDistributionHelperTests
         Assert.Equal(2, random.DoubleDrawCount); // consumes exactly two uniforms
     }
 
+    /// <summary>
+    /// With a standard deviation of zero, the Gaussian sampler returns the mean.
+    /// </summary>
     [Fact]
-    public void NextGaussian_WithZeroDeviation_ReturnsMean()
+    public void NextGaussianWithZeroDeviationReturnsMean()
     {
         var random = new ScriptedRandomProvider(doubles: [0.3, 0.6]);
 
@@ -37,8 +44,11 @@ public class RandomDistributionHelperTests
         Assert.Equal(5.0, value, Precision);
     }
 
+    /// <summary>
+    /// A uniform draw of 0.5 maps to the Cauchy location.
+    /// </summary>
     [Fact]
-    public void NextCauchy_AtMedianDrawReturnsLocation()
+    public void NextCauchyAtMedianDrawReturnsLocation()
     {
         // u = 0.5 → tan(π(0.5 - 0.5)) = tan(0) = 0 → location.
         var random = new ScriptedRandomProvider(doubles: [0.5]);
@@ -48,8 +58,11 @@ public class RandomDistributionHelperTests
         Assert.Equal(2.0, value, Precision);
     }
 
+    /// <summary>
+    /// A uniform draw of 0.75 maps to the Cauchy location plus one scale.
+    /// </summary>
     [Fact]
-    public void NextCauchy_AtUpperQuartileReturnsLocationPlusScale()
+    public void NextCauchyAtUpperQuartileReturnsLocationPlusScale()
     {
         // u = 0.75 → tan(π·0.25) = 1 → location + scale.
         var random = new ScriptedRandomProvider(doubles: [0.75]);

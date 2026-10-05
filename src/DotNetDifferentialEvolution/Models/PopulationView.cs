@@ -33,8 +33,8 @@ public readonly record struct PopulationView(
         => Genes.Span.Slice(individualIndex * GenomeSize, GenomeSize);
 
     /// <summary>Gets the genes of the live individuals, excluding any allocated tail.</summary>
-    public Span<double> ActiveGenes => Genes.Span.Slice(0, Count * GenomeSize);
+    public Span<double> ActiveGenes => Genes.Span[..(Count * GenomeSize)];
 
     /// <summary>Gets the fitness values of the live individuals, excluding any allocated tail.</summary>
-    public Span<double> ActiveFfValues => FfValues.Span.Slice(0, Count);
+    public Span<double> ActiveFfValues => FfValues.Span[..Count];
 }

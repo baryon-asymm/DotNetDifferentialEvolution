@@ -3,8 +3,8 @@ using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators.Interfaces;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 
@@ -31,10 +31,7 @@ internal static class ManualAlgorithmRunner
         // reproducible without the strategy holding a provider of its own.
         var mutationStrategy = new MutationStrategy(
             mutationForce: mutationForce,
-            crossoverProbability: crossoverProbability,
-            populationSize: populationSize,
-            lowerBound: context.GenesLowerBound,
-            upperBound: context.GenesUpperBound);
+            crossoverProbability: crossoverProbability);
         var selectionStrategy = new SelectionStrategy(context.GenomeSize);
         var executor = new AlgorithmExecutor(mutationStrategy, selectionStrategy, context);
 
@@ -45,7 +42,7 @@ internal static class ManualAlgorithmRunner
             executor.Execute(workerId: 0, out var bestHandledIndividualIndex);
             context.SwapPopulations();
             population = context.GetRepresentativePopulation(++generationNumber, bestHandledIndividualIndex);
-        } while (terminationStrategy.ShouldTerminate(population) == false);
+        } while (!terminationStrategy.ShouldTerminate(population));
 
         population.MoveCursorToBestIndividual();
         return population;

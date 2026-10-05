@@ -1,7 +1,6 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.Concurrency;
 
@@ -22,27 +21,35 @@ public class ParallelDeterminismTests
 
     private const double ValueTolerance = 1e-3;
 
+    /// <summary>
+    /// The same Sphere problem reaches the optimum with one worker and with one per processor, so
+    /// striping the population across workers does not break the search.
+    /// </summary>
     [Fact]
     public async Task SingleWorkerAndMultiWorkerBothConverge()
     {
         var evaluator = new SphereEvaluator(dimension: 6);
 
-        var single = await RunAsync(evaluator, workers: 1);
-        var multi = await RunAsync(evaluator, workers: Math.Max(2, Environment.ProcessorCount));
+        var single = await RunAsync(evaluator, workers: 1).ConfigureAwait(true);
+        var multi = await RunAsync(evaluator, workers: Math.Max(2, Environment.ProcessorCount)).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, single, ValueTolerance);
         ConvergenceAssert.ReachedOptimum(evaluator, multi, ValueTolerance);
     }
 
+    /// <summary>
+    /// Twenty-five consecutive multi-worker runs all reach the optimum; a data race on the shared
+    /// buffers would make at least one of them miss it.
+    /// </summary>
     [Fact]
-    public async Task RepeatedParallelRunsAllConverge_NoDataRaceCorruption()
+    public async Task RepeatedParallelRunsAllConvergeNoDataRaceCorruption()
     {
         var evaluator = new SphereEvaluator(dimension: 6);
         var workers = Math.Max(2, Environment.ProcessorCount);
 
-        for (int run = 0; run < 25; run++)
+        for (var run = 0; run < 25; run++)
         {
-            var result = await RunAsync(evaluator, workers);
+            var result = await RunAsync(evaluator, workers).ConfigureAwait(true);
             ConvergenceAssert.ReachedOptimum(evaluator, result, ValueTolerance);
         }
     }
@@ -57,7 +64,7 @@ public class ParallelDeterminismTests
     /// wall-clock bound, which would be a flaky assertion on shared hardware.
     /// </summary>
     [Fact]
-    public async Task OversubscribedWorkerCount_CompletesAndConverges()
+    public async Task OversubscribedWorkerCountCompletesAndConverges()
     {
         var evaluator = new SphereEvaluator(dimension: 6);
 
@@ -65,12 +72,12 @@ public class ParallelDeterminismTests
         // test meaningful on a single-core agent.
         var workers = Math.Max(4, Environment.ProcessorCount * 2);
 
-        var result = await RunAsync(evaluator, workers, OversubscribedTimeout);
+        var result = await RunAsync(evaluator, workers, OversubscribedTimeout).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, result, ValueTolerance);
     }
 
-    private static async Task<DotNetDifferentialEvolution.Models.Population> RunAsync(
+    private static async Task<Models.Population> RunAsync(
         SphereEvaluator evaluator,
         int workers,
         TimeSpan? timeout = null)
@@ -85,7 +92,7 @@ public class ParallelDeterminismTests
             .UseProcessors(workers)
             .Build();
 
-        var result = await de.RunAsync().WaitAsync(timeout ?? Timeout);
+        var result = await de.RunAsync().WaitAsync(timeout ?? Timeout).ConfigureAwait(true);
         result.MoveCursorToBestIndividual();
         return result;
     }

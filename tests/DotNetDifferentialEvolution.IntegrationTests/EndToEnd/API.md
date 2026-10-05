@@ -26,9 +26,9 @@ public class AdaptiveVariantsConvergenceTests
 [Trait("Category", "Integration")]
 public class BenchmarkConvergenceTests
 {
-    public async Task ClassicDe_ConvergesOnUnimodalFunctions(string functionName, int dimension);
-    public async Task Shade_ConvergesOnMultimodalFunctions(string functionName, int dimension);
-    public async Task LShade_ConvergesOnHarderMultimodalFunctions(string functionName, int dimension);   // Slow
+    public async Task ClassicDeConvergesOnUnimodalFunctions(string functionName, int dimension);
+    public async Task ShadeConvergesOnMultimodalFunctions(string functionName, int dimension);
+    public async Task LShadeConvergesOnHarderMultimodalFunctions(string functionName, int dimension);   // Slow
 }
 [Trait("Category", "Integration")]
 public class MutationStrategyConvergenceTests
@@ -45,8 +45,8 @@ public class DocumentedExampleTests
 [Trait("Category", "Integration")]
 public class LocalSearchHookTests
 {
-    public async Task Refiner_RunsOnConfiguredCadence_AndWriteBackSurvivesIntoResult();
-    public async Task Refiner_EvaluationsAreFoldedIntoEvaluationCount();
+    public async Task RefinerRunsOnConfiguredCadenceAndWriteBackSurvivesIntoResult();
+    public async Task RefinerEvaluationsAreFoldedIntoEvaluationCount();
 }
 [Trait("Category", "Integration")]
 public class PopulationSizeReportingTests

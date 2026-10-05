@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The grammar of an <c>API.md</c>: its ✅ C# blocks and the declarations in them, and the text that sits under ✅ more
@@ -12,24 +9,31 @@ namespace ProtocolChecks;
 /// or in code, under a ✅ mark). A type need not be given a full declaration: one public only because a framework
 /// requires it may be named in a sentence, and that still counts.
 /// </summary>
-internal static class ApiDeclarations
+internal static partial class ApiDeclarations
 {
-    private static readonly Regex TypeRegex = new(
-        @"\b(?:record\s+struct|record\s+class|record|class|struct|enum|interface|delegate\s+[\w<>\[\],.?]+)\s+(\w+)", RegexOptions.Compiled);
+    [GeneratedRegex(
+        @"\b(?:record\s+struct|record\s+class|record|class|struct|enum|interface|delegate\s+[\w<>\[\],.?]+)\s+(\w+)", RegexOptions.Compiled)]
+    private static partial Regex TypeRegex();
 
-    private static readonly Regex PropertyRegex = new(@"\b(\w+)\s*\{\s*(?:get|set|init)", RegexOptions.Compiled);
+    [GeneratedRegex(@"\b(\w+)\s*\{\s*(?:get|set|init)", RegexOptions.Compiled)]
+    private static partial Regex PropertyRegex();
 
-    private static readonly Regex MethodRegex = new(@"\b(\w+)\s*(?:<[\w,\s]+>)?\s*\(", RegexOptions.Compiled);
+    [GeneratedRegex(@"\b(\w+)\s*(?:<[\w,\s]+>)?\s*\(", RegexOptions.Compiled)]
+    private static partial Regex MethodRegex();
 
-    private static readonly Regex FieldDeclarationRegex = new(
+    [GeneratedRegex(
         @"^\s*(?:(?:public|internal|private|protected|static|readonly|const|required|new|volatile|unsafe)\s+)*[\w.]+(?:<[^;=]*>)?(?:\[[\s,]*\])*\??\s+(?<names>\w+(?:\s*=\s*[^,;]+)?(?:\s*,\s*\w+(?:\s*=\s*[^,;]+)?)*)\s*;\s*$",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled)]
+    private static partial Regex FieldDeclarationRegex();
 
-    private static readonly Regex FieldNameRegex = new(@"^\s*(\w+)", RegexOptions.Compiled);
+    [GeneratedRegex(@"^\s*(\w+)", RegexOptions.Compiled)]
+    private static partial Regex FieldNameRegex();
 
-    private static readonly Regex EnumMemberRegex = new(@"^\s*(\w+)\s*(?:=\s*[^,]+?)?\s*,?\s*$", RegexOptions.Compiled);
+    [GeneratedRegex(@"^\s*(\w+)\s*(?:=\s*[^,]+?)?\s*,?\s*$", RegexOptions.Compiled)]
+    private static partial Regex EnumMemberRegex();
 
-    private static readonly Regex ParameterNameRegex = new(@"(\w+)\s*$", RegexOptions.Compiled);
+    [GeneratedRegex(@"(\w+)\s*$", RegexOptions.Compiled)]
+    private static partial Regex ParameterNameRegex();
 
     private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
@@ -214,7 +218,7 @@ internal static class ApiDeclarations
     /// lines. Whether the type opens a body decides who owns the members after it (<see cref="Declaration.OpensBody"/>).</summary>
     private static List<Declaration>? TypeDeclaration(string[] lines, ref int index, string line)
     {
-        var match = TypeRegex.Match(line);
+        var match = TypeRegex().Match(line);
         if (!match.Success)
         {
             return null;
@@ -266,7 +270,7 @@ internal static class ApiDeclarations
 
     private static Declaration? PropertyDeclaration(string line)
     {
-        var match = PropertyRegex.Match(line);
+        var match = PropertyRegex().Match(line);
         return match.Success ? new Declaration(match.Groups[1].Value, IsType: false, IsEnumMember: false) : null;
     }
 
@@ -279,7 +283,7 @@ internal static class ApiDeclarations
     /// needs no joining before the name: the continuation line that carries the name is read as a declaration line.</summary>
     private static Declaration? MethodDeclaration(string[] lines, ref int index, string line)
     {
-        var match = MethodRegex.Matches(line).FirstOrDefault(candidate => !Keywords.Contains(candidate.Groups[1].Value));
+        var match = MethodRegex().Matches(line).FirstOrDefault(candidate => !Keywords.Contains(candidate.Groups[1].Value));
         if (match is null)
         {
             return null;
@@ -291,7 +295,7 @@ internal static class ApiDeclarations
 
     private static List<Declaration>? FieldDeclarations(string line)
     {
-        var match = FieldDeclarationRegex.Match(line);
+        var match = FieldDeclarationRegex().Match(line);
         if (!match.Success)
         {
             return null;
@@ -300,7 +304,7 @@ internal static class ApiDeclarations
         var declarations = new List<Declaration>();
         foreach (var declarator in match.Groups["names"].Value.Split(','))
         {
-            var name = FieldNameRegex.Match(declarator);
+            var name = FieldNameRegex().Match(declarator);
             if (name.Success && !Keywords.Contains(name.Groups[1].Value))
             {
                 declarations.Add(new Declaration(name.Groups[1].Value, IsType: false, IsEnumMember: false));
@@ -312,7 +316,7 @@ internal static class ApiDeclarations
 
     private static Declaration? EnumMemberDeclaration(string line)
     {
-        var match = EnumMemberRegex.Match(line);
+        var match = EnumMemberRegex().Match(line);
         return match.Success && !Keywords.Contains(match.Groups[1].Value) ? new Declaration(match.Groups[1].Value, IsType: false, IsEnumMember: true) : null;
     }
 
@@ -336,7 +340,7 @@ internal static class ApiDeclarations
         foreach (var parameter in text[(open + 1)..close].Split(','))
         {
             var withoutDefault = parameter.Split('=')[0].Trim();
-            var name = ParameterNameRegex.Match(withoutDefault);
+            var name = ParameterNameRegex().Match(withoutDefault);
             if (name.Success && char.IsUpper(name.Groups[1].Value[0]))
             {
                 names.Add(name.Groups[1].Value);

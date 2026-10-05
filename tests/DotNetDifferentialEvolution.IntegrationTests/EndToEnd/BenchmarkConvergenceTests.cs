@@ -1,7 +1,6 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -18,13 +17,19 @@ public class BenchmarkConvergenceTests
 
     // ---- Unimodal: classic DE/rand/1/bin should reach a tight tolerance. ----
 
+    /// <summary>
+    /// Classic DE/rand/1/bin with constant F and CR reaches each unimodal benchmark's global
+    /// minimum to within 1e-6.
+    /// </summary>
+    /// <param name="functionName">The benchmark's catalog name.</param>
+    /// <param name="dimension">The number of genes.</param>
     [Theory]
     [InlineData("Sphere", 5)]
     [InlineData("Rosenbrock", 2)]
     [InlineData("Zakharov", 5)]
     [InlineData("SumOfDifferentPowers", 5)]
     [InlineData("DixonPrice", 2)]
-    public async Task ClassicDe_ConvergesOnUnimodalFunctions(
+    public async Task ClassicDeConvergesOnUnimodalFunctions(
         string functionName,
         int dimension)
     {
@@ -40,13 +45,19 @@ public class BenchmarkConvergenceTests
                 .WithTerminationCondition(new StagnationStreakTerminationStrategy(2500, 1e-12))
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
-                .Build());
+                .Build()).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-6);
     }
 
     // ---- Multimodal: SHADE should reach the global basin (value-based). ----
 
+    /// <summary>
+    /// SHADE reaches the global basin of each multimodal benchmark, ending within 1e-4 of the
+    /// global minimum after 3000 generations.
+    /// </summary>
+    /// <param name="functionName">The benchmark's catalog name.</param>
+    /// <param name="dimension">The number of genes.</param>
     [Theory]
     [InlineData("Rastrigin", 2)]
     [InlineData("Ackley", 2)]
@@ -55,7 +66,7 @@ public class BenchmarkConvergenceTests
     [InlineData("Himmelblau", 2)]
     [InlineData("Booth", 2)]
     [InlineData("Beale", 2)]
-    public async Task Shade_ConvergesOnMultimodalFunctions(
+    public async Task ShadeConvergesOnMultimodalFunctions(
         string functionName,
         int dimension)
     {
@@ -70,20 +81,26 @@ public class BenchmarkConvergenceTests
                 .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(3000))
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
-                .Build());
+                .Build()).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-4);
     }
 
     // ---- Deceptive / harder multimodal: give L-SHADE a real evaluation budget. ----
 
+    /// <summary>
+    /// L-SHADE with a 300 000-evaluation budget ends within 1% of the global minimum (1e-2 absolute
+    /// near zero) on deceptive and higher-dimensional multimodal benchmarks.
+    /// </summary>
+    /// <param name="functionName">The benchmark's catalog name.</param>
+    /// <param name="dimension">The number of genes.</param>
     [Theory]
     [Trait("Category", "Slow")]
     [InlineData("Schwefel", 2)]
     [InlineData("StyblinskiTang", 2)]
     [InlineData("Rastrigin", 5)]
     [InlineData("Ackley", 5)]
-    public async Task LShade_ConvergesOnHarderMultimodalFunctions(
+    public async Task LShadeConvergesOnHarderMultimodalFunctions(
         string functionName,
         int dimension)
     {
@@ -99,7 +116,7 @@ public class BenchmarkConvergenceTests
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(maxEvaluations))
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
-                .Build());
+                .Build()).ConfigureAwait(true);
 
         // Looser tolerance: these landscapes are deceptive / dimension-scaled.
         var tolerance = 1e-2 * Math.Max(1.0, Math.Abs(evaluator.GetGlobalMinimumFfValue()));

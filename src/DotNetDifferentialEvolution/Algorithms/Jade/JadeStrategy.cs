@@ -13,7 +13,16 @@ namespace DotNetDifferentialEvolution.Algorithms.Jade;
 /// an adaptive mean <c>μCR</c>; both means are nudged toward the values that produced
 /// successful trials. Used together with <see cref="MutationStrategies.CurrentToPBestMutationStrategy"/>.
 /// </summary>
-public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGenerationStrategy
+/// <remarks>
+/// Initializes a new instance of the <see cref="JadeStrategy"/> class.
+/// </remarks>
+/// <param name="populationSize">The size of the population.</param>
+/// <param name="adaptationRate">The adaptation rate (c) for the parameter means.</param>
+/// <param name="initialMean">The initial value of μF and μCR.</param>
+public class JadeStrategy(
+    int populationSize,
+    double adaptationRate = JadeStrategy.DefaultAdaptationRate,
+    double initialMean = JadeStrategy.DefaultInitialMean) : AdaptiveStrategyBase(populationSize), IControlParameterProvider, IGenerationStrategy
 {
     /// <summary>The default adaptation rate (<c>c</c>) for the parameter means.</summary>
     public const double DefaultAdaptationRate = 0.1;
@@ -24,27 +33,10 @@ public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGe
     private const double CrStandardDeviation = 0.1;
     private const double FScale = 0.1;
 
-    private readonly double _adaptationRate;
+    private readonly double _adaptationRate = adaptationRate;
 
-    private double _meanCr;
-    private double _meanF;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="JadeStrategy"/> class.
-    /// </summary>
-    /// <param name="populationSize">The size of the population.</param>
-    /// <param name="adaptationRate">The adaptation rate (c) for the parameter means.</param>
-    /// <param name="initialMean">The initial value of μF and μCR.</param>
-    public JadeStrategy(
-        int populationSize,
-        double adaptationRate = DefaultAdaptationRate,
-        double initialMean = DefaultInitialMean)
-        : base(populationSize)
-    {
-        _adaptationRate = adaptationRate;
-        _meanCr = initialMean;
-        _meanF = initialMean;
-    }
+    private double _meanCr = initialMean;
+    private double _meanF = initialMean;
 
     /// <inheritdoc />
     public void GetControlParameters(
@@ -62,7 +54,9 @@ public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGe
         } while (mutationForce <= 0.0);
 
         if (mutationForce > 1.0)
+        {
             mutationForce = 1.0;
+        }
     }
 
     /// <inheritdoc />
@@ -91,12 +85,14 @@ public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGe
         var fSum = 0.0;
         var fSquaredSum = 0.0;
 
-        for (int i = 0; i < currentPopulationSize; i++)
+        for (var i = 0; i < currentPopulationSize; i++)
         {
             // S_CR and S_F take improving trials only; a trial accepted on a tie taught the search
             // nothing and must not pull μCR or μF toward its parameters.
-            if (trialRecords[i].Improved == false)
+            if (!trialRecords[i].Improved)
+            {
                 continue;
+            }
 
             crSum += trialRecords[i].UsedCr;
             fSum += trialRecords[i].UsedF;
@@ -105,10 +101,14 @@ public class JadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IGe
         }
 
         if (crCount == 0)
+        {
             return;
+        }
 
         _meanCr = (1.0 - _adaptationRate) * _meanCr + _adaptationRate * (crSum / crCount);
         if (fSum > 0.0)
+        {
             _meanF = (1.0 - _adaptationRate) * _meanF + _adaptationRate * (fSquaredSum / fSum);
+        }
     }
 }

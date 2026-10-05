@@ -20,7 +20,7 @@ shares.
 public class CrossoverHelperTests
 {
     public void MixesMutantAndParentGenesAndRepairsOutOfBounds();
-    public void GuaranteedGeneAlwaysComesFromMutant_EvenWhenCrossoverNeverFires();
+    public void GuaranteedGeneAlwaysComesFromMutantEvenWhenCrossoverNeverFires();
     public void InBoundsMutantGenesAreKeptWhenCrossoverAlwaysFires();
     public void RepairReflectsOutOfBoundGenesHalfwayTowardTheParent();
     public void GeneInheritanceRateMatchesTheClosedForm(double crossoverProbability, int genomeSize);
@@ -30,11 +30,11 @@ public class CrossoverHelperTests
 public class MutationMathTests
 {
     public static IEnumerable<object[]> GenomeSizes();
-    public void AssignBasePlusScaledDifference_MatchesScalarReference(int genomeSize);
-    public void AddScaledDifference_AccumulatesOntoDestination(int genomeSize);
-    public void AssignCurrentToTarget_MovesCurrentTowardTarget(int genomeSize);
-    public void AssignCurrentToTarget_WithForceZero_YieldsCurrent();
-    public void AssignCurrentToTarget_WithForceOne_YieldsTarget();
+    public void AssignBasePlusScaledDifferenceMatchesScalarReference(int genomeSize);
+    public void AddScaledDifferenceAccumulatesOntoDestination(int genomeSize);
+    public void AssignCurrentToTargetMovesCurrentTowardTarget(int genomeSize);
+    public void AssignCurrentToTargetWithForceZeroYieldsCurrent();
+    public void AssignCurrentToTargetWithForceOneYieldsTarget();
 }
 [Trait("Category", "Unit")]
 public class RandomIndexSelectorTests

@@ -1,7 +1,7 @@
 using DotNetDifferentialEvolution.Interfaces;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.Concurrency;
 
@@ -16,6 +16,11 @@ public class CancellationTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// Cancelling from inside generation 5 completes the run task as canceled at the next barrier,
+    /// before generation 6 starts.
+    /// </summary>
+    /// <param name="workers">The number of worker threads the run uses.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
@@ -27,29 +32,37 @@ public class CancellationTests
 
         using var de = Build(observer, workers);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => de.RunAsync(cancellation.Token).WaitAsync(Timeout));
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => de.RunAsync(cancellation.Token).WaitAsync(Timeout)).ConfigureAwait(true);
 
         // Cancellation is observed at the barrier that follows the generation which requested it,
         // so exactly one more generation must not have started.
         Assert.Equal(5, observer.Generations);
     }
 
+    /// <summary>
+    /// A token that is already canceled when the run starts stops it before a single generation is
+    /// evolved.
+    /// </summary>
     [Fact]
     public async Task ATokenAlreadyCanceledStopsTheRunBeforeAnyGeneration()
     {
         using var cancellation = new CancellationTokenSource();
-        await cancellation.CancelAsync();
+        await cancellation.CancelAsync().ConfigureAwait(true);
 
         var observer = new GenerationCountingObserver(cancelAtGeneration: null, cancellation);
         using var de = Build(observer, workers: 4);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => de.RunAsync(cancellation.Token).WaitAsync(Timeout));
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => de.RunAsync(cancellation.Token).WaitAsync(Timeout)).ConfigureAwait(true);
 
         Assert.Equal(0, observer.Generations);
     }
 
+    /// <summary>
+    /// Disposing an optimizer whose run was canceled stops and joins every worker thread within the
+    /// timeout.
+    /// </summary>
     [Fact]
     public async Task ACanceledRunDisposesWithoutHanging()
     {
@@ -59,17 +72,21 @@ public class CancellationTests
         var de = Build(observer, workers: 4);
         try
         {
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(
-                () => de.RunAsync(cancellation.Token).WaitAsync(Timeout));
+            _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => de.RunAsync(cancellation.Token).WaitAsync(Timeout)).ConfigureAwait(true);
         }
         finally
         {
             // Dispose stops and joins every worker thread; if a worker were still spinning past
             // the barrier this would not return.
-            await Task.Run(de.Dispose).WaitAsync(Timeout);
+            await Task.Run(de.Dispose).WaitAsync(Timeout).ConfigureAwait(true);
         }
     }
 
+    /// <summary>
+    /// A token that is never canceled changes nothing: the run evolves every generation and returns
+    /// a population.
+    /// </summary>
     [Fact]
     public async Task AnUncanceledRunIsUnaffected()
     {
@@ -78,12 +95,16 @@ public class CancellationTests
 
         using var de = Build(observer, workers: 4);
 
-        var result = await de.RunAsync(cancellation.Token).WaitAsync(Timeout);
+        var result = await de.RunAsync(cancellation.Token).WaitAsync(Timeout).ConfigureAwait(true);
 
         Assert.Equal(Generations, observer.Generations);
         Assert.NotNull(result);
     }
 
+    /// <summary>
+    /// The overload without a token still runs to the termination condition and returns a
+    /// population.
+    /// </summary>
     [Fact]
     public async Task RunAsyncWithoutATokenStillWorks()
     {
@@ -91,7 +112,7 @@ public class CancellationTests
 
         using var de = Build(observer, workers: 4);
 
-        var result = await de.RunAsync().WaitAsync(Timeout);
+        var result = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         Assert.Equal(Generations, observer.Generations);
         Assert.NotNull(result);
@@ -122,18 +143,12 @@ public class CancellationTests
     /// from a timer makes the test deterministic: the handler runs on the orchestrator thread just
     /// before the termination check, so the cancellation is guaranteed to be seen at that barrier.
     /// </summary>
-    private sealed class GenerationCountingObserver : IPopulationUpdatedHandler
+    private sealed class GenerationCountingObserver(
+        int? cancelAtGeneration,
+        CancellationTokenSource? cancellationSource) : IPopulationUpdatedHandler
     {
-        private readonly int? _cancelAtGeneration;
-        private readonly CancellationTokenSource? _cancellationSource;
-
-        public GenerationCountingObserver(
-            int? cancelAtGeneration,
-            CancellationTokenSource? cancellationSource)
-        {
-            _cancelAtGeneration = cancelAtGeneration;
-            _cancellationSource = cancellationSource;
-        }
+        private readonly int? _cancelAtGeneration = cancelAtGeneration;
+        private readonly CancellationTokenSource? _cancellationSource = cancellationSource;
 
         public int Generations { get; private set; }
 
@@ -145,7 +160,9 @@ public class CancellationTests
             Generations = population.GenerationNumber;
 
             if (Generations == _cancelAtGeneration)
+            {
                 _cancellationSource?.Cancel();
+            }
         }
     }
 }

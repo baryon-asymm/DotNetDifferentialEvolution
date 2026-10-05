@@ -17,7 +17,7 @@ because reproducibility and speed of the whole engine both rest on it.
   Gaussian spare without locking. Reproducibility of a parallel run depends on it
   (`3f3d394`). Held by its use in the engine, not by this node.
 - **The Gaussian spare belongs to the instance, not the thread or the class.** Held by
-  `SeededRandomProviderGaussianTests.TheCacheTravelsWithTheInstance_NotTheThread`.
+  `SeededRandomProviderGaussianTests.TheCacheTravelsWithTheInstanceNotTheThread`.
 - **A probability of exactly 1 accepts every draw.** `RandomThreshold.Scale(1.0)` is
   `ulong.MaxValue`, not an out-of-range conversion. Held by
   `RandomThresholdTests.AProbabilityOfOneAcceptsEveryDraw` and

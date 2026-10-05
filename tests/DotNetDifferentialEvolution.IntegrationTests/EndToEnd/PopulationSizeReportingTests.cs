@@ -2,7 +2,7 @@ using DotNetDifferentialEvolution.Algorithms.Lshade;
 using DotNetDifferentialEvolution.Interfaces;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -23,15 +23,20 @@ public class PopulationSizeReportingTests
     private const int InitialPopulationSize = 50;
     private const long EvaluationBudget = 4000;
 
+    /// <summary>
+    /// Across an L-SHADE run the reported population size never increases, is already below the
+    /// initial size after the first generation, and ends at
+    /// <see cref="LShadeStrategy.MinimumPopulationSize"/>.
+    /// </summary>
     [Fact]
     public async Task AnLShadeRunReportsTheActivePopulationShrinkingToItsMinimum()
     {
-        var observer = await RunLShadeAsync();
+        var observer = await RunLShadeAsync().ConfigureAwait(true);
 
         Assert.NotEmpty(observer.ReportedSizes);
 
         // Non-increasing: LPSR only ever drops individuals.
-        for (int i = 1; i < observer.ReportedSizes.Count; i++)
+        for (var i = 1; i < observer.ReportedSizes.Count; i++)
         {
             Assert.True(
                 observer.ReportedSizes[i] <= observer.ReportedSizes[i - 1],
@@ -45,10 +50,14 @@ public class PopulationSizeReportingTests
         Assert.Equal(LShadeStrategy.MinimumPopulationSize, observer.ReportedSizes[^1]);
     }
 
+    /// <summary>
+    /// Every individual reachable through the reported population size at the end of the run is a
+    /// live, converged one, not a stale leftover of the larger initial population.
+    /// </summary>
     [Fact]
     public async Task TheReportedIndividualsAreAllLive()
     {
-        var observer = await RunLShadeAsync();
+        var observer = await RunLShadeAsync().ConfigureAwait(true);
 
         // Every reported individual must be one the run is still evolving. Their fitness values
         // are within a couple of orders of magnitude of each other once L-SHADE has converged;
@@ -60,20 +69,28 @@ public class PopulationSizeReportingTests
         Assert.All(ffValues, ffValue => Assert.True(ffValue < 1E-6, $"stale-looking individual at {ffValue}"));
     }
 
+    /// <summary>
+    /// <see cref="Population.Capacity"/> keeps reporting the initial buffer length while the active
+    /// population shrinks.
+    /// </summary>
     [Fact]
     public async Task CapacityKeepsReportingTheAllocatedLength()
     {
-        var observer = await RunLShadeAsync();
+        var observer = await RunLShadeAsync().ConfigureAwait(true);
 
         Assert.All(observer.ReportedCapacities, capacity => Assert.Equal(InitialPopulationSize, capacity));
     }
 
+    /// <summary>
+    /// <see cref="Population.GenomeSize"/> stays at the problem's dimension in every generation
+    /// while the population shrinks.
+    /// </summary>
     [Fact]
     public async Task TheGenomeSizeDoesNotDriftWithTheShrinkingPopulation()
     {
         // GenomeSize is derived from the gene buffer, which is sized against the capacity; deriving
         // it from the active size instead would make it grow as the population shrinks.
-        var observer = await RunLShadeAsync();
+        var observer = await RunLShadeAsync().ConfigureAwait(true);
 
         Assert.All(observer.ReportedGenomeSizes, genomeSize => Assert.Equal(5, genomeSize));
     }
@@ -93,7 +110,7 @@ public class PopulationSizeReportingTests
             .WithPopulationUpdateHandler(observer)
             .Build();
 
-        await de.RunAsync().WaitAsync(Timeout);
+        _ = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         return observer;
     }
@@ -119,7 +136,7 @@ public class PopulationSizeReportingTests
             ReportedGenomeSizes.Add(population.GenomeSize);
 
             var ffValues = new double[size];
-            for (int i = 0; i < size; i++)
+            for (var i = 0; i < size; i++)
             {
                 population.MoveCursorTo(i);
                 ffValues[i] = population.IndividualCursor.FitnessFunctionValue;

@@ -27,9 +27,9 @@ public static class PopulationSortHelper
         int count,
         Span<double> keyBuffer)
     {
-        var keys = keyBuffer.Slice(0, count);
-        var indices = sortedIndices.Slice(0, count);
-        for (int i = 0; i < count; i++)
+        var keys = keyBuffer[..count];
+        var indices = sortedIndices[..count];
+        for (var i = 0; i < count; i++)
         {
             var ffValue = populationFfValues[i];
             keys[i] = double.IsNaN(ffValue) ? double.PositiveInfinity : ffValue;

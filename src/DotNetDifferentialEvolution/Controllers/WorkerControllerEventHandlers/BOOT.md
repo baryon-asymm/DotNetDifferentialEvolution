@@ -21,7 +21,7 @@ cancellation, and the result. It is the one place where the run is quiescent.
 - **A `NaN` individual is never reported best**, by either the reduction or the scan
   (`66fd1f3`). Held by `NaNFitnessTests`.
 - **The barrier wait yields but never sleeps.** `SpinOnce(sleep1Threshold: -1)`; held by
-  the code and by `ParallelDeterminismTests.OversubscribedWorkerCount_CompletesAndConverges`.
+  the code and by `ParallelDeterminismTests.OversubscribedWorkerCountCompletesAndConverges`.
 - **Evaluations are counted per generation as the live size before the hook shrinks
   it.** The initial population's evaluations are counted by the builder. Held by the
   code; the L-SHADE schedule depends on it.

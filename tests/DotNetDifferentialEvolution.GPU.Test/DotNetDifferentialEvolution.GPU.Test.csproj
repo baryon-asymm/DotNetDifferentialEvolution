@@ -7,20 +7,31 @@
 
     <ItemGroup>
         <PackageReference Include="coverlet.collector" Version="6.0.0"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
-        <PackageReference Include="xunit" Version="2.5.3"/>
-        <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
+        <PackageReference Include="xunit" Version="2.9.3"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"/>
     </ItemGroup>
 
     <ItemGroup>
         <Using Include="Xunit"/>
-        <!-- tests/Directory.Build.props imports the shared abstractions for the CPU test projects.
-             The GPU package does not depend on them (yet), so the namespace does not exist here. -->
-        <Using Remove="DotNetOptimization.Abstractions"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- ILGPU emits its kernel launchers into a dynamic assembly named ILGPURuntime, which must
+             see the tests' objective structs; they are internal (CA1515). -->
+        <InternalsVisibleTo Include="ILGPURuntime" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The PTX texts of check L2, read from the output directory (Devices/BOOT.md, their provenance). -->
+        <None Include="Devices\Ptx\*.ptx" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\DotNetDifferentialEvolution.GPU\DotNetDifferentialEvolution.GPU.csproj"/>
+        <!-- The CPU package, for the parity check of the DE step (GPU ACCEPTANCE.md, check 1g):
+             the test project references both packages, neither package the other. -->
+        <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj"/>
     </ItemGroup>
 
 </Project>

@@ -18,19 +18,19 @@ the problem context.
 [Trait("Category", "Unit")]
 public class IndividualCursorTests
 {
-    public void Snapshot_PreservesValueAndGenes();
-    public void ShallowSnapshot_SharesGeneStorage();
-    public void DeepSnapshot_CopiesGeneStorage();
+    public void SnapshotPreservesValueAndGenes();
+    public void ShallowSnapshotSharesGeneStorage();
+    public void DeepSnapshotCopiesGeneStorage();
 }
 [Trait("Category", "Unit")]
 public class PopulationTests
 {
     public void DerivesPopulationAndGenomeSizeFromBuffers();
-    public void MoveCursorTo_PointsCursorAtTheRequestedIndividual();
-    public void MoveCursorToBestIndividual_UsesBestIndividualIndex();
+    public void MoveCursorToPointsCursorAtTheRequestedIndividual();
+    public void MoveCursorToBestIndividualUsesBestIndividualIndex();
     public void APopulationStartsFullyActive();
     public void GenomeSizeStaysDerivedFromTheCapacityWhenThePopulationShrinks();
-    public void MoveCursorTo_RefusesAnIndexOutsideTheActivePopulation(int individualIndex);
+    public void MoveCursorToRefusesAnIndexOutsideTheActivePopulation(int individualIndex);
 }
 [Trait("Category", "Unit")]
 public class PopulationViewTests
@@ -45,8 +45,8 @@ public class PopulationViewTests
 [Trait("Category", "Unit")]
 public class ProblemContextTests
 {
-    public void Constructor_InitializesDerivedState();
-    public void SwapPopulations_ExchangesCurrentAndTrialBuffers();
-    public void GetRepresentativePopulation_StampsGenerationBestAndEvaluationCount();
+    public void ConstructorInitializesDerivedState();
+    public void SwapPopulationsExchangesCurrentAndTrialBuffers();
+    public void GetRepresentativePopulationStampsGenerationBestAndEvaluationCount();
 }
 ```

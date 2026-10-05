@@ -10,6 +10,10 @@ namespace DotNetDifferentialEvolution.UnitTests.TerminationStrategies;
 [Trait("Category", "Unit")]
 public class StagnationStreakTerminationStrategyTests
 {
+    /// <summary>
+    /// After the baseline generation, each generation without improvement extends the streak, and the
+    /// strategy terminates when the streak reaches its maximum.
+    /// </summary>
     [Fact]
     public void AccumulatesStreakAndTerminatesAfterMaxStagnantGenerations()
     {
@@ -28,6 +32,9 @@ public class StagnationStreakTerminationStrategyTests
         Assert.Equal(3, strategy.CurrentStagnationStreak);
     }
 
+    /// <summary>
+    /// An improvement larger than the threshold resets the streak and becomes the new baseline.
+    /// </summary>
     [Fact]
     public void ImprovementGreaterThanThresholdResetsTheStreak()
     {
@@ -35,9 +42,9 @@ public class StagnationStreakTerminationStrategyTests
         var ff = new[] { 10.0 };
         var population = PopulationFactory.SingleIndividual(ff);
 
-        strategy.ShouldTerminate(population); // baseline
-        strategy.ShouldTerminate(population); // streak 1
-        strategy.ShouldTerminate(population); // streak 2
+        _ = strategy.ShouldTerminate(population); // baseline
+        _ = strategy.ShouldTerminate(population); // streak 1
+        _ = strategy.ShouldTerminate(population); // streak 2
         Assert.Equal(2, strategy.CurrentStagnationStreak);
 
         // A meaningful improvement resets the streak.
@@ -47,6 +54,9 @@ public class StagnationStreakTerminationStrategyTests
         Assert.Equal(5.0, strategy.LastBestFitnessFunctionValue);
     }
 
+    /// <summary>
+    /// An improvement smaller than the threshold counts as stagnation and does not move the baseline.
+    /// </summary>
     [Fact]
     public void ImprovementSmallerThanThresholdDoesNotResetTheStreak()
     {
@@ -54,10 +64,10 @@ public class StagnationStreakTerminationStrategyTests
         var ff = new[] { 1.0 };
         var population = PopulationFactory.SingleIndividual(ff);
 
-        strategy.ShouldTerminate(population); // baseline, last = 1.0
+        _ = strategy.ShouldTerminate(population); // baseline, last = 1.0
         // Tiny change below the threshold counts as stagnation.
         ff[0] = 1.0 - 1e-5;
-        strategy.ShouldTerminate(population);
+        _ = strategy.ShouldTerminate(population);
         Assert.Equal(1, strategy.CurrentStagnationStreak);
         // Baseline is not updated for sub-threshold changes.
         Assert.Equal(1.0, strategy.LastBestFitnessFunctionValue);

@@ -1,48 +1,100 @@
-# EditorConfig — repo-wide analyzer policy.
-# The build runs the full .NET analyzer set with warnings-as-errors (see Directory.Build.props).
-# The few rules below are intentionally disabled because they are inappropriate for this
-# library; every other rule is expected to pass.
+# EditorConfig — repo-wide analyzer policy (root BOOT.md, Invariants).
+#
+# Owner's decision, 2026-10-03: the compiler and every analyzer at their maximum, every
+# diagnostic an error (Directory.Build.props), and nothing in the tree exempt — tests and
+# benchmarks included. No rule is lowered below `warning` anywhere: a rule that conflicts with
+# a framework or a library is resolved in code, and a conflict code cannot resolve goes to the
+# owner. The style options below choose between two forms of the same code; none is chosen to
+# silence a rule. They follow the owner's other trees (AerospacePropellantThermodynamics,
+# root .editorconfig), so the kit code copied from there (tests/*.Protocol.Tests) reads the same.
 root = true
 
 [*.cs]
 
-# CA5394 (insecure randomness): by design. This is a stochastic optimizer that requires a fast,
-# reproducible pseudo-random generator (System.Random). Seeding for reproducible runs is a core
-# feature; a cryptographic RNG would be both slower and non-reproducible. Not a security context.
-dotnet_diagnostic.CA5394.severity = none
+# Every analyzer diagnostic, the IDE code-style rules included, is at least a warning — and so,
+# through TreatWarningsAsErrors, an error. Without this line the IDE rules stay suggestions and
+# EnforceCodeStyleInBuild checks almost nothing.
+dotnet_analyzer_diagnostic.severity = warning
 
-# CA1716 (identifier matches a reserved keyword): the public API deliberately uses the natural,
-# intention-revealing names Next / Select / Stop. Renaming them would be a gratuitous breaking
-# change for consumers for no real benefit.
-dotnet_diagnostic.CA1716.severity = none
+# var everywhere; file-scoped namespaces; usings outside the namespace, System first.
+csharp_style_var_for_built_in_types = true
+csharp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = true
+csharp_style_namespace_declarations = file_scoped
+csharp_using_directive_placement = outside_namespace
+dotnet_sort_system_directives_first = true
 
-# Non-shipping code (tests + benchmarks): the full analyzer set + warnings-as-errors still
-# applies, but a handful of rules target shipping-library concerns and fight standard test /
-# BenchmarkDotNet conventions. Relaxing them here (and ONLY here) keeps idiomatic test code.
-[{tests,benchmarks}/**/*.cs]
+# Braces always.
+csharp_prefer_braces = true
 
-# Test method names use the conventional Method_State_Expected / Given_When_Then style.
-dotnet_diagnostic.CA1707.severity = none
-# xUnit and BenchmarkDotNet discover only public test/benchmark classes.
-dotnet_diagnostic.CA1515.severity = none
-# Inline literal arrays in [InlineData]/asserts are idiomatic and cannot be static readonly.
-dotnet_diagnostic.CA1861.severity = none
-# No SynchronizationContext in test runs, so ConfigureAwait(false) is pure noise (xUnit guidance).
-dotnet_diagnostic.CA2007.severity = none
-# Console/diagnostic output in tests and benchmarks is not localized.
-dotnet_diagnostic.CA1303.severity = none
-# Interface-typed fields in test/benchmark helpers are deliberate; the micro-perf hint is irrelevant.
-dotnet_diagnostic.CA1859.severity = none
+# Expression bodies.
+csharp_style_expression_bodied_methods = when_on_single_line
+csharp_style_expression_bodied_constructors = false
+csharp_style_expression_bodied_operators = when_on_single_line
+csharp_style_expression_bodied_properties = true
+csharp_style_expression_bodied_indexers = true
+csharp_style_expression_bodied_accessors = true
+csharp_style_expression_bodied_lambdas = true
+csharp_style_expression_bodied_local_functions = when_on_single_line
+csharp_style_prefer_primary_constructors = true
 
-# GPU package and its tests: kernel code compiled by ILGPU. Two rules do not fit it.
-[{src/DotNetDifferentialEvolution.GPU,tests/DotNetDifferentialEvolution.GPU.Test}/**.cs]
+# Parentheses: none needed in arithmetic, always for clarity in mixed logical/relational code.
+dotnet_style_parentheses_in_arithmetic_binary_operators = never_if_unnecessary
+dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity
+dotnet_style_parentheses_in_other_binary_operators = always_for_clarity
+dotnet_style_parentheses_in_other_operators = never_if_unnecessary
 
-# CA1815 (value types should override equality): the structs here are kernel parameters
-# (strategies, fitness functions, the device population, the random generator). They are
-# passed by value into a kernel and never compared; ILGPU cannot compile the virtual Equals
-# they would gain anyway.
-dotnet_diagnostic.CA1815.severity = none
-# CA1814 (prefer jagged arrays): the host-side population is double[,] because ILGPU's
-# Allocate2DDenseX copies exactly that shape into a dense 2D device buffer. A jagged array
-# would have to be flattened by hand to reach the device.
-dotnet_diagnostic.CA1814.severity = none
+dotnet_style_prefer_conditional_expression_over_assignment = true
+dotnet_style_prefer_conditional_expression_over_return = true
+csharp_style_unused_value_expression_statement_preference = discard_variable
+csharp_style_unused_value_assignment_preference = discard_variable
+
+# Naming: _camelCase private instance fields; PascalCase constants, static fields, public fields,
+# types and members; I-prefixed interfaces; camelCase locals and parameters.
+dotnet_naming_symbols.instance_fields.applicable_kinds = field
+dotnet_naming_symbols.instance_fields.applicable_accessibilities = private, protected, private_protected
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_rule.instance_fields_underscore.symbols = instance_fields
+dotnet_naming_rule.instance_fields_underscore.style = underscore_camel
+dotnet_naming_rule.instance_fields_underscore.severity = warning
+
+dotnet_naming_symbols.static_fields.applicable_kinds = field
+dotnet_naming_symbols.static_fields.required_modifiers = static
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_symbols.public_fields.applicable_kinds = field
+dotnet_naming_symbols.public_fields.applicable_accessibilities = public, internal, protected_internal
+dotnet_naming_style.pascal.capitalization = pascal_case
+dotnet_naming_rule.constants_pascal.symbols = constants
+dotnet_naming_rule.constants_pascal.style = pascal
+dotnet_naming_rule.constants_pascal.severity = warning
+dotnet_naming_rule.static_fields_pascal.symbols = static_fields
+dotnet_naming_rule.static_fields_pascal.style = pascal
+dotnet_naming_rule.static_fields_pascal.severity = warning
+dotnet_naming_rule.public_fields_pascal.symbols = public_fields
+dotnet_naming_rule.public_fields_pascal.style = pascal
+dotnet_naming_rule.public_fields_pascal.severity = warning
+
+dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum, delegate, namespace
+dotnet_naming_symbols.members.applicable_kinds = property, method, event
+dotnet_naming_rule.types_pascal.symbols = types
+dotnet_naming_rule.types_pascal.style = pascal
+dotnet_naming_rule.types_pascal.severity = warning
+dotnet_naming_rule.members_pascal.symbols = members
+dotnet_naming_rule.members_pascal.style = pascal
+dotnet_naming_rule.members_pascal.severity = warning
+
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.i_pascal.capitalization = pascal_case
+dotnet_naming_style.i_pascal.required_prefix = I
+dotnet_naming_rule.interfaces_i.symbols = interfaces
+dotnet_naming_rule.interfaces_i.style = i_pascal
+dotnet_naming_rule.interfaces_i.severity = warning
+
+dotnet_naming_symbols.locals.applicable_kinds = parameter, local
+dotnet_naming_style.camel.capitalization = camel_case
+dotnet_naming_rule.locals_camel.symbols = locals
+dotnet_naming_rule.locals_camel.style = camel
+dotnet_naming_rule.locals_camel.severity = warning
+dotnet_diagnostic.IDE1006.severity = warning

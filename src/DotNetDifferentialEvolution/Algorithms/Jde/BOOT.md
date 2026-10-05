@@ -9,12 +9,12 @@ regenerated, and are inherited by a trial that takes the individual's place.
 
 - **Inheritance is on survival, not on improvement.** The individual carried forward is
   the trial whenever the trial was taken, ties included (`ae16907`). Held by
-  `JdeStrategyTests.AfterGeneration_KeepsParametersOfATrialAcceptedOnATie` and
-  `AfterGeneration_KeepsParametersOfSuccessfulTrialsPerIndividual`.
+  `JdeStrategyTests.AfterGenerationKeepsParametersOfATrialAcceptedOnATie` and
+  `AfterGenerationKeepsParametersOfSuccessfulTrialsPerIndividual`.
 - **Without regeneration the stored pair is returned; with it F is in `[0.1, 1.0)` and
   CR uniform** at the defaults. Held by
-  `JdeStrategyTests.WithoutAdaptation_ReturnsTheStoredPerIndividualParameters` and
-  `WhenAdaptationTriggers_RegeneratesFWithinRangeAndCrUniformly`.
+  `JdeStrategyTests.WithoutAdaptationReturnsTheStoredPerIndividualParameters` and
+  `WhenAdaptationTriggersRegeneratesFWithinRangeAndCrUniformly`.
 - **Per-individual state is written only between generations.** Workers read
   `_mutationForces[i]` for their own `i`; the hook writes after the barrier. Held by the
   engine's barrier.

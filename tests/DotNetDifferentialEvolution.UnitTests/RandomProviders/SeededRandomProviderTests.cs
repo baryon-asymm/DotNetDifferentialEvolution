@@ -10,13 +10,17 @@ namespace DotNetDifferentialEvolution.UnitTests.RandomProviders;
 [Trait("Category", "Unit")]
 public class SeededRandomProviderTests
 {
+    /// <summary>
+    /// Two providers with the same seed produce identical raw, floating-point and bounded integer
+    /// streams.
+    /// </summary>
     [Fact]
     public void SameSeedProducesTheSameStream()
     {
         var first = new SeededRandomProvider(seed: 12345);
         var second = new SeededRandomProvider(seed: 12345);
 
-        for (int i = 0; i < 1_000; i++)
+        for (var i = 0; i < 1_000; i++)
         {
             Assert.Equal(first.NextULong(), second.NextULong());
             Assert.Equal(first.NextDouble(), second.NextDouble());
@@ -24,6 +28,9 @@ public class SeededRandomProviderTests
         }
     }
 
+    /// <summary>
+    /// Providers with adjacent seeds share no raw output across a thousand draws.
+    /// </summary>
     [Fact]
     public void DifferentSeedsProduceDifferentStreams()
     {
@@ -31,10 +38,12 @@ public class SeededRandomProviderTests
         var second = new SeededRandomProvider(seed: 12346);
 
         var collisions = 0;
-        for (int i = 0; i < 1_000; i++)
+        for (var i = 0; i < 1_000; i++)
         {
             if (first.NextULong() == second.NextULong())
+            {
                 collisions++;
+            }
         }
 
         // Adjacent seeds are what the engine hands consecutive workers. SplitMix64 expansion is
@@ -42,18 +51,25 @@ public class SeededRandomProviderTests
         Assert.Equal(0, collisions);
     }
 
+    /// <summary>
+    /// <c>NextDouble</c> always returns a value in [0, 1).
+    /// </summary>
     [Fact]
     public void NextDoubleStaysInTheUnitInterval()
     {
         var random = new SeededRandomProvider(seed: 7);
 
-        for (int i = 0; i < 100_000; i++)
+        for (var i = 0; i < 100_000; i++)
         {
             var value = random.NextDouble();
-            Assert.True(value >= 0.0 && value < 1.0, $"NextDouble returned {value}");
+            Assert.True(value is >= 0.0 and < 1.0, $"NextDouble returned {value}");
         }
     }
 
+    /// <summary>
+    /// <c>Next(maxValue)</c> stays in [0, maxValue) and passes a chi-square test for uniformity.
+    /// </summary>
+    /// <param name="maxValue">The exclusive upper bound of the draws.</param>
     [Theory]
     [InlineData(2)]
     [InlineData(7)]
@@ -62,13 +78,13 @@ public class SeededRandomProviderTests
     public void NextIsUniformOverTheRequestedRange(
         int maxValue)
     {
-        const int DrawsPerBucket = 2_000;
+        const int drawsPerBucket = 2_000;
 
         var random = new SeededRandomProvider(seed: maxValue);
         var counts = new int[maxValue];
-        var draws = maxValue * DrawsPerBucket;
+        var draws = maxValue * drawsPerBucket;
 
-        for (int i = 0; i < draws; i++)
+        for (var i = 0; i < draws; i++)
         {
             var value = random.Next(maxValue);
             Assert.InRange(value, 0, maxValue - 1);
@@ -87,11 +103,18 @@ public class SeededRandomProviderTests
         Assert.True(chiSquare < critical, $"chi-square {chiSquare:F2} exceeded {critical:F2}");
     }
 
+    /// <summary>
+    /// A negative upper bound is rejected.
+    /// </summary>
     [Fact]
     public void NextRejectsANegativeBound()
         => Assert.Throws<ArgumentOutOfRangeException>(
             () => new SeededRandomProvider(seed: 1).Next(-1));
 
+    /// <summary>
+    /// Across a thousand raw draws from seed 0, every bit is set at least once and cleared at least
+    /// once.
+    /// </summary>
     [Fact]
     public void RawOutputHasNoStuckBits()
     {
@@ -101,7 +124,7 @@ public class SeededRandomProviderTests
 
         var orOfAll = 0UL;
         var andOfAll = ulong.MaxValue;
-        for (int i = 0; i < 1_000; i++)
+        for (var i = 0; i < 1_000; i++)
         {
             var value = random.NextULong();
             orOfAll |= value;

@@ -9,14 +9,21 @@ fact was seen red on a mutation (this node's `BOOT.md`, acceptance criteria).
 
 | Claim | Fact |
 |---|---|
-| The public surface of every library assembly (CPU, GPU, Tests.Shared, Benchmark) equals `PublicSurface.approved.txt` | `SurfaceTests` |
+| The public surface of every library assembly (CPU, GPU, Tests.Common, Benchmark) equals `PublicSurface.approved.txt` | `SurfaceTests` |
 | Every exported type is named under ✅ in its node's `API.md` | `CoverageTests` |
 | Every type's namespace is exactly its node's | `NamespaceTests` |
 | Every declaration in a C# block under ✅ exists, type and member | `DeclarationTests` |
 | `## Dependencies` equals the real crossings: signatures, generic constraints and IL bodies | `DependencyTests` |
 | Every source the compiler read lies in a directory with `BOOT.md` and `API.md` | `CompiledSourceTests` |
 | The protocol linter passes with `--strict` | `LintTests` |
-| No node under `src/` calls `System.Console` | `ForbiddenCallTests` |
+| No node under `src/` calls `System.Console`; the GPU package never calls `GC.Collect` (GPU check 7a) | `ForbiddenCallTests` |
+| In the GPU package only `PopulationTransfers` calls an ILGPU host transfer (GPU check 5a) | `GpuGuardTests.OnlyTheTransferHelperCallsAnIlgpuHostTransfer` |
+| The IL reachable from every GPU kernel entry point holds no `throw`, `newarr`, `newobj` of a reference type or `box` (GPU check 8a) | `GpuGuardTests.KernelReachableCodeNeitherThrowsNorAllocatesNorBoxes` |
+| GPU kernel-reachable code calls only `Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`, `Max`, `IsNaN` of `Math` and `Double` (GPU check 8b) | `GpuGuardTests.KernelReachableCodeCallsOnlyTheAllowedMathAndDoubleMembers` |
+| No constant left of an ordered floating-point comparison in the GPU package's sources (GPU check 8c) | `GpuGuardTests.GpuSourcesPutNoConstantLeftOfAnOrderedFloatingComparison` |
+| No `src` method passes host memory to an ILGPU transfer as a raw `ref T` (GPU check 8d) | `GpuGuardTests.NoSrcMethodPassesHostMemoryToAnIlgpuTransferByReference` |
+| The GPU package references no `ILGPU.Algorithms`, in its assembly or its project (GPU check L8) | `GpuGuardTests.TheGpuPackageUsesNoIlgpuAlgorithms` |
+| Nothing in the tree suppresses a diagnostic: no `#pragma warning disable`, `#nullable disable`, suppression attribute, `NoWarn` beyond 1701/1702, `WarningsNotAsErrors`, rule set or severity below warning; no generated-code marker on authored code; no skipped test or hidden theory data; the root `Directory.Build.props` keeps the maximum (`TreatWarningsAsErrors`, `CodeAnalysisTreatWarningsAsErrors`, `EnableNETAnalyzers`, `AnalysisLevel` latest-all, `EnforceCodeStyleInBuild`, `WarningLevel` 9999, `Features` strict, `GenerateDocumentationFile`) | `NoSuppressionGuardTests` |
 | Every node path named in `ProtocolConfig` is a node; no library type in the global namespace | `ConfigTests` |
 
 The self-checks of the parsers (`ApiDeclarationsTests`, the helper cases in

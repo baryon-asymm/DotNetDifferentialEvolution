@@ -1,8 +1,4 @@
-using System;
-using System.IO;
-using System.Linq;
-
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// A node of the tree: a directory holding both documents. <see cref="RelativePath"/> is the directory path from the

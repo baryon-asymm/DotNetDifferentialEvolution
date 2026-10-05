@@ -1,10 +1,8 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.ControlParameterProviders;
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.MutationStrategies;
-using DotNetDifferentialEvolution.SelectionStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -18,6 +16,11 @@ public class MutationStrategyConvergenceTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
 
+    /// <summary>
+    /// Each constant-parameter mutation strategy the builder exposes, seeded and single-threaded,
+    /// reaches the 5-D Sphere optimum to within 1e-3.
+    /// </summary>
+    /// <param name="strategy">The mutation strategy in DE notation.</param>
     [Theory]
     [InlineData("best/1")]
     [InlineData("current-to-best/1")]
@@ -29,12 +32,12 @@ public class MutationStrategyConvergenceTests
     {
         var evaluator = new SphereEvaluator(dimension: 5);
 
-        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () => Build(strategy, evaluator));
+        var best = await BuilderOptimizer.RunOnceAsync(Timeout, () => Build(strategy, evaluator)).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-3);
     }
 
-    private static DotNetDifferentialEvolution.DifferentialEvolution Build(
+    private static DifferentialEvolution Build(
         string strategy,
         SphereEvaluator evaluator)
     {
@@ -43,7 +46,7 @@ public class MutationStrategyConvergenceTests
             .WithPopulationSize(60)
             .WithUniformPopulationSampling();
 
-        ISelectionStrategyRequired afterMutation = strategy switch
+        var afterMutation = strategy switch
         {
             "best/1" => withSampling.WithBestMutationStrategy(0.5, 0.9),
             "current-to-best/1" => withSampling.WithCurrentToBestMutationStrategy(0.5, 0.9),

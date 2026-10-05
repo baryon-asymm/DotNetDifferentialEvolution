@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The configuration itself: the tree has nodes, the root namespace is the tree's, and every node path
@@ -19,9 +16,10 @@ public sealed class ConfigTests
         Assert.True(Tree.Nodes.Count > 1, $"found nothing: the walk from {Tree.Root} found {Tree.Nodes.Count} node(s), so it proves nothing");
         var paths = Tree.Nodes.Select(node => node.RelativePath).ToHashSet(StringComparer.Ordinal);
         var named = ProtocolConfig.NumericalNodes.Select(path => ("NumericalNodes", path))
-            .Concat(ProtocolConfig.NamespaceExceptions.Keys.Select(path => ("NamespaceExceptions", path)));
-        var problems = named.Where(entry => !paths.Contains(entry.Item2))
-            .Select(entry => $"ProtocolConfig.{entry.Item1} names {entry.Item2}, which is not a node of the tree")
+            .Concat(ProtocolConfig.NamespaceExceptions.Keys.Select(path => ("NamespaceExceptions", path)))
+            .Append(("GpuPackagePath", path: ProtocolConfig.GpuPackagePath));
+        var problems = named.Where(entry => !paths.Contains(entry.path))
+            .Select(entry => $"ProtocolConfig.{entry.Item1} names {entry.path}, which is not a node of the tree")
             .ToList();
         Assert.True(problems.Count == 0, string.Join("\n", problems));
     }

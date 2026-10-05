@@ -9,7 +9,7 @@ documented examples are code that builds.
 ## Invariants
 
 - **Optima and domains come from the shared benchmark library**
-  ([FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/BOOT.md));
+  ([FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/BOOT.md));
   `ConvergenceAssert` reads them from the evaluator.
 - **Tolerances step with difficulty**, each written beside its test: 1e-6 for
   unimodal, 1e-4 for SHADE on multimodal, `1e-2·max(1, |f*|)` for the deceptive set,
@@ -36,10 +36,10 @@ documented examples are code that builds.
   [LocalSearch](../../../src/DotNetDifferentialEvolution/LocalSearch/API.md),
   [Models](../../../src/DotNetDifferentialEvolution/Models/API.md) — the observer, the
   refiner, the result.
-- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
+- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md)
   — the benchmarks.
 - [TestSupport](../TestSupport/API.md) — `BuilderOptimizer`, `ConvergenceAssert`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ⚠ Corrected 2026-10-03 by the reflection check: this list named `Algorithms/Lshade`
 (for `LShadeStrategy.MinimumPopulationSize`, which no source here mentions) and
@@ -60,7 +60,7 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 - [x] Non-degenerate: 2026-10-02, scratch clone of `a504474`. Selection never taking an
       improvement turned all 9 cases of `MutationStrategyConvergenceTests` and
       `AdaptiveVariantsConvergenceTests` red; a shifted local-search cadence turned
-      `Refiner_RunsOnConfiguredCadence_AndWriteBackSurvivesIntoResult` red.
+      `RefinerRunsOnConfiguredCadenceAndWriteBackSurvivesIntoResult` red.
 - [x] Each convergence test is one run seeded with `BuilderOptimizer.Seed` (2026-10-03,
       [TestSupport](../TestSupport/BOOT.md)); it used to keep the best of 3 or 4 unseeded
       attempts, so a variant converging one time in four passed.

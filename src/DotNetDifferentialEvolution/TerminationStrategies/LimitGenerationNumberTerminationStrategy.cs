@@ -6,23 +6,18 @@ namespace DotNetDifferentialEvolution.TerminationStrategies;
 /// <summary>
 /// Represents a termination strategy that limits the number of generations in Differential Evolution.
 /// </summary>
-public class LimitGenerationNumberTerminationStrategy : ITerminationStrategy
+/// <remarks>
+/// Initializes a new instance of the <see cref="LimitGenerationNumberTerminationStrategy"/> class.
+/// </remarks>
+/// <param name="maxGenerationNumber">The maximum number of generations allowed.</param>
+public class LimitGenerationNumberTerminationStrategy(
+    int maxGenerationNumber) : ITerminationStrategy
 {
     /// <summary>
     /// Gets the maximum number of generations allowed.
     /// </summary>
-    public int MaxGenerationNumber { get; init; }
-    
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LimitGenerationNumberTerminationStrategy"/> class.
-    /// </summary>
-    /// <param name="maxGenerationNumber">The maximum number of generations allowed.</param>
-    public LimitGenerationNumberTerminationStrategy(
-        int maxGenerationNumber)
-    {
-        MaxGenerationNumber = maxGenerationNumber;
-    }
-    
+    public int MaxGenerationNumber { get; init; } = maxGenerationNumber;
+
     /// <summary>
     /// Determines whether the evolution process should terminate based on the current population.
     /// </summary>

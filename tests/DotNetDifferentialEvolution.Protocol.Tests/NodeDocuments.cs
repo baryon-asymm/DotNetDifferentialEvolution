@@ -1,22 +1,20 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// What a node's own <c>BOOT.md</c> declares under <c>## Dependencies</c> (AGENTS.md §6): every link that resolves to a
 /// node's <c>API.md</c>, and the links that resolve to none. The canonical form itself (links or the single word
 /// <c>None</c>, not both) is the linter's to check; this reads only what the reflection check compares.
 /// </summary>
-internal static class NodeDocuments
+internal static partial class NodeDocuments
 {
-    private static readonly Regex DependenciesSectionRegex = new(
-        @"^## Dependencies\s*$(.*?)(?=^## |\z)", RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled);
+    [GeneratedRegex(
+        @"^## Dependencies\s*$(.*?)(?=^## |\z)", RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled)]
+    private static partial Regex DependenciesSectionRegex();
 
-    private static readonly Regex LinkRegex = new(@"\]\(\s*<?([^)\s>]+)>?[^)]*\)", RegexOptions.Compiled);
+    [GeneratedRegex(@"\]\(\s*<?([^)\s>]+)>?[^)]*\)", RegexOptions.Compiled)]
+    private static partial Regex LinkRegex();
 
     /// <summary>The nodes a BOOT.md declares in its <c>## Dependencies</c> section, and the API.md links resolving to no node.
     /// Links inside code fences are not read (the linter does not resolve them either).</summary>
@@ -24,7 +22,7 @@ internal static class NodeDocuments
     {
         ArgumentNullException.ThrowIfNull(node);
         var boot = WithoutFences(File.ReadAllText(node.Boot).ReplaceLineEndings("\n"));
-        var section = DependenciesSectionRegex.Match(boot);
+        var section = DependenciesSectionRegex().Match(boot);
         var declared = new HashSet<Node>();
         var unresolved = new List<string>();
         if (!section.Success)
@@ -33,7 +31,7 @@ internal static class NodeDocuments
         }
 
         var byDirectory = Tree.Nodes.ToDictionary(n => Path.GetFullPath(n.Directory), n => n, StringComparer.OrdinalIgnoreCase);
-        foreach (Match link in LinkRegex.Matches(section.Groups[1].Value))
+        foreach (Match link in LinkRegex().Matches(section.Groups[1].Value))
         {
             var target = link.Groups[1].Value;
             if (!target.EndsWith("API.md", StringComparison.Ordinal))

@@ -21,7 +21,7 @@ public interface IGenerationStrategy
     /// The per-individual trial outcomes for the generation that just finished. Only the
     /// first <see cref="GenerationContext.ActivePopulationSize"/> entries are meaningful.
     /// </param>
-    public void AfterGeneration(
+    void AfterGeneration(
         GenerationContext context,
         ReadOnlySpan<TrialRecord> trialRecords);
 
@@ -36,7 +36,7 @@ public interface IGenerationStrategy
     /// on the orchestrator thread, so the provider it receives is used by nothing else. Defaults
     /// to ignoring the provider, so a hook that draws no randomness is unaffected.
     /// </remarks>
-    public void UseRandomProvider(
+    void UseRandomProvider(
         BaseRandomProvider randomProvider)
     {
     }

@@ -1,9 +1,6 @@
-using System;
-using System.IO;
-using System.Linq;
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The approve-and-compare discipline of a snapshot fact, written once for both snapshots. With no approved file the

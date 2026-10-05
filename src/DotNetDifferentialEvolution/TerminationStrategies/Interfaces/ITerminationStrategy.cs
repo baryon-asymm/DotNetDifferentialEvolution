@@ -12,5 +12,5 @@ public interface ITerminationStrategy
     /// </summary>
     /// <param name="population">The current population of individuals.</param>
     /// <returns><c>true</c> if the evolution process should terminate; otherwise, <c>false</c>.</returns>
-    public bool ShouldTerminate(Population population);
+    bool ShouldTerminate(Population population);
 }

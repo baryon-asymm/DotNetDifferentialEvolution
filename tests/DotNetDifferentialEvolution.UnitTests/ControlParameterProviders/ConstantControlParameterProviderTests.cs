@@ -1,5 +1,5 @@
 using DotNetDifferentialEvolution.ControlParameterProviders;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
 
 namespace DotNetDifferentialEvolution.UnitTests.ControlParameterProviders;
 
@@ -9,6 +9,9 @@ namespace DotNetDifferentialEvolution.UnitTests.ControlParameterProviders;
 [Trait("Category", "Unit")]
 public class ConstantControlParameterProviderTests
 {
+    /// <summary>
+    /// Every individual receives the configured F and CR, and the random provider is never consulted.
+    /// </summary>
     [Fact]
     public void ReturnsTheSameParametersForEveryIndividual()
     {

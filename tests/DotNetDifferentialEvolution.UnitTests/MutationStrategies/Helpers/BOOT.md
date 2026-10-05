@@ -24,7 +24,7 @@ is still the same algorithm.
   — under test (internal, through `InternalsVisibleTo`).
 - [RandomProviders](../../../../src/DotNetDifferentialEvolution/RandomProviders/API.md)
   — `SeededRandomProvider` and the two random-source adapters.
-- [Fakes](../../../DotNetDifferentialEvolution.Tests.Shared/Fakes/API.md) — scripted
+- [Fakes](../../../DotNetDifferentialEvolution.Tests.Common/Fakes/API.md) — scripted
   and deterministic providers.
 
 ## Constraints

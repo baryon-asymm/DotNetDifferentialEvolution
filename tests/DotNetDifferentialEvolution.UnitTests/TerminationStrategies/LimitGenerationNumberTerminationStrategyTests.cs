@@ -9,6 +9,12 @@ namespace DotNetDifferentialEvolution.UnitTests.TerminationStrategies;
 [Trait("Category", "Unit")]
 public class LimitGenerationNumberTerminationStrategyTests
 {
+    /// <summary>
+    /// The strategy terminates once the generation number reaches the limit, and not before.
+    /// </summary>
+    /// <param name="generationNumber">The current generation number.</param>
+    /// <param name="maxGenerationNumber">The generation limit.</param>
+    /// <param name="expected">Whether the strategy should terminate.</param>
     [Theory]
     [InlineData(0, 100, false)]
     [InlineData(99, 100, false)]

@@ -22,7 +22,7 @@ internal static class FitnessComparisonHelper
         double incumbentFfValue)
     {
         return candidateFfValue < incumbentFfValue
-               || (double.IsNaN(incumbentFfValue) && double.IsNaN(candidateFfValue) == false);
+               || (double.IsNaN(incumbentFfValue) && !double.IsNaN(candidateFfValue));
     }
 
     /// <summary>
@@ -44,6 +44,6 @@ internal static class FitnessComparisonHelper
         double incumbentFfValue)
     {
         return candidateFfValue <= incumbentFfValue
-               || (double.IsNaN(incumbentFfValue) && double.IsNaN(candidateFfValue) == false);
+               || (double.IsNaN(incumbentFfValue) && !double.IsNaN(candidateFfValue));
     }
 }

@@ -10,7 +10,7 @@ public interface IAlgorithmExecutor
     /// </summary>
     /// <param name="workerId">The index of the worker executing the algorithm.</param>
     /// <param name="bestHandledIndividualIndex">The index of the best handled individual.</param>
-    public void Execute(
+    void Execute(
         int workerId,
         out int bestHandledIndividualIndex);
 }

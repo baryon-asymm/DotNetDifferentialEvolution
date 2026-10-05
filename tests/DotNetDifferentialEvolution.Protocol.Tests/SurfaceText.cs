@@ -1,19 +1,17 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The text of a surface snapshot: one section per group, one line per type with its kind and bases, one indented
 /// line per member at or above an accessibility floor, all ordinal. Rich enough that the change worth catching moves
 /// a line: the kind of a type and its bases, <c>static</c>, constant and enum values, nullability, <c>ref</c>/<c>out</c>/
 /// <c>in</c>/<c>params</c>, default values, and <c>init</c> as distinct from <c>set</c>. Shared by the public-surface
-/// snapshot (<see cref="SurfaceTests"/>) and the tree-contract snapshot (<see cref="TreeContractSnapshotTests"/>).
+/// snapshot (<see cref="SurfaceTests"/>) and the tree-contract snapshot (<c>TreeContractSnapshotTests</c>, a kit fact
+/// this tree omits).
 /// </summary>
 internal static class SurfaceText
 {
@@ -216,26 +214,18 @@ internal static class SurfaceText
         return nullable ? name + "?" : name;
     }
 
-    private static string Constant(object? value, Type type)
-    {
-        if (value is null)
-        {
-            return "null";
-        }
-
-        if (type.IsEnum)
-        {
-            return Enum.ToObject(type, value).ToString()!;
-        }
-
-        return value switch
-        {
-            string text => "\"" + text + "\"",
-            bool flag => flag ? "true" : "false",
-            double number => number.ToString("R", CultureInfo.InvariantCulture),
-            float number => number.ToString("R", CultureInfo.InvariantCulture) + "f",
-            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => value.ToString() ?? "null",
-        };
-    }
+    private static string Constant(object? value, Type type) =>
+        value is null
+            ? "null"
+            : type.IsEnum
+                ? Enum.ToObject(type, value).ToString()!
+                : value switch
+                {
+                    string text => "\"" + text + "\"",
+                    bool flag => flag ? "true" : "false",
+                    double number => number.ToString("R", CultureInfo.InvariantCulture),
+                    float number => number.ToString("R", CultureInfo.InvariantCulture) + "f",
+                    IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+                    _ => value.ToString() ?? "null",
+                };
 }

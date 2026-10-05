@@ -8,22 +8,17 @@ namespace DotNetDifferentialEvolution.TerminationStrategies;
 /// This is the natural stopping criterion for L-SHADE, whose population-size reduction is
 /// driven by the same evaluation budget.
 /// </summary>
-public class LimitEvaluationNumberTerminationStrategy : ITerminationStrategy
+/// <remarks>
+/// Initializes a new instance of the <see cref="LimitEvaluationNumberTerminationStrategy"/> class.
+/// </remarks>
+/// <param name="maxEvaluationNumber">The maximum number of fitness-function evaluations allowed.</param>
+public class LimitEvaluationNumberTerminationStrategy(
+    long maxEvaluationNumber) : ITerminationStrategy
 {
     /// <summary>
     /// Gets the maximum number of fitness-function evaluations allowed.
     /// </summary>
-    public long MaxEvaluationNumber { get; init; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LimitEvaluationNumberTerminationStrategy"/> class.
-    /// </summary>
-    /// <param name="maxEvaluationNumber">The maximum number of fitness-function evaluations allowed.</param>
-    public LimitEvaluationNumberTerminationStrategy(
-        long maxEvaluationNumber)
-    {
-        MaxEvaluationNumber = maxEvaluationNumber;
-    }
+    public long MaxEvaluationNumber { get; init; } = maxEvaluationNumber;
 
     /// <inheritdoc />
     public bool ShouldTerminate(

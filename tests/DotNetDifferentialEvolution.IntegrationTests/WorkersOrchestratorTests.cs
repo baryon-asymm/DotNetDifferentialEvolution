@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests;
 
@@ -15,6 +15,10 @@ public class WorkersOrchestratorTests
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
     private static readonly int WorkersCount = Math.Max(2, Environment.ProcessorCount);
 
+    /// <summary>
+    /// One worker per processor, sharing one population, together reach the 2-D Rosenbrock optimum,
+    /// and every worker is stopped once the result is in.
+    /// </summary>
     [Fact]
     public async Task AllWorkersCooperateToConverge()
     {
@@ -27,12 +31,16 @@ public class WorkersOrchestratorTests
         using var harness = new MultiWorkerHarness(context, executor, WorkersCount);
 
         harness.StartAll();
-        var result = await harness.Handler.GetResultPopulationTask().WaitAsync(Timeout);
+        var result = await harness.Handler.GetResultPopulationTask().WaitAsync(Timeout).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, result, valueTolerance: 1e-5, geneTolerance: 1e-2);
         Assert.False(harness.AnyRunning);
     }
 
+    /// <summary>
+    /// A fitness-function exception thrown in any worker fails the result task with one to
+    /// one-per-worker inner exceptions, all of the thrown type, and every worker stops.
+    /// </summary>
     [Fact]
     public async Task FitnessFunctionExceptionPropagatesFromAnyWorkerAndStopsAll()
     {
@@ -48,7 +56,7 @@ public class WorkersOrchestratorTests
         harness.StartAll();
 
         var aggregate = await Assert.ThrowsAsync<AggregateException>(
-            () => harness.Handler.GetResultPopulationTask().WaitAsync(Timeout));
+            () => harness.Handler.GetResultPopulationTask().WaitAsync(Timeout)).ConfigureAwait(true);
 
         Assert.NotEmpty(aggregate.InnerExceptions);
         Assert.InRange(aggregate.InnerExceptions.Count, 1, WorkersCount);

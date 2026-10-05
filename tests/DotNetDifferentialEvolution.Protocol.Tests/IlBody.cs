@@ -1,9 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The instructions of a method body, and the types they bind to. Every opcode comes from the runtime's own table
@@ -59,7 +57,7 @@ internal static class IlBody
             }
 
             var width = opcode.OperandType == OperandType.InlineSwitch
-                ? 4 + (4 * BitConverter.ToInt32(il, offset))
+                ? 4 + 4 * BitConverter.ToInt32(il, offset)
                 : OperandWidths.GetValueOrDefault(opcode.OperandType, 4);
 
             MemberInfo? operand = null;

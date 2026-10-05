@@ -3,9 +3,9 @@ using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Algorithms;
 
@@ -26,8 +26,12 @@ public class JadeStrategyTests
     // u_cr1 = anything (multiplied by 0), u_cr2 = 0.75 → Gaussian = μCR; u_f = 0.5 → Cauchy = μF.
     private static double[] MeanRevealingDraws => [0.5, 0.75, 0.5];
 
+    /// <summary>
+    /// Two improving trials move μCR a tenth of the way toward their arithmetic mean of CR and μF
+    /// a tenth of the way toward their Lehmer mean of F.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_NudgesMeansTowardSuccessfulParameters()
+    public void AfterGenerationNudgesMeansTowardSuccessfulParameters()
     {
         var jade = new JadeStrategy(PopulationSize, adaptationRate: 0.1, initialMean: 0.5);
         var context = CreateContext();
@@ -47,8 +51,12 @@ public class JadeStrategyTests
         Assert.Equal(0.9 * 0.5 + 0.1 * 0.68, f, 1e-9);   // μF  = 0.518
     }
 
+    /// <summary>
+    /// A generation in which every parent was kept carries no evidence, so both means stay at
+    /// their initial value.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_WithNoSuccesses_LeavesMeansUnchanged()
+    public void AfterGenerationWithNoSuccessesLeavesMeansUnchanged()
     {
         var jade = new JadeStrategy(PopulationSize, adaptationRate: 0.1, initialMean: 0.5);
         var context = CreateContext();
@@ -67,8 +75,12 @@ public class JadeStrategyTests
         Assert.Equal(0.5, f, 1e-9);
     }
 
+    /// <summary>
+    /// A trial accepted on equal fitness is not a success: it moves neither mean and puts no
+    /// parent in the archive.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_IgnoresATrialAcceptedOnATie()
+    public void AfterGenerationIgnoresATrialAcceptedOnATie()
     {
         // The mirror of the jDE case: a tie survives selection but is not a success. S_CR and S_F
         // take improving trials only (both papers, Algorithm 2 line 16), so a tie must move
@@ -102,8 +114,12 @@ public class JadeStrategyTests
         Assert.Equal(0, context.ArchiveSize);
     }
 
+    /// <summary>
+    /// A negative archive capacity is treated as a disabled archive: successful trials archive
+    /// nothing and the update does not throw.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_WithANegativeArchiveCapacity_LeavesTheArchiveAlone()
+    public void AfterGenerationWithANegativeArchiveCapacityLeavesTheArchiveAlone()
     {
         // ArchiveCapacity is writable by any generation hook — L-SHADE rescales it every time it
         // shrinks the population. A negative value slipped past the `== 0` test that disables the

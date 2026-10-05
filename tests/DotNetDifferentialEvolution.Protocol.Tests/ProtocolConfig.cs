@@ -1,13 +1,10 @@
-using System;
-using System.Collections.Generic;
-
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Everything tree-specific the reflection checks read, in one place. Every other file of this kit is generic and
 /// should be dropped into a tree unchanged; a tree adapts the kit by editing this file alone. Nothing here names a
-/// node of any particular tree except <see cref="NamespaceExceptions"/>, whose one default entry is the kit's own
-/// test node and is explained there.
+/// node of any particular tree except <see cref="NamespaceExceptions"/>, whose one default entry in the kit is the
+/// kit's own test node and is explained there.
 /// </summary>
 internal static class ProtocolConfig
 {
@@ -69,8 +66,9 @@ internal static class ProtocolConfig
     /// Normally the directory of this test node itself.</summary>
     public const string SnapshotDirectory = "tests/DotNetDifferentialEvolution.Protocol.Tests";
 
-    /// <summary>Whether the tree-contract snapshot fact runs (<see cref="TreeContractSnapshotTests"/>). Off by default:
-    /// a tree turns it on once some <c>API.md</c> carries a ✅ section whose heading holds <see cref="TreeContractMarker"/>.</summary>
+    /// <summary>Whether the tree-contract snapshot fact runs (<c>TreeContractSnapshotTests</c>, a kit fact this tree
+    /// omits). Off by default: a tree turns it on once some <c>API.md</c> carries a ✅ section whose heading holds
+    /// <see cref="TreeContractMarker"/>.</summary>
     public static bool TreeContractSnapshot => false;
 
     /// <summary>The text that marks an <c>API.md</c> section heading (a line starting <c>## </c>) as a tree contract:
@@ -83,17 +81,32 @@ internal static class ProtocolConfig
     /// (<see cref="ConfigTests"/>). Empty by default.</summary>
     public static readonly IReadOnlyList<string> NumericalNodes = [];
 
+    /// <summary>The GPU package's node, read by the guards of its ACCEPTANCE.md (v1 checks 5a, 7a, 8a–8d) through
+    /// <see cref="GpuPackage"/>: its assembly and its sources, every child node included. Must be a node
+    /// (<see cref="ConfigTests"/>). This tree's addition to the kit (the node's BOOT.md, Deviations from the kit).</summary>
+    public const string GpuPackagePath = "src/DotNetDifferentialEvolution.GPU";
+
+    /// <summary>The one type of the GPU package whose methods may call an ILGPU host transfer, by full name (check 5a,
+    /// <see cref="GpuGuardTests"/>).</summary>
+    public const string GpuTransferHelper = "DotNetDifferentialEvolution.GPU.PopulationTransfers";
+
+    /// <summary>The members of <c>System.Math</c> and <c>System.Double</c> that code reachable from a GPU kernel may call,
+    /// by name (check 8b, <see cref="GpuGuardTests"/>): the frozen list of the GPU package's ACCEPTANCE.md. ⚠ 2026-10-05:
+    /// <c>Cos</c>, <c>Tan</c> and <c>IsFinite</c> added (check S16), for the CPU package's samplers and SHADE's weight test.</summary>
+    public static readonly IReadOnlySet<string> KernelMathAllowList = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "Abs", "Sqrt", "Exp", "Log", "Pow", "Floor", "Min", "Max", "IsNaN", "Cos", "Tan", "IsFinite",
+    };
+
     /// <summary>A node whose code lives in a namespace other than the one its path gives, keyed by the node's path, with
     /// the namespace it uses: a declared deviation of AGENTS.md §1 (§12). The node itself must say so in its own BOOT.md;
     /// the namespace fact skips the listed namespace in that node's own assembly and fails once no type uses it any
     /// more (a stale entry is a deviation that has been lifted and must be removed).
-    /// <para>The default entry is this kit itself: its files keep the neutral namespace <c>ProtocolChecks</c> so they can
-    /// be dropped in unchanged. A tree that renames them to <c>RootNamespace.Protocol.Tests</c> deletes the entry, and the
-    /// staleness check makes it do so.</para></summary>
-    public static readonly IReadOnlyDictionary<string, string> NamespaceExceptions = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        ["tests/DotNetDifferentialEvolution.Protocol.Tests"] = "ProtocolChecks",
-    };
+    /// <para>The kit's default entry is the kit itself: its files keep the neutral namespace <c>ProtocolChecks</c> so they
+    /// can be dropped in unchanged. A tree that renames them to <c>RootNamespace.Protocol.Tests</c> deletes the entry, and
+    /// the staleness check makes it do so. Empty in this tree since 2026-10-03: the files were renamed to
+    /// <c>DotNetDifferentialEvolution.Protocol.Tests</c> (IDE0130 under the maximum diagnostics; the node's BOOT.md).</para></summary>
+    public static readonly IReadOnlyDictionary<string, string> NamespaceExceptions = new Dictionary<string, string>(StringComparer.Ordinal);
 
     /// <summary>Rules against particular calls, read by <see cref="ForbiddenCallTests"/> through <see cref="ForbiddenCalls"/>.
     /// Empty by default; the fact then checks nothing and says so in its name only. A neutral example, forbidding console
@@ -116,6 +129,15 @@ internal static class ProtocolConfig
             Callee: callee => callee.DeclaringType == typeof(Console),
             Signature: _ => true,
             AllowList: new HashSet<string>(StringComparer.Ordinal)),
+
+        // The GPU package never forces a collection (its ACCEPTANCE.md, v1 check 7a): the 0.x Dispose called GC.Collect.
+        // The scope covers the package's node and every child node below it. No caller is allowed.
+        new ForbiddenCallRule(
+            Name: "no GC.Collect in the GPU package",
+            Scope: GpuPackage.Covers,
+            Callee: callee => callee.DeclaringType == typeof(GC) && callee.Name == nameof(GC.Collect),
+            Signature: _ => true,
+            AllowList: new HashSet<string>(StringComparer.Ordinal)),
     ];
 
     /// <summary>The largest number of distinct tree types one outermost type of a <see cref="Node.IsSource"/> node may name
@@ -134,8 +156,20 @@ internal static class ProtocolConfig
 
     /// <summary>MSBuild properties the root <c>Directory.Build.props</c> must keep, each with a regular expression its value
     /// must match (for instance <c>["TreatWarningsAsErrors"] = "^true$"</c>, <c>["AnalysisLevel"] = "^latest-all$"</c>):
-    /// the analyzer decision a tree made, held by a fact so it cannot be lost silently. Empty by default.</summary>
-    public static readonly IReadOnlyDictionary<string, string> RequiredRootBuildProperties = new Dictionary<string, string>(StringComparer.Ordinal);
+    /// the analyzer decision a tree made, held by a fact so it cannot be lost silently. Empty by default; this tree
+    /// holds the owner's decision of 2026-10-03, the compiler and every analyzer at their maximum and every diagnostic an
+    /// error (root <c>BOOT.md</c>, Invariants).</summary>
+    public static readonly IReadOnlyDictionary<string, string> RequiredRootBuildProperties = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["TreatWarningsAsErrors"] = "^true$",
+        ["CodeAnalysisTreatWarningsAsErrors"] = "^true$",
+        ["EnableNETAnalyzers"] = "^true$",
+        ["AnalysisLevel"] = "^latest-all$",
+        ["EnforceCodeStyleInBuild"] = "^true$",
+        ["WarningLevel"] = "^9999$",
+        ["Features"] = "^strict$",
+        ["GenerateDocumentationFile"] = "^true$",
+    };
 
     /// <summary>Whether a node falls under <see cref="NumericalNodes"/>: listed itself, or a descendant of a listed node.</summary>
     public static bool IsNumerical(Node node)

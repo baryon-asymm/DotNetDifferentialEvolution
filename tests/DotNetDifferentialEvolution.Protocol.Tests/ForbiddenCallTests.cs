@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Optional, behind <see cref="ProtocolConfig.ForbiddenCallRules"/> (empty by default): every configured rule holds
@@ -58,7 +55,7 @@ public sealed class ForbiddenCallTests
     /// <summary>A call to the forbidden API, once directly and once inside a lambda.</summary>
     private static int Probe(int left, int right)
     {
-        Func<int, int> inside = value => Math.Max(value, right);
+        int inside(int value) => Math.Max(value, right);
         return Math.Max(left, inside(left));
     }
 }

@@ -33,11 +33,11 @@ workers, threads and memory.
 - [Models](../../../src/DotNetDifferentialEvolution/Models/API.md),
   [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — the result and the stop rule.
-- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md)
+- [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md)
   — Sphere.
 - [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [TestSupport](../TestSupport/API.md) — `ConvergenceAssert`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ## Constraints
 

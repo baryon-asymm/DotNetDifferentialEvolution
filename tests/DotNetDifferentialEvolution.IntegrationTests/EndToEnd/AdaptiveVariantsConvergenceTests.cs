@@ -1,9 +1,6 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.IntegrationTests.TestSupport;
-using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.TerminationStrategies.Interfaces;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.EndToEnd;
 
@@ -16,6 +13,11 @@ public class AdaptiveVariantsConvergenceTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
 
+    /// <summary>
+    /// Each self-adaptive variant, seeded and single-threaded, reaches the 2-D Rosenbrock optimum
+    /// before stagnating for 2000 generations.
+    /// </summary>
+    /// <param name="variant">The variant to run: <c>jDE</c>, <c>JADE</c> or <c>SHADE</c>.</param>
     [Theory]
     [InlineData("jDE")]
     [InlineData("JADE")]
@@ -32,7 +34,7 @@ public class AdaptiveVariantsConvergenceTests
                 .WithPopulationSize(50)
                 .WithUniformPopulationSampling();
 
-            ITerminationConditionRequired configured = variant switch
+            var configured = variant switch
             {
                 "jDE" => withSampling.WithJde(),
                 "JADE" => withSampling.WithJade(),
@@ -45,11 +47,15 @@ public class AdaptiveVariantsConvergenceTests
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
                 .Build();
-        });
+        }).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-6, geneTolerance: 1e-3);
     }
 
+    /// <summary>
+    /// L-SHADE, seeded and single-threaded, reaches the 2-D Rosenbrock optimum within the
+    /// evaluation budget that also drives its population-size reduction.
+    /// </summary>
     [Fact]
     public async Task LShadeConvergesOnRosenbrock()
     {
@@ -65,7 +71,7 @@ public class AdaptiveVariantsConvergenceTests
                 .WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(maxEvaluations))
                 .UseProcessors(1)
                 .WithSeed(BuilderOptimizer.Seed)
-                .Build());
+                .Build()).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, best, valueTolerance: 1e-6, geneTolerance: 1e-3);
     }

@@ -25,7 +25,7 @@ A green U2 over a red U0 means the builder wires parts that are themselves wrong
   Nothing enforces the mark.
 - **The suite is deterministic.** Every random input is scripted, seeded, or used only
   for a property that holds for any draw (`UniformRandomSamplingMakerTests`,
-  `LShadeStrategyTests.AfterGeneration_KeepsTheBestSurvivorsInAscendingFitnessOrder`).
+  `LShadeStrategyTests.AfterGenerationKeepsTheBestSurvivorsInAscendingFitnessOrder`).
   Statistical bounds are taken at about the 0.999 quantile *and* run on fixed seeds, so
   they cannot flake.
 - **Expected values are derived, not recorded.** Each exact case states its closed
@@ -42,8 +42,9 @@ A green U2 over a red U0 means the builder wires parts that are themselves wrong
 - [Models](../../src/DotNetDifferentialEvolution/Models/API.md) — `Population`, the
   return type the surface tests pin.
 
-Each child declares the package nodes it checks. Outside the tree: xUnit 2.5.3,
-xunit.runner.visualstudio 2.5.3, Microsoft.NET.Test.Sdk 17.8.0, coverlet.collector 6.0.0.
+Each child declares the package nodes it checks. Outside the tree: xUnit 2.9.3,
+xunit.runner.visualstudio 3.1.4, Microsoft.NET.Test.Sdk 17.14.1 (all since 2026-10-03, for
+the maximum diagnostics), coverlet.collector 6.0.0.
 
 ## Constraints
 
@@ -52,7 +53,7 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - Settings from `tests/Directory.Build.props` (net8.0, `LangVersion latest`, the root
   analyzer policy); `IsTestProject`; global `using Xunit`.
 - References the package and
-  [Tests.Shared](../DotNetDifferentialEvolution.Tests.Shared/API.md) as projects.
+  [Tests.Common](../DotNetDifferentialEvolution.Tests.Common/API.md) as projects.
 - The whole suite runs in well under a second (89 ms on 2026-10-02); a unit test that
   needs a full optimization run belongs in the integration project.
 

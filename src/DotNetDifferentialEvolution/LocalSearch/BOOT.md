@@ -12,7 +12,7 @@ the adaptive variant's own state is left as it is.
   synchronisation. Held by the engine; stated by the contract.
 - **Evaluations made by the refiner count toward the budget** — by contract only; the
   engine cannot see them. Held for the test refiner by
-  `LocalSearchHookTests.Refiner_EvaluationsAreFoldedIntoEvaluationCount`; any other
+  `LocalSearchHookTests.RefinerEvaluationsAreFoldedIntoEvaluationCount`; any other
   refiner is on its honour.
 
 ## Dependencies

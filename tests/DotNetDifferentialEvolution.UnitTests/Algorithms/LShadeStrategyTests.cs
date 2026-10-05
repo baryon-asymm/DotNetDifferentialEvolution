@@ -3,9 +3,9 @@ using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.SelectionStrategies;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.Fakes;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-using DotNetDifferentialEvolution.Tests.Shared.Helpers;
+using DotNetDifferentialEvolution.Tests.Common.Fakes;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.Helpers;
 
 namespace DotNetDifferentialEvolution.UnitTests.Algorithms;
 
@@ -21,13 +21,20 @@ public class LShadeStrategyTests
     private const int InitialPopulationSize = 10;
     private const long MaxEvaluations = 100;
 
+    /// <summary>
+    /// The active population follows the linear reduction schedule of the consumed evaluation
+    /// budget, from the initial size down to the minimum, and never below it once the budget is
+    /// overrun.
+    /// </summary>
+    /// <param name="evaluationCount">The evaluations consumed so far.</param>
+    /// <param name="expectedPopulationSize">The population size the schedule prescribes.</param>
     [Theory]
     // N = round((minN - initN)/maxEvals * evals + initN), minN = 4, initN = 10, maxEvals = 100.
     [InlineData(0L, 10)]     // no budget consumed → no reduction
     [InlineData(50L, 7)]     // halfway → 7
     [InlineData(100L, 4)]    // budget exhausted → minimum
     [InlineData(200L, 4)]    // over budget → clamped to the minimum
-    public void AfterGeneration_ReducesPopulationLinearlyWithTheEvaluationBudget(
+    public void AfterGenerationReducesPopulationLinearlyWithTheEvaluationBudget(
         long evaluationCount,
         int expectedPopulationSize)
     {
@@ -40,8 +47,12 @@ public class LShadeStrategyTests
         Assert.Equal(expectedPopulationSize, context.CurrentPopulationSize);
     }
 
+    /// <summary>
+    /// Shrinking the population keeps exactly the best individuals and leaves them ordered from
+    /// best to worst.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_KeepsTheBestSurvivorsInAscendingFitnessOrder()
+    public void AfterGenerationKeepsTheBestSurvivorsInAscendingFitnessOrder()
     {
         var lshade = CreateStrategy();
         var context = CreateContext();
@@ -58,6 +69,14 @@ public class LShadeStrategyTests
         Assert.Equal(expectedSurvivors, actualSurvivors); // best `newSize`, ascending
     }
 
+    /// <summary>
+    /// A scheduled population size that falls exactly halfway between two integers is rounded
+    /// half away from zero, as the papers do, not to the even neighbour.
+    /// </summary>
+    /// <param name="initialPopulationSize">The population size the run starts with.</param>
+    /// <param name="maxEvaluationNumber">The total evaluation budget.</param>
+    /// <param name="evaluationCount">The evaluations consumed so far.</param>
+    /// <param name="expectedPopulationSize">The population size rounded half up.</param>
     [Theory]
     // Inputs for which N = round((minN - initN)/maxEvals * evals + initN) lands on an exact
     // midpoint (minN = 4). The papers round half away from zero; .NET's default
@@ -65,7 +84,7 @@ public class LShadeStrategyTests
     [InlineData(24, 2000L, 750L, 17)]   // 24 - 20 * 0.375  = 16.5 → 17 (ToEven gives 16)
     [InlineData(8, 1000L, 375L, 7)]     //  8 -  4 * 0.375  =  6.5 →  7 (ToEven gives  6)
     [InlineData(12, 1600L, 300L, 11)]   // 12 -  8 * 0.1875 = 10.5 → 11 (ToEven gives 10)
-    public void AfterGeneration_RoundsMidpointPopulationSizesHalfUp(
+    public void AfterGenerationRoundsMidpointPopulationSizesHalfUp(
         int initialPopulationSize,
         long maxEvaluationNumber,
         long evaluationCount,
@@ -84,8 +103,12 @@ public class LShadeStrategyTests
         Assert.Equal(expectedPopulationSize, context.CurrentPopulationSize);
     }
 
+    /// <summary>
+    /// The archive capacity rescaled to the reduced population is rounded half away from zero
+    /// when it lands on a midpoint.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_RoundsAMidpointArchiveCapacityHalfUp()
+    public void AfterGenerationRoundsAMidpointArchiveCapacityHalfUp()
     {
         // Half the budget reduces 10 → 7 individuals; 1.5 * 7 = 10.5 is an exact midpoint,
         // which MidpointRounding.ToEven would round down to 10.
@@ -103,8 +126,12 @@ public class LShadeStrategyTests
         Assert.Equal(11, context.ArchiveCapacity);
     }
 
+    /// <summary>
+    /// L-SHADE writes the improvement-weighted Lehmer mean of the successful CR values into the
+    /// memory, which sits above the arithmetic mean plain SHADE uses on the same inputs.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_UpdatesMemoryCrWithTheWeightedLehmerMean()
+    public void AfterGenerationUpdatesMemoryCrWithTheWeightedLehmerMean()
     {
         // L-SHADE is built on SHADE 1.1, whose memory update takes the weighted *Lehmer* mean of
         // the successful CR values (its Algorithm 1, line 5). SHADE (2013), Eq. (17), takes the
@@ -118,11 +145,19 @@ public class LShadeStrategyTests
         var records = new TrialRecord[InitialPopulationSize];
         records[0] = new TrialRecord
         {
-            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.4, UsedF = 0.2
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 10,
+            TrialFfValue = 8,
+            UsedCr = 0.4,
+            UsedF = 0.2
         };
         records[1] = new TrialRecord
         {
-            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.9, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 10,
+            TrialFfValue = 6,
+            UsedCr = 0.9,
+            UsedF = 0.5
         };
 
         lshade.AfterGeneration(new GenerationContext(context), records);
@@ -138,8 +173,12 @@ public class LShadeStrategyTests
         Assert.Equal((2 * 0.04 + 4 * 0.25) / (2 * 0.2 + 4 * 0.5), f, 1e-9);
     }
 
+    /// <summary>
+    /// When every successful CR is zero, the terminal rule fixes the memory slot so that it yields
+    /// CR = 0 without a Gaussian draw, instead of computing a 0/0 Lehmer mean.
+    /// </summary>
     [Fact]
-    public void AfterGeneration_TerminalCrRuleWinsOverTheLehmerMean()
+    public void AfterGenerationTerminalCrRuleWinsOverTheLehmerMean()
     {
         // Both halves of SHADE 1.1's rule are on for L-SHADE, and the terminal test comes first:
         // all-zero successful CR fixes the slot rather than feeding a 0/0 Lehmer mean.
@@ -149,11 +188,19 @@ public class LShadeStrategyTests
         var records = new TrialRecord[InitialPopulationSize];
         records[0] = new TrialRecord
         {
-            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 8, UsedCr = 0.0, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 10,
+            TrialFfValue = 8,
+            UsedCr = 0.0,
+            UsedF = 0.5
         };
         records[1] = new TrialRecord
         {
-            Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 10, TrialFfValue = 6, UsedCr = 0.0, UsedF = 0.5
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 10,
+            TrialFfValue = 6,
+            UsedCr = 0.0,
+            UsedF = 0.5
         };
 
         lshade.AfterGeneration(new GenerationContext(context), records);
@@ -166,39 +213,52 @@ public class LShadeStrategyTests
         Assert.Equal(0.0, cr, 1e-12);
     }
 
+    /// <summary>
+    /// A zero or negative evaluation budget is rejected at construction, since it would divide the
+    /// reduction schedule by a non-positive number.
+    /// </summary>
+    /// <param name="maxEvaluationNumber">The invalid evaluation budget.</param>
     [Theory]
     [InlineData(0L)]
     [InlineData(-1L)]
-    public void Constructor_RejectsANonPositiveEvaluationBudget(
+    public void ConstructorRejectsANonPositiveEvaluationBudget(
         long maxEvaluationNumber)
     {
         // The budget is the denominator of the reduction schedule. Left unchecked it produces a
         // non-finite progress and collapses the population to the minimum in one generation,
         // which no exception ever reports.
-        Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
             initialPopulationSize: InitialPopulationSize,
             maxEvaluationNumber: maxEvaluationNumber,
             archiveSizeRate: 0.0,
             memorySize: 5));
     }
 
+    /// <summary>
+    /// A negative archive size rate is rejected at construction.
+    /// </summary>
     [Fact]
-    public void Constructor_RejectsANegativeArchiveSizeRate()
+    public void ConstructorRejectsANegativeArchiveSizeRate()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => new LShadeStrategy(
             initialPopulationSize: InitialPopulationSize,
             maxEvaluationNumber: MaxEvaluations,
             archiveSizeRate: -0.5,
             memorySize: 5));
     }
 
+    /// <summary>
+    /// The constructor rejects a minimum population size below the floor of four, and one that
+    /// exceeds the initial population size.
+    /// </summary>
+    /// <param name="minPopulationSize">The invalid minimum population size.</param>
     [Theory]
     [InlineData(3)]                       // below the floor of 4
     [InlineData(InitialPopulationSize)]   // equal handled separately; this checks > initial
-    public void Constructor_ValidatesMinimumPopulationSize(
+    public void ConstructorValidatesMinimumPopulationSize(
         int minPopulationSize)
     {
-        Assert.ThrowsAny<ArgumentException>(() => new LShadeStrategy(
+        _ = Assert.ThrowsAny<ArgumentException>(() => new LShadeStrategy(
             initialPopulationSize: minPopulationSize < 4 ? InitialPopulationSize : 4,
             maxEvaluationNumber: MaxEvaluations,
             archiveSizeRate: 0.0,

@@ -9,6 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <!-- Roslyn: a semantic model over the GPU package's own sources, for check 8c of its ACCEPTANCE.md
+             (ConstantLeftComparisons). The version APT pins (AerospacePropellantThermodynamics, Directory.Packages.props). -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
         <PackageReference Include="xunit" Version="2.9.3"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
@@ -20,11 +23,12 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\DotNetDifferentialEvolution\DotNetDifferentialEvolution.csproj"/>
         <ProjectReference Include="..\..\src\DotNetDifferentialEvolution.GPU\DotNetDifferentialEvolution.GPU.csproj"/>
-        <ProjectReference Include="..\DotNetDifferentialEvolution.Tests.Shared\DotNetDifferentialEvolution.Tests.Shared.csproj"/>
+        <ProjectReference Include="..\DotNetDifferentialEvolution.Tests.Common\DotNetDifferentialEvolution.Tests.Common.csproj"/>
         <ProjectReference Include="..\DotNetDifferentialEvolution.UnitTests\DotNetDifferentialEvolution.UnitTests.csproj"/>
         <ProjectReference Include="..\DotNetDifferentialEvolution.IntegrationTests\DotNetDifferentialEvolution.IntegrationTests.csproj"/>
         <ProjectReference Include="..\DotNetDifferentialEvolution.GPU.Test\DotNetDifferentialEvolution.GPU.Test.csproj"/>
         <ProjectReference Include="..\..\benchmarks\DotNetDifferentialEvolution.Benchmark\DotNetDifferentialEvolution.Benchmark.csproj"/>
+        <ProjectReference Include="..\..\benchmarks\DotNetDifferentialEvolution.Benchmark.Runner\DotNetDifferentialEvolution.Benchmark.Runner.csproj"/>
     </ItemGroup>
 
 </Project>

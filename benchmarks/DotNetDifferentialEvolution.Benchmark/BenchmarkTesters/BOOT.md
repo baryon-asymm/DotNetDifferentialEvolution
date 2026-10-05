@@ -15,9 +15,9 @@ performance changes to the executor and the mutation arithmetic.
 
 ## Dependencies
 
-- [AlgorithmExecutors](../../../src/DotNetDifferentialEvolution/AlgorithmExecutors/API.md),
-  [AlgorithmExecutors/Interfaces](../../../src/DotNetDifferentialEvolution/AlgorithmExecutors/Interfaces/API.md)
-  — the executor under measurement.
+- [AlgorithmExecutors](../../../src/DotNetDifferentialEvolution/AlgorithmExecutors/API.md)
+  — the executor under measurement, held as the concrete `AlgorithmExecutor` since
+  2026-10-03 (CA1859), so `AlgorithmExecutors/Interfaces` is no longer a dependency.
 - [Models](../../../src/DotNetDifferentialEvolution/Models/API.md) — `ProblemContext`.
 - [MutationStrategies](../../../src/DotNetDifferentialEvolution/MutationStrategies/API.md),
   [MutationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/MutationStrategies/Interfaces/API.md),
@@ -25,12 +25,12 @@ performance changes to the executor and the mutation arithmetic.
   [SelectionStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/SelectionStrategies/Interfaces/API.md),
   [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — the parts it is built from.
-- [FitnessFunctionEvaluators](../../../tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md),
-  [Helpers](../../../tests/DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) —
+- [FitnessFunctionEvaluators](../../../tests/DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md),
+  [Helpers](../../../tests/DotNetDifferentialEvolution.Tests.Common/Helpers/API.md) —
   `SimpleSumEvaluator`, `ProblemContextHelper`.
 - [GenerationStrategies](../../../src/DotNetDifferentialEvolution/GenerationStrategies/API.md) — `IGenerationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [FitnessFunctionEvaluators/Interfaces](../../../tests/DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../../tests/DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 Outside the tree: BenchmarkDotNet 0.14.0.
 
@@ -43,15 +43,18 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-- [x] Builds with the project, 0 warnings: 2026-10-02.
+- [x] Builds with the project, 0 warnings: 2026-10-02; again under the maximum
+      diagnostics, 2026-10-03.
 - [ ] Not run in this reconstruction: no BenchmarkDotNet figure is recorded here, so
       no claim about the engine's speed rests on this node.
 - [ ] ⚠ Only the classic legacy scheme is measured; the p-best strategies, the adaptive
       hooks and the multi-worker barrier have no throughput benchmark.
-- [ ] ⚠ Three fields (`_mutationStrategy`, `_selectionStrategy`, `_context`) are kept
-      but never read after construction; `RandomProviders` is imported and unused.
-      (The unused import of `Benchmark.RandomGenerators` went with that node,
-      2026-10-03.)
+- [x] ⚠ Three fields (`_mutationStrategy`, `_selectionStrategy`, `_context`) were kept
+      but never read after construction; `RandomProviders` was imported and unused.
+      Closed 2026-10-03 under the maximum diagnostics (IDE0052, IDE0005): the strategies
+      are locals of the constructor, `_context` is gone, the executor field is the concrete
+      `AlgorithmExecutor` (CA1859), and the imports are the ones used. (The unused import
+      of `Benchmark.RandomGenerators` went with that node, 2026-10-03.)
 
 ## Taboos
 

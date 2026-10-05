@@ -10,6 +10,9 @@ namespace DotNetDifferentialEvolution.UnitTests.PopulationSampling;
 [Trait("Category", "Unit")]
 public class UniformRandomSamplingMakerTests
 {
+    /// <summary>
+    /// Every sampled gene lies within the bounds of its own dimension.
+    /// </summary>
     [Fact]
     public void SamplesEveryGeneWithinItsPerDimensionBounds()
     {
@@ -23,13 +26,16 @@ public class UniformRandomSamplingMakerTests
 
         maker.SamplePopulation(population);
 
-        for (int i = 0; i < population.Length; i++)
+        for (var i = 0; i < population.Length; i++)
         {
             var gene = i % genomeSize;
             Assert.InRange(population[i], lower[gene], upper[gene]);
         }
     }
 
+    /// <summary>
+    /// Sampling overwrites every element of the population buffer.
+    /// </summary>
     [Fact]
     public void FillsTheEntireBuffer()
     {

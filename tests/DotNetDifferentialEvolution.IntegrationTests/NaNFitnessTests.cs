@@ -5,7 +5,7 @@ using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.MutationStrategies;
 using DotNetDifferentialEvolution.MutationStrategies.Interfaces;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests;
 
@@ -28,8 +28,12 @@ public class NaNFitnessTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// A worker whose scan starts at a NaN individual still reports the real-valued minimum as the
+    /// best.
+    /// </summary>
     [Fact]
-    public async Task PerWorkerScan_DoesNotReportANaNIndividualAsTheBest()
+    public async Task PerWorkerScanDoesNotReportANaNIndividualAsTheBest()
     {
         // The worker's scan starts from the first individual it handles — index 0 for worker 0 —
         // which is the NaN one here, so it has to be displaced by a real-valued individual.
@@ -37,14 +41,18 @@ public class NaNFitnessTests
         var (context, executor) = CreateRunWithNaNTrials(populationSize, workersCount: 1);
         context.CurrentPopulation.FfValues.Span[0] = double.NaN;
 
-        var result = await RunOneGenerationAsync(context, executor, workersCount: 1);
+        var result = await RunOneGenerationAsync(context, executor, workersCount: 1).ConfigureAwait(true);
 
         Assert.True(double.IsNaN(FitnessAt(result, 0)));
         AssertBestIsTheLiveMinimum(result);
     }
 
+    /// <summary>
+    /// When one worker's stripe is all NaN, the reduction across workers still reports the other
+    /// worker's real-valued best.
+    /// </summary>
     [Fact]
-    public async Task CrossWorkerReduction_DoesNotReportANaNIndividualAsTheBest()
+    public async Task CrossWorkerReductionDoesNotReportANaNIndividualAsTheBest()
     {
         // Two workers stride the population: the master (worker 1) handles 1, 3, 5 — all NaN
         // here — and the slave (worker 0) handles 0, 2, 4. The reduction across workers starts
@@ -56,14 +64,18 @@ public class NaNFitnessTests
         populationFfValues[3] = double.NaN;
         populationFfValues[5] = double.NaN;
 
-        var result = await RunOneGenerationAsync(context, executor, workersCount: 2);
+        var result = await RunOneGenerationAsync(context, executor, workersCount: 2).ConfigureAwait(true);
 
         Assert.True(double.IsNaN(FitnessAt(result, 1)));
         AssertBestIsTheLiveMinimum(result);
     }
 
+    /// <summary>
+    /// With a generation strategy installed, the orchestrator's whole-population scan passes over a
+    /// NaN individual and reports the real-valued minimum.
+    /// </summary>
     [Fact]
-    public async Task PopulationScan_DoesNotReportANaNIndividualAsTheBest()
+    public async Task PopulationScanDoesNotReportANaNIndividualAsTheBest()
     {
         // With a generation strategy in play the orchestrator rescans the whole population
         // instead of reducing the per-worker indices.
@@ -72,14 +84,18 @@ public class NaNFitnessTests
             populationSize, workersCount: 1, generationStrategy: new NoOpGenerationStrategy());
         context.CurrentPopulation.FfValues.Span[0] = double.NaN;
 
-        var result = await RunOneGenerationAsync(context, executor, workersCount: 1);
+        var result = await RunOneGenerationAsync(context, executor, workersCount: 1).ConfigureAwait(true);
 
         Assert.True(double.IsNaN(FitnessAt(result, 0)));
         AssertBestIsTheLiveMinimum(result);
     }
 
+    /// <summary>
+    /// When every individual is NaN the population scan still reports a valid index into the
+    /// population.
+    /// </summary>
     [Fact]
-    public async Task PopulationScan_WithAnAllNaNPopulation_StillReportsAnInRangeIndex()
+    public async Task PopulationScanWithAnAllNaNPopulationStillReportsAnInRangeIndex()
     {
         // Degenerate but reachable: nothing is better than anything else, and the scan still has
         // to name an individual rather than throw or return -1.
@@ -88,14 +104,18 @@ public class NaNFitnessTests
             populationSize, workersCount: 1, generationStrategy: new NoOpGenerationStrategy());
         context.CurrentPopulation.FfValues.Span.Fill(double.NaN);
 
-        var result = await RunOneGenerationAsync(context, executor, workersCount: 1);
+        var result = await RunOneGenerationAsync(context, executor, workersCount: 1).ConfigureAwait(true);
 
         Assert.InRange(result.BestIndividualIndex, 0, populationSize - 1);
         Assert.True(double.IsNaN(FitnessAt(result, result.BestIndividualIndex)));
     }
 
+    /// <summary>
+    /// The initial best the builder computes and hands to the first mutation is not the individual
+    /// whose evaluation returned NaN.
+    /// </summary>
     [Fact]
-    public async Task Builder_DoesNotHandANaNIndividualToMutationAsTheInitialBest()
+    public async Task BuilderDoesNotHandANaNIndividualToMutationAsTheInitialBest()
     {
         // The builder evaluates the initial population in index order and picks the best from it;
         // the very first evaluation — individual 0 — comes back NaN.
@@ -113,15 +133,19 @@ public class NaNFitnessTests
             .UseProcessors(1)
             .Build();
 
-        await de.RunAsync().WaitAsync(Timeout);
+        _ = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         // Individual 0 is the NaN one, so it must not be the best the first generation mutates around.
-        Assert.NotNull(mutationStrategy.FirstSeenBestIndividualIndex);
+        _ = Assert.NotNull(mutationStrategy.FirstSeenBestIndividualIndex);
         Assert.NotEqual(0, mutationStrategy.FirstSeenBestIndividualIndex);
     }
 
+    /// <summary>
+    /// End to end, a JADE run whose first initial evaluation returns NaN reports the real-valued
+    /// minimum of its final population as the best.
+    /// </summary>
     [Fact]
-    public async Task JadeRun_WithANaNInTheInitialPopulation_ReportsAFiniteBest()
+    public async Task JadeRunWithANaNInTheInitialPopulationReportsAFiniteBest()
     {
         // The end-to-end symptom: individual 0 of the initial population evaluates to NaN, and
         // from then on both the greedy selection and the best-index scan refuse to let go of it.
@@ -136,7 +160,7 @@ public class NaNFitnessTests
             .UseProcessors(1)
             .Build();
 
-        var result = await de.RunAsync().WaitAsync(Timeout);
+        var result = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         AssertBestIsTheLiveMinimum(result);
     }
@@ -169,7 +193,7 @@ public class NaNFitnessTests
 
         harness.StartAll();
 
-        return await harness.Handler.GetResultPopulationTask().WaitAsync(Timeout);
+        return await harness.Handler.GetResultPopulationTask().WaitAsync(Timeout).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -180,11 +204,13 @@ public class NaNFitnessTests
         Population population)
     {
         var liveMinimum = double.PositiveInfinity;
-        for (int i = 0; i < population.PopulationSize; i++)
+        for (var i = 0; i < population.PopulationSize; i++)
         {
             var fitnessValue = FitnessAt(population, i);
             if (fitnessValue < liveMinimum)
+            {
                 liveMinimum = fitnessValue;
+            }
         }
 
         population.MoveCursorToBestIndividual();

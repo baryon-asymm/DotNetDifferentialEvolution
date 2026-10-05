@@ -8,7 +8,12 @@ namespace DotNetDifferentialEvolution.Algorithms.Common;
 /// Shared machinery for the JADE/SHADE/L-SHADE family: external-archive maintenance and
 /// fitness ranking for the <c>current-to-pbest/1</c> mutation strategy.
 /// </summary>
-public abstract class AdaptiveStrategyBase
+/// <remarks>
+/// Initializes a new instance of the <see cref="AdaptiveStrategyBase"/> class.
+/// </remarks>
+/// <param name="populationSize">The maximum population size (used to size scratch buffers).</param>
+public abstract class AdaptiveStrategyBase(
+    int populationSize)
 {
     /// <summary>A single-threaded random provider for end-of-generation bookkeeping.</summary>
     protected BaseRandomProvider RandomProvider { get; private set; } = new RandomProvider();
@@ -26,17 +31,7 @@ public abstract class AdaptiveStrategyBase
         RandomProvider = randomProvider;
     }
 
-    private readonly double[] _sortKeys;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AdaptiveStrategyBase"/> class.
-    /// </summary>
-    /// <param name="populationSize">The maximum population size (used to size scratch buffers).</param>
-    protected AdaptiveStrategyBase(
-        int populationSize)
-    {
-        _sortKeys = new double[populationSize];
-    }
+    private readonly double[] _sortKeys = new double[populationSize];
 
     /// <summary>
     /// Adds the parents discarded this generation (now residing in the swapped-out trial
@@ -57,25 +52,24 @@ public abstract class AdaptiveStrategyBase
         // than being ignored the way a disabled archive is.
         var capacity = Math.Min(context.ArchiveCapacity, bufferCapacity);
         if (capacity <= 0)
+        {
             return;
+        }
 
         var discardedParents = context.DiscardedParents.Genes.Span;
         var archiveSize = Math.Min(context.ArchiveSize, capacity);
 
-        for (int i = 0; i < currentPopulationSize; i++)
+        for (var i = 0; i < currentPopulationSize; i++)
         {
             // Improvement, not survival: both papers insert into the archive on the strict
             // comparison (their Algorithm 2, line 16), so a parent displaced by a tie is not
             // archived. It was not beaten, and the archive exists to keep beaten parents around.
-            if (trialRecords[i].Improved == false)
+            if (!trialRecords[i].Improved)
+            {
                 continue;
+            }
 
-            int slot;
-            if (archiveSize < capacity)
-                slot = archiveSize++;
-            else
-                slot = RandomProvider.Next(capacity);
-
+            var slot = archiveSize < capacity ? archiveSize++ : RandomProvider.Next(capacity);
             discardedParents.Slice(i * genomeSize, genomeSize)
                 .CopyTo(archive.Slice(slot * genomeSize, genomeSize));
         }

@@ -61,3 +61,6 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+# The PTX texts of the GPU tests keep LF: their SHA-256 is recorded (GPU.Test/Devices/BOOT.md).
+*.ptx text eol=lf

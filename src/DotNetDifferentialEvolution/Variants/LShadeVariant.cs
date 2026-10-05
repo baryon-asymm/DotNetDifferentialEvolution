@@ -32,9 +32,14 @@ public sealed class LShadeVariant : IDeVariant
         int memorySize = 6)
     {
         if (maxEvaluationNumber <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(maxEvaluationNumber), "Evaluation budget must be greater than 0.");
+        }
+
         if (archiveSizeRate < 0.0)
+        {
             throw new ArgumentOutOfRangeException(nameof(archiveSizeRate), "Archive size rate must be non-negative.");
+        }
 
         _maxEvaluationNumber = maxEvaluationNumber;
         _pBestRate = pBestRate;
@@ -72,10 +77,12 @@ public sealed class LShadeVariant : IDeVariant
         // either terminates with a population still well above 4, or spends its tail at 4.
         if (terminationStrategy is LimitEvaluationNumberTerminationStrategy evaluationTermination
             && evaluationTermination.MaxEvaluationNumber != _maxEvaluationNumber)
+        {
             throw new InvalidOperationException(
                 $"L-SHADE was configured with an evaluation budget of {_maxEvaluationNumber}, but the " +
                 $"termination strategy limits evaluations to {evaluationTermination.MaxEvaluationNumber}. " +
                 "They must match so the linear population-size reduction reaches its minimum exactly " +
                 "as the run terminates.");
+        }
     }
 }

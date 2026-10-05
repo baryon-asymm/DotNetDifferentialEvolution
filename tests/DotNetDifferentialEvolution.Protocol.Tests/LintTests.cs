@@ -1,12 +1,8 @@
-using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// Lint (AGENTS.md §13, the language-independent half): the protocol linter, run as a process from the tree root in

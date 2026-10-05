@@ -11,15 +11,10 @@ namespace DotNetDifferentialEvolution.RandomProviders;
 /// inlinable target. Used as a <see langword="struct"/> type argument the interface calls
 /// disappear too, leaving the generator's arithmetic inline in the helper's loop.
 /// </remarks>
-internal readonly struct SeededRandomSource : IRandomSource
+internal readonly struct SeededRandomSource(
+    SeededRandomProvider provider) : IRandomSource
 {
-    private readonly SeededRandomProvider _provider;
-
-    public SeededRandomSource(
-        SeededRandomProvider provider)
-    {
-        _provider = provider;
-    }
+    private readonly SeededRandomProvider _provider = provider;
 
     /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

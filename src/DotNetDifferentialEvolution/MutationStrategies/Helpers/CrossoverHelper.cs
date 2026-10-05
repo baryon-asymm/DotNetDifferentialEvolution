@@ -73,15 +73,19 @@ internal static class CrossoverHelper
         var individualOffset = individualIndex * genomeSize;
         var crossoverThreshold = RandomThreshold.Scale(crossoverProbability);
 
-        for (int i = 0; i < genomeSize; i++)
+        for (var i = 0; i < genomeSize; i++)
         {
             if (i == guaranteedGeneIndex || randomSource.NextULong() <= crossoverThreshold)
             {
                 var parentGene = population[individualOffset + i];
                 if (trialIndividual[i] < lowerBound[i])
+                {
                     trialIndividual[i] = (lowerBound[i] + parentGene) / 2.0;
+                }
                 else if (trialIndividual[i] > upperBound[i])
+                {
                     trialIndividual[i] = (upperBound[i] + parentGene) / 2.0;
+                }
             }
             else
             {

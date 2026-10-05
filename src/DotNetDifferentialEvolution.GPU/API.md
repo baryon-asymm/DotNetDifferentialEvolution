@@ -1,125 +1,11 @@
 # API.md — DotNetDifferentialEvolution.GPU
 
-Namespace: `DotNetDifferentialEvolution.GPU`. The GPU package's entry point and the map
-of its parts. A caller assembles a run from struct strategies and an ILGPU device, hands
-it to the optimizer and gets the best individual back. Everything not listed here is
-internal structure and may change.
+Namespace: `DotNetDifferentialEvolution.GPU`; the objective's contract is in
+[Objectives](Objectives/API.md). A caller writes the objective as a struct, assembles a
+run with the builder, and gets the best individual back as an `ISolution`. Everything not
+listed here is internal structure and may change.
 
-## How the package is used ✅
-
-```csharp
-public sealed class DifferentialEvolutionOptimizer
-    : IDifferentialEvolutionOptimizer<OptimizationResult>, IDisposable
-{
-    public DifferentialEvolutionOptimizer(IKernelController kernelController);
-
-    public Task<OptimizationResult> RunAsync();
-    public Task<OptimizationResult> RunAsync(CancellationToken cancellationToken);
-    public void Dispose();
-}
-```
-
-The path through the nodes:
-
-1. The caller creates an ILGPU `Context` and `Accelerator`, allocates device buffers
-   for the box bounds and for the random states (one `XorShift32` per individual,
-   non-zero seeds), and writes the objective as a struct implementing
-   [`IFitnessFunctionInvoker`](Interfaces/API.md).
-2. It builds the parts: [`PopulationSamplingMaker`](PopulationSamplingMakers/API.md)
-   (size and box, upper bound first), [`RandomGenerator`](RandomGenerators/API.md),
-   [`MutationStrategy<RandomGenerator>`](MutationStrategies/API.md) (lower bound
-   first), [`SelectionStrategy`](SelectionStrategies/API.md) and
-   [`MaxGenerationStrategy`](TerminationStrategies/API.md).
-3. It passes them, with the context and the device, to
-   [`KernelController<…>`](Controllers/Kernels/API.md), and the controller to this
-   optimizer.
-4. The **constructor** compiles the kernels and allocates the populations
-   (`CompileAndGpuMemoryAlloc`); ILGPU compilation errors surface here.
-5. `RunAsync` evaluates the current population, runs generations until the stop rule
-   or the token, copies the whole current population to the host and returns the
-   individual with the lowest fitness (the first one found on a tie) as an
-   [`OptimizationResult`](Models/API.md). It does all this **synchronously** on the
-   calling thread and returns a completed task.
-6. `Dispose` disposes the controller — which disposes the context and the device —
-   and then calls `GC.Collect()`.
-
-A second `RunAsync` continues from where the first stopped: it re-evaluates the current
-population and runs a new full count of generations.
-
-## Errors
-
-| Situation | Behaviour |
-|---|---|
-| The kernels cannot be compiled | ILGPU's exception from the constructor |
-| No current population when picking the result | `InvalidOperationException` (cannot happen after a successful constructor) |
-| Cancellation | A normal result from the population reached so far; no `OperationCanceledException` |
-| Individual 0 has fitness `NaN` | Returned as the best: every comparison with `NaN` is false (by reading the code) |
-
-## Side effects
-
-Blocks the calling thread for the whole run; copies the population to the host once
-per `RunAsync`; forces a full garbage collection on `Dispose`.
-
-## Children
-
-- [Interfaces](Interfaces/API.md) — the optimizer, objective and observer contracts.
-- [Models](Models/API.md) — device and host populations, result types.
-- [Controllers/Kernels](Controllers/Kernels/API.md) — kernel controller and its
-  [contract](Controllers/Kernels/Interfaces/API.md).
-- [MutationStrategies](MutationStrategies/API.md) — DE/rand/1/bin, and its
-  [contract](MutationStrategies/Interfaces/API.md).
-- [SelectionStrategies](SelectionStrategies/API.md) — greedy selection, and its
-  [contract](SelectionStrategies/Interfaces/API.md).
-- [RandomGenerators](RandomGenerators/API.md) — per-thread `XorShift32`, and its
-  [contract](RandomGenerators/Interfaces/API.md).
-- [PopulationSamplingMakers](PopulationSamplingMakers/API.md) — uniform box sampler,
-  and its [contract](PopulationSamplingMakers/Interfaces/API.md).
-- [TerminationStrategies](TerminationStrategies/API.md) — generation limit, and its
-  [contract](TerminationStrategies/Interfaces/API.md).
-
-## Out of scope
-
-- A builder: every part is assembled by hand.
-- Seeding a run, adaptive variants (jDE, JADE, SHADE, L-SHADE), other mutation schemes,
-  stop rules other than a generation count.
-- `DotNetOptimization.Abstractions`: the result is not an `ISolution` and the objective
-  is not an `IFitnessFunctionEvaluator`.
-
-## v1 contract ⏳
-
-Designed on 2026-10-03; nothing below exists yet (`BOOT.md`, `## v1 design ⏳`). It
-replaces everything above at 1.0.0. The objective's contract is in the
-`DotNetDifferentialEvolution.GPU.Objectives` namespace; everything else is in
-`DotNetDifferentialEvolution.GPU`.
-
-### Objective
-
-```csharp
-public interface IGpuFitnessFunction
-{
-    double Evaluate(GeneView genes);
-}
-
-public readonly struct GeneView
-{
-    public int Length { get; }
-    public double this[int index] { get; }
-}
-```
-
-- **Shape.** A struct implementation, compiled into the kernel. `Evaluate` is called
-  once per individual per launch, one GPU thread each.
-- **Input and output.** `genes` is that individual's `D` genes and nothing else, and it
-  cannot be written through. The return value is the fitness; lower is better, and
-  `NaN` is allowed (it ranks worst).
-- **Data.** Any data the objective needs (fit points, constants) it carries as fields:
-  value types and ILGPU `ArrayView`s the caller allocated on the same accelerator.
-- **No bounds check.** Reading `genes[j]` outside `0 ≤ j < Length` is undefined, because
-  kernels cannot throw.
-- **What the body may use.** The kernel rules of `BOOT.md`, `## Constraints`, plus the
-  `Math` allow-list of invariant 8.
-
-### Builder
+## Builder ✅
 
 ```csharp
 public static class GpuDifferentialEvolutionBuilder
@@ -157,23 +43,80 @@ public interface IGpuDifferentialEvolutionBuilder<TFunction> where TFunction : s
     GpuDifferentialEvolution Build();
 }
 
-public enum GpuDevice { Auto = 0, Cuda, OpenCL, Cpu }
+public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
 ```
 
-- **DE/rand/1/bin is the only scheme**, named as in the CPU builder.
+- **DE/rand/1/bin**, named as in the CPU builder; the other schemes and the variants
+  below.
 - **The limits.** A generation limit runs exactly that many generations (≥ 1). An
   evaluation limit stops at the first generation boundary where the count, starting at
-  N, is ≥ the limit; this is the CPU package's rule.
+  N, is ≥ the limit; at least one generation runs.
 - **Devices.**
   - `OnDevice(Auto)` tries CUDA, then OpenCL, then the CPU accelerator.
   - An explicit `Cuda`, `OpenCL` or `Cpu` uses that device or makes `Build` throw.
-  - `OnAccelerator` uses the caller's accelerator and never disposes it.
-- **`Build`** samples the population on the device, compiles the kernels and evaluates
-  the initial population, so it costs N evaluations and the compile time. Kernel
-  compile errors surface here.
-- **Unseeded runs.** Without `WithSeed`, the seed is one draw from `Random.Shared`.
+  - CUDA needs an installed CUDA Toolkit: its math is libdevice's (libnvvm and
+    `libdevice.10.bc`, found through `CUDA_PATH` or the toolkit's default directories).
+    Without one, an explicit `Cuda` throws and Auto skips CUDA with that reason.
+  - `OnAccelerator` uses the caller's accelerator and never disposes it; the objective's
+    own `ArrayView`s must live on it. For a CUDA accelerator, an objective that calls
+    `Exp`, `Log` or `Pow` needs a context built with `LibDevice(libnvvm, libdevice)`;
+    without it `Build` throws ILGPU's `InternalCompilerException` (measured 2026-10-03).
+    So do JADE, SHADE and L-SHADE, whose samplers call `Log`, `Cos` and `Tan`: without
+    `LibDevice` their `Build` throws the same, while the fixed schemes and jDE build and run
+    (measured 2026-10-05, RTX 5070 Ti, a scratch program outside the tree).
+- **`Build`** opens the device, compiles the kernels, samples the population on the
+  device and evaluates it: it costs N evaluations and the compile time. Kernel compile
+  errors surface here.
+- **Unseeded runs.** Without `WithSeed`, the seed is one draw of
+  `RandomNumberGenerator.GetInt32(int.MaxValue)`.
+- **The objective type** must be visible to ILGPU's runtime assembly
+  ([Objectives](Objectives/API.md)).
 
-### Optimizer and result
+## Symmetry with the CPU package ✅
+
+Designed and built 2026-10-05 (HISTORY.md#symmetry-decided-2026-10-05), checks S1–S17.
+
+```csharp
+public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+{
+    IGpuTerminationConditionRequired<TFunction> WithDefaultMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithBestMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithCurrentToBestMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithRandTwoMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithBestTwoMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithJde(double initialMutationForce = 0.5, double initialCrossoverProbability = 0.9);
+    IGpuTerminationConditionRequired<TFunction> WithJade(double pBestRate = 0.1, double archiveSizeRate = 1.0, double adaptationRate = 0.1);
+    IGpuTerminationConditionRequired<TFunction> WithShade(double pBestRate = 0.2, double archiveSizeRate = 1.0, int memorySize = 100);
+    IGpuTerminationConditionRequired<TFunction> WithLShade(long maxEvaluationNumber, double pBestRate = 0.11,
+        double archiveSizeRate = 2.6, int memorySize = 6);
+}
+
+public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+{
+    IGpuDeviceRequired<TFunction> WithGenerationLimit(int maxGenerations);
+    IGpuDeviceRequired<TFunction> WithEvaluationLimit(long maxEvaluations);
+    IGpuDeviceRequired<TFunction> WithStagnationLimit(int maxStagnationStreak, double stagnationThreshold);
+}
+```
+
+- **The CPU builder's names, parameters, order and defaults** (check S1), and its
+  semantics (`docs/ALGORITHMS.md` §§3–7, §9): each fixed scheme with F and CR and
+  ties accepted; jDE on rand/1, F and CR per individual, inherited on survival; JADE on
+  current-to-pbest/1 with an archive, ties refused; SHADE with a success-history memory
+  and p drawn from [min(2/N, p), p]; L-SHADE with the Lehmer CR mean, the terminal CR
+  and linear population reduction to 4 at `maxEvaluationNumber`.
+- **The minimum population** is the scheme's, as in the CPU package: rand/1, jDE, JADE,
+  SHADE and L-SHADE 4; best/1 and current-to-best/1 3; rand/2 6; best/2 5.
+- **The stagnation limit** is the CPU package's `StagnationStreakTerminationStrategy`:
+  after each generation, if `|best − last| > threshold` then `last = best` and the streak
+  is 0, else the streak grows; the run stops when the streak reaches `maxStagnationStreak`.
+  `last` starts at `double.MinValue`.
+- **L-SHADE** with an evaluation limit other than `maxEvaluationNumber` makes `Build`
+  throw, as the CPU package's `LShadeVariant.Validate` does; with a generation or a
+  stagnation limit it runs, and its population reaches 4 at the budget.
+- **The observer** sees the current population size: under L-SHADE it shrinks.
+
+## Optimizer and result ✅
 
 ```csharp
 public sealed class GpuDifferentialEvolution : IDisposable
@@ -210,36 +153,66 @@ public sealed class GpuPopulationSnapshot
 }
 ```
 
-- **`RunAsync`** runs the generations on a dedicated thread bound to the accelerator,
+- **`RunAsync`** runs the generations on a thread of its own, bound to the accelerator,
   and returns at once.
   - The result is the best individual of the final population: `NaN` is worst, a tie
     goes to the lowest index.
   - The token is observed between generations and ends the task as canceled.
   - After the run, a second call returns the same task; during the run it throws.
-- **`Device.FallbackReason`** says why `Auto` skipped a backend. It is `null` when
-  nothing was skipped or the device was explicit.
+- **`Device.FallbackReason`** says why `Auto` skipped each backend before the one it
+  chose. It is `null` when nothing was skipped, when the device was explicit, and for a
+  caller's accelerator.
 - **The observer** gets a host copy of the population every `everyNGenerations`
-  generations, on the run thread. That copy is the only per-generation transfer, and the
-  caller opts into it.
+  generations, on the run's thread. That copy is the only per-generation transfer, and
+  the caller opts into it.
+- **`Dispose`** stops a run in progress between generations and waits for it, then frees
+  the device buffers, and the device unless it was the caller's. Called from the
+  observer, it stops the run and the run's thread frees everything as it ends.
 
-### Errors of v1
+## Errors
 
 | Situation | Behaviour |
 |---|---|
-| Bounds of different lengths, empty, or lower > upper | `ArgumentException` from `WithBounds` |
-| `populationSize < 4` (rand/1 needs four distinct individuals) | `ArgumentOutOfRangeException` |
+| Bounds of different lengths, empty, not finite, or lower > upper | `ArgumentException` from `WithBounds` |
+| `populationSize < 1`, or N·D > `int.MaxValue` ⚠ 2026-10-05: was `populationSize < 4`, now each scheme's minimum is checked by `Build` (next row) → HISTORY.md#symmetry-decided-2026-10-05 | `ArgumentOutOfRangeException` |
+| N below the scheme's minimum (L-SHADE: below 4) | `InvalidOperationException` from `Build`, naming the scheme and its minimum |
+| `pBestRate` outside (0, 1]; `archiveSizeRate` negative or not finite; `adaptationRate` outside [0, 1]; `memorySize < 1`; `maxEvaluationNumber < 1` | `ArgumentOutOfRangeException` |
+| jDE's initial F not finite or ≤ 0, or initial CR outside [0, 1] | `ArgumentOutOfRangeException` |
+| `maxStagnationStreak < 1`; `stagnationThreshold` negative or not finite | `ArgumentOutOfRangeException` |
+| L-SHADE with an evaluation limit other than its `maxEvaluationNumber` | `InvalidOperationException` from `Build` |
+| The archive's capacity·D above `int.MaxValue` | `InvalidOperationException` from `Build` |
 | `mutationForce` not finite or ≤ 0; `crossoverProbability` outside [0, 1] | `ArgumentOutOfRangeException` |
 | A limit < 1 | `ArgumentOutOfRangeException` |
 | `everyNGenerations < 1` | `ArgumentOutOfRangeException` |
+| An undefined `GpuDevice` value | `ArgumentOutOfRangeException` from `OnDevice` |
 | `null` handler or accelerator | `ArgumentNullException` |
-| An explicit device that is not present | `InvalidOperationException` from `Build`, naming the device |
+| An accelerator other than CUDA, OpenCL or CPU | `ArgumentException` from `OnAccelerator` |
+| An explicit device that is not present, or `Cuda` without a CUDA Toolkit | `InvalidOperationException` from `Build`, naming the device and the reason |
 | The objective cannot be compiled by ILGPU | ILGPU's exception from `Build` |
 | `RunAsync` while a run is in progress | `InvalidOperationException` |
+| `RunAsync` after `Dispose` | `ObjectDisposedException` |
 | The observer throws | the task faults with that exception |
 
-### Out of scope for v1
+## Side effects
 
-- `float`, jDE and the other adaptive variants, schemes other than DE/rand/1/bin.
-- Stop rules other than the two limits, and a public termination interface.
+`Build` opens a device context unless one is passed, allocates `3·N·D + 2·N + 2·D`
+doubles on the device and compiles two kernels; a configuration that needs bookkeeping
+allocates its buffers and compiles its kernels too ([Bookkeeping](Bookkeeping/API.md)). A run copies the population to the host
+once at the end, and once per observer call. No `GC.Collect`.
+
+## Children
+
+- [Objectives](Objectives/API.md) — the objective's contract and the gene view.
+- [Devices](Devices/API.md) — device selection, ownership, the math probe (internal).
+- [Kernels](Kernels/API.md) — the kernels and the DE step (internal).
+- [Bookkeeping](Bookkeeping/API.md) — the work between generations (internal).
+- [Random](Random/API.md) — Philox4x32-10 and the draw conversions (internal).
+
+## Out of scope
+
+- `float`.
+- A caller's own scheme, variant, parameter provider (so the CPU package's dithered
+  provider, reached only through its open interface), selection, stop rule, local
+  search or initial sampling.
 - An objective on the host or through `IFitnessFunctionEvaluator`: a `ReadOnlySpan`
   cannot cross into an ILGPU kernel.

@@ -1,4 +1,4 @@
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.UnitTests.FitnessFunctions;
 
@@ -10,6 +10,10 @@ namespace DotNetDifferentialEvolution.UnitTests.FitnessFunctions;
 [Trait("Category", "Unit")]
 public class BenchmarkFunctionEvaluatorTests
 {
+    /// <summary>
+    /// Every benchmark function with a known minimizer evaluates there to its declared global minimum.
+    /// </summary>
+    /// <param name="dimension">The problem dimension the functions are created with.</param>
     [Theory]
     [InlineData(2)]
     [InlineData(5)]
@@ -31,6 +35,11 @@ public class BenchmarkFunctionEvaluatorTests
         }
     }
 
+    /// <summary>
+    /// Every benchmark function declares one proper interval per dimension: matching lower and upper
+    /// lengths, equal to the dimension, with each lower bound strictly below its upper bound.
+    /// </summary>
+    /// <param name="dimension">The problem dimension the functions are created with.</param>
     [Theory]
     [InlineData(2)]
     [InlineData(4)]
@@ -50,11 +59,16 @@ public class BenchmarkFunctionEvaluatorTests
 
             Assert.Equal(lower.Length, upper.Length);
             Assert.Equal(evaluator.Dimension, lower.Length);
-            for (int i = 0; i < lower.Length; i++)
+            for (var i = 0; i < lower.Length; i++)
+            {
                 Assert.True(lower.Span[i] < upper.Span[i], $"{evaluator.Name} bound {i} must be a proper interval.");
+            }
         }
     }
 
+    /// <summary>
+    /// The worker-indexed overload of <c>Evaluate</c> returns the same value as the plain overload.
+    /// </summary>
     [Fact]
     public void WorkerIndexedEvaluateMatchesPlainEvaluate()
     {

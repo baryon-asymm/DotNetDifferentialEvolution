@@ -57,7 +57,8 @@ jobs:
           --collect:"XPlat Code Coverage"
 
       # Broader gate: unit + integration, excluding the long-running (Slow) tests and the GPU
-      # tests, which need an OpenCL device the hosted runners do not have.
+      # tests that need a real device (Category=Gpu): the hosted runners have neither CUDA nor
+      # OpenCL. The GPU package's own suite runs here on ILGPU's CPU accelerator.
       - name: Integration tests (excluding slow and GPU)
         run: >-
           dotnet test DotNetDifferentialEvolution.sln
@@ -72,3 +73,11 @@ jobs:
           dotnet pack src/DotNetDifferentialEvolution/DotNetDifferentialEvolution.csproj
           --configuration Release --no-build
           --output ${{ runner.temp }}/api-check
+
+      # The GPU package packs from the same build, without publishing (GPU ACCEPTANCE.md, R1).
+      # No package validation: 1.0.0 replaces every public type of 0.x on purpose.
+      - name: Pack the GPU package
+        run: >-
+          dotnet pack src/DotNetDifferentialEvolution.GPU/DotNetDifferentialEvolution.GPU.csproj
+          --configuration Release --no-build
+          --output ${{ runner.temp }}/gpu-pack

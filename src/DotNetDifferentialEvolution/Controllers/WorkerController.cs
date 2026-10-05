@@ -8,13 +8,11 @@ namespace DotNetDifferentialEvolution.Controllers;
 /// </summary>
 public class WorkerController : IDisposable
 {
-    private static volatile int _globalWorkerCounter;
-    
+    private static volatile int ActiveWorkerCount;
+
     private readonly object _lock = new();
-    
+
     private bool _isDisposed;
-    
-    private readonly int _workerId;
     private readonly string _workerThreadName;
 
     private volatile bool _isPassLoopCompleted;
@@ -23,46 +21,44 @@ public class WorkerController : IDisposable
     private volatile bool _isPreparingToRun;
     private volatile bool _isRunning;
     private volatile bool _workerShouldStop;
-    
-    private volatile int _bestHandledIndividualIndex;
-    
-    private Thread? _workerThread;
-    private Exception? _exception;
 
+    private volatile int _bestHandledIndividualIndex;
+
+    private Thread? _workerThread;
     private readonly IAlgorithmExecutor _algorithmExecutor;
-    
+
     private readonly IWorkerPassLoopDoneHandler? _workerPassLoopDoneHandler;
 
     /// <summary>
     /// Gets a value indicating whether the worker is running.
     /// </summary>
     public bool IsRunning => _isRunning;
-    
+
     /// <summary>
     /// Gets a value indicating whether the worker has encountered an exception.
     /// </summary>
-    public bool HasException => _exception != null;
+    public bool HasException => Exception != null;
 
     /// <summary>
     /// Gets the exception encountered by the worker, if any.
     /// </summary>
-    public Exception? Exception => _exception;
+    public Exception? Exception { get; private set; }
 
     /// <summary>
     /// Gets the global worker counter.
     /// </summary>
-    public static int GlobalWorkerCounter => _globalWorkerCounter;
-    
+    public static int GlobalWorkerCounter => ActiveWorkerCount;
+
     /// <summary>
     /// Gets the ID (index) of the worker.
     /// </summary>
-    public int WorkerId => _workerId;
-    
+    public int WorkerId { get; }
+
     /// <summary>
     /// Gets a value indicating whether the pass loop is completed.
     /// </summary>
     public bool IsPassLoopCompleted => _isPassLoopCompleted;
-    
+
     /// <summary>
     /// Gets the index of the best handled individual.
     /// </summary>
@@ -79,8 +75,8 @@ public class WorkerController : IDisposable
         IAlgorithmExecutor algorithmExecutor,
         IWorkerPassLoopDoneHandler? workerPassLoopDoneHandler = null)
     {
-        _workerId = workerId;
-        _workerThreadName = $"{Interlocked.Increment(ref _globalWorkerCounter)}-DEWorkerThread_{_workerId}";
+        WorkerId = workerId;
+        _workerThreadName = $"{Interlocked.Increment(ref ActiveWorkerCount)}-DEWorkerThread_{WorkerId}";
         _algorithmExecutor = algorithmExecutor;
         _workerPassLoopDoneHandler = workerPassLoopDoneHandler;
     }
@@ -99,10 +95,10 @@ public class WorkerController : IDisposable
                 {
                     throw new InvalidOperationException("The worker is already running.");
                 }
-                
+
                 return;
             }
-            
+
             StartAndWaitUntilWorkerStarted();
         }
     }
@@ -115,16 +111,16 @@ public class WorkerController : IDisposable
     {
         lock (_lock)
         {
-            if (_isRunning == false)
+            if (!_isRunning)
             {
                 if (throwIfStopped)
                 {
                     throw new InvalidOperationException("The worker is already stopped.");
                 }
-                
+
                 return;
             }
-            
+
             StopAndWaitUntilWorkerStopped();
         }
     }
@@ -145,10 +141,10 @@ public class WorkerController : IDisposable
     {
         _isRunning = true;
         _isPreparingToRun = false;
-        
+
         try
         {
-            while (_workerShouldStop == false)
+            while (!_workerShouldStop)
             {
                 // Cooperative wait for the next generation. A fresh SpinWait per generation so the
                 // backoff always starts from zero; SpinOnce(-1) keeps SpinWait's spin/yield
@@ -157,18 +153,19 @@ public class WorkerController : IDisposable
                 // burning the core is what keeps an oversubscribed worker count (more workers than
                 // available cores, e.g. UseAllProcessors) from collapsing into livelock.
                 var passLoopSpinWait = new SpinWait();
-                // CA1508 false positive: _workerShouldStop is volatile and may be flipped by
-                // Stop() on another thread, so this spin-wait condition is not statically constant.
-#pragma warning disable CA1508
-                while (_passLoopPermitted == false && _workerShouldStop == false)
+                while (MustWaitForPassPermission())
+                {
                     passLoopSpinWait.SpinOnce(sleep1Threshold: -1);
-#pragma warning restore CA1508
+                }
+
                 _passLoopPermitted = false;
 
                 if (_workerShouldStop)
+                {
                     break;
+                }
 
-                _algorithmExecutor.Execute(_workerId,
+                _algorithmExecutor.Execute(WorkerId,
                                            out var bestHandledIndividualIndex);
                 _bestHandledIndividualIndex = bestHandledIndividualIndex;
 
@@ -177,43 +174,61 @@ public class WorkerController : IDisposable
                 var shouldTerminate = false;
                 _workerPassLoopDoneHandler?.Handle(this, out shouldTerminate);
                 if (shouldTerminate)
+                {
                     break;
+                }
             }
         }
-        // CA1031: a worker thread is a failure boundary. Any exception from the user-supplied
-        // fitness function must be captured and marshaled to the orchestrator (surfaced as an
-        // AggregateException), never left to crash the thread, so catching all types is intended.
-#pragma warning disable CA1031
-        catch (Exception ex)
+        // A worker thread is a failure boundary. Any exception from the user-supplied fitness
+        // function must be captured and marshaled to the orchestrator (surfaced as an
+        // AggregateException), never left to crash the thread, so every type but
+        // OutOfMemoryException is caught (IsCapturedForTheOrchestrator).
+        catch (Exception ex) when (IsCapturedForTheOrchestrator(ex))
         {
-            _exception = ex;
+            Exception = ex;
             _workerPassLoopDoneHandler?.Handle(this, out _);
         }
-#pragma warning restore CA1031
         finally
         {
             _isRunning = false;
         }
     }
-    
+
     /// <summary>
     /// Starts the worker and waits until it is started.
     /// </summary>
+    /// <summary>
+    /// Whether the worker may not yet start its next pass. Both fields are volatile and written by
+    /// other threads (the orchestrator's permit, <see cref="Stop"/>); keeping the test in a method
+    /// of its own leaves no constant for a flow analysis to see in the spin-wait that polls it.
+    /// </summary>
+    private bool MustWaitForPassPermission() => !_passLoopPermitted && !_workerShouldStop;
+
+    /// <summary>
+    /// Whether a worker failure is captured and handed to the orchestrator. Every exception is,
+    /// except <see cref="OutOfMemoryException"/>: a process out of memory cannot be trusted to
+    /// marshal it, so it is left to end the thread as the runtime does by default.
+    /// </summary>
+    private static bool IsCapturedForTheOrchestrator(Exception exception) =>
+        exception is not OutOfMemoryException;
+
     private void StartAndWaitUntilWorkerStarted()
     {
         EnsureRunReadyState();
-        
+
         _workerThread = new Thread(RunWorkerLoop)
         {
             Name = _workerThreadName,
             Priority = ThreadPriority.Highest
         };
-        
+
         _workerThread.Start();
-        
+
         var spinWait = new SpinWait();
         while (_isPreparingToRun)
+        {
             spinWait.SpinOnce();
+        }
     }
 
     /// <summary>
@@ -223,8 +238,8 @@ public class WorkerController : IDisposable
     {
         _isPreparingToRun = true;
         _workerShouldStop = false;
-        _exception = null;
-        
+        Exception = null;
+
         PermitToPassLoop();
     }
 
@@ -237,7 +252,9 @@ public class WorkerController : IDisposable
 
         var spinWait = new SpinWait();
         while (_isRunning)
+        {
             spinWait.SpinOnce();
+        }
     }
 
     /// <summary>
@@ -248,7 +265,7 @@ public class WorkerController : IDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
-    
+
     /// <summary>
     /// Disposes the worker.
     /// </summary>
@@ -256,7 +273,9 @@ public class WorkerController : IDisposable
     protected virtual void Dispose(bool disposing)
     {
         if (_isDisposed)
+        {
             return;
+        }
 
         if (disposing)
         {
@@ -264,13 +283,13 @@ public class WorkerController : IDisposable
             {
                 StopAndWaitUntilWorkerStopped();
             }
-            
-            Interlocked.Decrement(ref _globalWorkerCounter);
+
+            _ = Interlocked.Decrement(ref ActiveWorkerCount);
         }
 
         _isDisposed = true;
     }
-    
+
     /// <summary>
     /// Finalizes the worker.
     /// </summary>

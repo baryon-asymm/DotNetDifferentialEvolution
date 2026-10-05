@@ -50,11 +50,19 @@ public class CurrentToPBestMutationStrategy : IMutationStrategy
         double pBestRateMax)
     {
         if (pBestRateMin is <= 0.0 or > 1.0)
+        {
             throw new ArgumentOutOfRangeException(nameof(pBestRateMin), "p-best rate must be in (0, 1].");
+        }
+
         if (pBestRateMax is <= 0.0 or > 1.0)
+        {
             throw new ArgumentOutOfRangeException(nameof(pBestRateMax), "p-best rate must be in (0, 1].");
+        }
+
         if (pBestRateMin > pBestRateMax)
+        {
             throw new ArgumentException("Minimum p-best rate must not exceed the maximum.", nameof(pBestRateMin));
+        }
 
         _pBestRateMin = pBestRateMin;
         _pBestRateMax = pBestRateMax;

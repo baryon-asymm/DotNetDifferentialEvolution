@@ -8,8 +8,11 @@ namespace DotNetDifferentialEvolution.UnitTests.Models;
 [Trait("Category", "Unit")]
 public class IndividualCursorTests
 {
+    /// <summary>
+    /// A snapshot carries the cursor's fitness value and genes.
+    /// </summary>
     [Fact]
-    public void Snapshot_PreservesValueAndGenes()
+    public void SnapshotPreservesValueAndGenes()
     {
         double[] genes = [1.0, 2.0, 3.0];
         var cursor = new IndividualCursor(4.0, genes);
@@ -20,8 +23,11 @@ public class IndividualCursorTests
         Assert.Equal(genes, snapshot.Genes.ToArray());
     }
 
+    /// <summary>
+    /// A shallow snapshot shares the gene buffer, so a later write to the buffer shows through it.
+    /// </summary>
     [Fact]
-    public void ShallowSnapshot_SharesGeneStorage()
+    public void ShallowSnapshotSharesGeneStorage()
     {
         double[] genes = [1.0, 2.0, 3.0];
         var cursor = new IndividualCursor(4.0, genes);
@@ -32,8 +38,11 @@ public class IndividualCursorTests
         Assert.Equal(99.0, shallow.Genes.Span[0]); // reflects the mutation
     }
 
+    /// <summary>
+    /// A deep snapshot copies the genes, so a later write to the buffer does not affect it.
+    /// </summary>
     [Fact]
-    public void DeepSnapshot_CopiesGeneStorage()
+    public void DeepSnapshotCopiesGeneStorage()
     {
         double[] genes = [1.0, 2.0, 3.0];
         var cursor = new IndividualCursor(4.0, genes);

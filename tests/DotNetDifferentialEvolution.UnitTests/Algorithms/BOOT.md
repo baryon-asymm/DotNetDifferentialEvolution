@@ -33,13 +33,13 @@ cosine term is 0 (draws `0.5, 0.75`), the Cauchy to its location at the draw `0.
   — `SelectionOutcome`.
 - [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md)
   — the limits the contexts are built with.
-- [Fakes](../../DotNetDifferentialEvolution.Tests.Shared/Fakes/API.md),
-  [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/API.md),
-  [Helpers](../../DotNetDifferentialEvolution.Tests.Shared/Helpers/API.md) — scripted
+- [Fakes](../../DotNetDifferentialEvolution.Tests.Common/Fakes/API.md),
+  [FitnessFunctionEvaluators](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/API.md),
+  [Helpers](../../DotNetDifferentialEvolution.Tests.Common/Helpers/API.md) — scripted
   draws, Sphere, `ProblemContextHelper`.
 - [ControlParameterProviders](../../../src/DotNetDifferentialEvolution/ControlParameterProviders/API.md) — `IControlParameterProvider`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 - [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — `ITerminationStrategy`. Added 2026-10-03 from the reflection check (`DependencyTests`).
-- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Shared/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
+- [FitnessFunctionEvaluators/Interfaces](../../DotNetDifferentialEvolution.Tests.Common/FitnessFunctionEvaluators/Interfaces/API.md) — `ITestFitnessFunctionEvaluator`. Added 2026-10-03 from the reflection check (`DependencyTests`).
 
 ## Constraints
 
@@ -49,10 +49,10 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 
 - [x] Green: 2026-10-02, 32 cases in 4 classes (jDE 4, JADE 4, SHADE 8, L-SHADE 16).
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. JADE keyed on `Replaced`
-      instead of `Improved` turned `AfterGeneration_IgnoresATrialAcceptedOnATie` red.
+      instead of `Improved` turned `AfterGenerationIgnoresATrialAcceptedOnATie` red.
 - [ ] ⚠ The sampling bounds (F in `(0, 1]`, CR in `[0, 1]`) of JADE and SHADE are not
       asserted; only the centres are read back.
-- [ ] ⚠ `Constructor_ValidatesMinimumPopulationSize` checks a minimum below 4 and an
+- [ ] ⚠ `ConstructorValidatesMinimumPopulationSize` checks a minimum below 4 and an
       initial size below the minimum; its comment says the equal case is "handled
       separately", and no test does so.
 - [ ] ⚠ Tolerances `1e-9` and `1e-12` are literals in each assertion.

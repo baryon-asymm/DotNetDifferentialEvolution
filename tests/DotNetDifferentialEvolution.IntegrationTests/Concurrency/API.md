@@ -37,14 +37,14 @@ public class SeededReproducibilityTests
 public class ParallelDeterminismTests
 {
     public async Task SingleWorkerAndMultiWorkerBothConverge();
-    public async Task RepeatedParallelRunsAllConverge_NoDataRaceCorruption();
-    public async Task OversubscribedWorkerCount_CompletesAndConverges();
+    public async Task RepeatedParallelRunsAllConvergeNoDataRaceCorruption();
+    public async Task OversubscribedWorkerCountCompletesAndConverges();
 }
 [Trait("Category", "Integration")]
 public class WorkerLifecycleTests
 {
-    public async Task RepeatedBuildRunDispose_DoesNotLeakWorkerControllers();
-    public async Task RepeatedBuildRunDispose_DoesNotLeakThreads();
+    public async Task RepeatedBuildRunDisposeDoesNotLeakWorkerControllers();
+    public async Task RepeatedBuildRunDisposeDoesNotLeakThreads();
 }
 [Trait("Category", "Integration")]
 [Trait("Category", "Slow")]

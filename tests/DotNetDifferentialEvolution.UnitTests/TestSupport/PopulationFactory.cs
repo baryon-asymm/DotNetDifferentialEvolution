@@ -33,18 +33,19 @@ internal static class PopulationFactory
 
     /// <summary>Creates a single-individual, single-gene population with the given best fitness.</summary>
     public static Population SingleIndividual(
-        double[] fitnessValueBuffer)
-    {
-        return Create(genes: [0.0], fitnessValues: fitnessValueBuffer, bestIndividualIndex: 0);
-    }
+        double[] fitnessValueBuffer) => Create(genes: [0.0], fitnessValues: fitnessValueBuffer, bestIndividualIndex: 0);
 
     private static int IndexOfMinimum(
         double[] values)
     {
         var best = 0;
-        for (int i = 1; i < values.Length; i++)
+        for (var i = 1; i < values.Length; i++)
+        {
             if (values[i] < values[best])
+            {
                 best = i;
+            }
+        }
 
         return best;
     }

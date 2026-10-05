@@ -24,7 +24,9 @@ public static class RandomDistributionHelper
         ArgumentNullException.ThrowIfNull(randomProvider);
 
         if (randomProvider is SeededRandomProvider seededRandomProvider)
+        {
             return seededRandomProvider.NextGaussian(mean, standardDeviation);
+        }
 
         // Guard against log(0).
         var u1 = 1.0 - randomProvider.NextDouble();

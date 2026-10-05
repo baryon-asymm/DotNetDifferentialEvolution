@@ -1,6 +1,5 @@
-using DotNetDifferentialEvolution;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.Concurrency;
 
@@ -15,19 +14,25 @@ public class ResourceUsageTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// Fifty build/run/dispose cycles after a warmup grow the settled managed heap by no more than
+    /// 32 MB.
+    /// </summary>
     [Fact]
     public async Task RepeatedRunsDoNotGrowManagedHeapUnbounded()
     {
         // Settle and establish a baseline after a warmup run.
         using (var warmup = BuildOptimizer())
-            await warmup.RunAsync().WaitAsync(Timeout);
+        {
+            _ = await warmup.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
+        }
 
         var baseline = GetSettledManagedMemory();
 
-        for (int i = 0; i < 50; i++)
+        for (var i = 0; i < 50; i++)
         {
             using var de = BuildOptimizer();
-            await de.RunAsync().WaitAsync(Timeout);
+            _ = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
         }
 
         var after = GetSettledManagedMemory();
@@ -48,7 +53,7 @@ public class ResourceUsageTests
         return GC.GetTotalMemory(forceFullCollection: true);
     }
 
-    private static DotNetDifferentialEvolution.DifferentialEvolution BuildOptimizer() =>
+    private static DifferentialEvolution BuildOptimizer() =>
         DifferentialEvolutionBuilder.ForFunction(new SphereEvaluator(dimension: 5))
             .WithBounds(new SphereEvaluator(5).GetLowerBounds(), new SphereEvaluator(5).GetUpperBounds())
             .WithPopulationSize(60)

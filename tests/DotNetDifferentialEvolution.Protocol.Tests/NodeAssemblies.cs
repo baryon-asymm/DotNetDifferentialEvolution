@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// The assembly each node's project builds, loaded by name from this test project's build output, and a type's own
@@ -56,12 +52,9 @@ internal static class NodeAssemblies
     {
         ArgumentNullException.ThrowIfNull(type);
         var assemblyNode = NodeOf(type.Assembly);
-        if (assemblyNode is not null && ExemptNamespaceOf(assemblyNode) is { } exempt && type.Namespace == exempt)
-        {
-            return assemblyNode;
-        }
-
-        return NodeOfNamespace(type.Namespace) ?? assemblyNode;
+        return assemblyNode is not null && ExemptNamespaceOf(assemblyNode) is { } exempt && type.Namespace == exempt
+            ? assemblyNode
+            : NodeOfNamespace(type.Namespace) ?? assemblyNode;
     }
 
     /// <summary>The namespace a node declares as its exception in <see cref="ProtocolConfig.NamespaceExceptions"/>, or null.</summary>

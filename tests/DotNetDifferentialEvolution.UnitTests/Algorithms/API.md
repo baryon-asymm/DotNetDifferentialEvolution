@@ -17,42 +17,42 @@ Nothing outward. What this node proves about the four adaptive strategies.
 [Trait("Category", "Unit")]
 public class JdeStrategyTests
 {
-    public void WithoutAdaptation_ReturnsTheStoredPerIndividualParameters();
-    public void WhenAdaptationTriggers_RegeneratesFWithinRangeAndCrUniformly();
-    public void AfterGeneration_KeepsParametersOfSuccessfulTrialsPerIndividual();
-    public void AfterGeneration_KeepsParametersOfATrialAcceptedOnATie();
+    public void WithoutAdaptationReturnsTheStoredPerIndividualParameters();
+    public void WhenAdaptationTriggersRegeneratesFWithinRangeAndCrUniformly();
+    public void AfterGenerationKeepsParametersOfSuccessfulTrialsPerIndividual();
+    public void AfterGenerationKeepsParametersOfATrialAcceptedOnATie();
 }
 [Trait("Category", "Unit")]
 public class JadeStrategyTests
 {
-    public void AfterGeneration_NudgesMeansTowardSuccessfulParameters();
-    public void AfterGeneration_WithNoSuccesses_LeavesMeansUnchanged();
-    public void AfterGeneration_IgnoresATrialAcceptedOnATie();
-    public void AfterGeneration_WithANegativeArchiveCapacity_LeavesTheArchiveAlone();
+    public void AfterGenerationNudgesMeansTowardSuccessfulParameters();
+    public void AfterGenerationWithNoSuccessesLeavesMeansUnchanged();
+    public void AfterGenerationIgnoresATrialAcceptedOnATie();
+    public void AfterGenerationWithANegativeArchiveCapacityLeavesTheArchiveAlone();
 }
 [Trait("Category", "Unit")]
 public class ShadeStrategyTests
 {
-    public void Constructor_ThrowsWhenMemorySizeIsNotPositive();
-    public void AfterGeneration_StoresImprovementWeightedMeans();
-    public void AfterGeneration_WithNoSuccesses_LeavesMemoryUnchanged();
-    public void AfterGeneration_WithTerminalCrEnabled_FixesSlotToZeroWhenAllSuccessfulCrAreZero();
-    public void AfterGeneration_TerminalCrSlotStaysTerminal_EvenAfterNonZeroSuccessfulCr();
-    public void AfterGeneration_WithTerminalCrDisabled_KeepsZeroMeanAsAnOrdinaryValue();
-    public void AfterGeneration_IgnoresASuccessWhoseImprovementIsNotMeasurable();
-    public void AfterGeneration_IgnoresASuccessOverAnInfiniteParent();
+    public void ConstructorThrowsWhenMemorySizeIsNotPositive();
+    public void AfterGenerationStoresImprovementWeightedMeans();
+    public void AfterGenerationWithNoSuccessesLeavesMemoryUnchanged();
+    public void AfterGenerationWithTerminalCrEnabledFixesSlotToZeroWhenAllSuccessfulCrAreZero();
+    public void AfterGenerationTerminalCrSlotStaysTerminalEvenAfterNonZeroSuccessfulCr();
+    public void AfterGenerationWithTerminalCrDisabledKeepsZeroMeanAsAnOrdinaryValue();
+    public void AfterGenerationIgnoresASuccessWhoseImprovementIsNotMeasurable();
+    public void AfterGenerationIgnoresASuccessOverAnInfiniteParent();
 }
 [Trait("Category", "Unit")]
 public class LShadeStrategyTests
 {
-    public void AfterGeneration_ReducesPopulationLinearlyWithTheEvaluationBudget(long evaluationCount, int expectedPopulationSize);
-    public void AfterGeneration_KeepsTheBestSurvivorsInAscendingFitnessOrder();
-    public void AfterGeneration_RoundsMidpointPopulationSizesHalfUp(int initialPopulationSize, long maxEvaluationNumber, long evaluationCount, int expectedPopulationSize);
-    public void AfterGeneration_RoundsAMidpointArchiveCapacityHalfUp();
-    public void AfterGeneration_UpdatesMemoryCrWithTheWeightedLehmerMean();
-    public void AfterGeneration_TerminalCrRuleWinsOverTheLehmerMean();
-    public void Constructor_RejectsANonPositiveEvaluationBudget(long maxEvaluationNumber);
-    public void Constructor_RejectsANegativeArchiveSizeRate();
-    public void Constructor_ValidatesMinimumPopulationSize(int minPopulationSize);
+    public void AfterGenerationReducesPopulationLinearlyWithTheEvaluationBudget(long evaluationCount, int expectedPopulationSize);
+    public void AfterGenerationKeepsTheBestSurvivorsInAscendingFitnessOrder();
+    public void AfterGenerationRoundsMidpointPopulationSizesHalfUp(int initialPopulationSize, long maxEvaluationNumber, long evaluationCount, int expectedPopulationSize);
+    public void AfterGenerationRoundsAMidpointArchiveCapacityHalfUp();
+    public void AfterGenerationUpdatesMemoryCrWithTheWeightedLehmerMean();
+    public void AfterGenerationTerminalCrRuleWinsOverTheLehmerMean();
+    public void ConstructorRejectsANonPositiveEvaluationBudget(long maxEvaluationNumber);
+    public void ConstructorRejectsANegativeArchiveSizeRate();
+    public void ConstructorValidatesMinimumPopulationSize(int minPopulationSize);
 }
 ```

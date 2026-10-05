@@ -14,7 +14,7 @@
         <PackageTags>differential-evolution de optimization .net</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <Version>5.1.0</Version>
+        <Version>6.0.0</Version>
     </PropertyGroup>
 
     <!-- Shared contracts for the DotNetOptimization family. The objective evaluator, the random
@@ -36,8 +36,8 @@
       against it would 404 forever. The release workflow packs explicitly from a tagged commit.
     -->
     <PropertyGroup>
-        <!-- Pack the XML documentation file so consumers get IntelliSense tooltips. -->
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- The XML documentation file is generated for every project (Directory.Build.props)
+             and packed with this one, so consumers get IntelliSense tooltips. -->
 
         <!-- SourceLink: embed the PDB into the DLL (no separate symbol package to publish) and
              record the GitHub repository + commit so sources resolve on demand while debugging. -->
@@ -60,14 +60,12 @@
       On a major release: bump PackageValidationBaselineVersion to the version just shipped and
       delete the suppression file, so the next cycle starts from an empty break list.
 
-      The baseline is still 4.0.0 rather than 4.1.0 because a baseline has to be downloadable from
-      nuget.org and 4.1.0 is not published yet. Once it is, move this to 4.1.0 and regenerate: the
-      suppression list then describes the step consumers actually take, instead of folding in the
-      4.1.0 changes a second time.
+      The baseline is 5.1.0, the latest version on nuget.org (2026-10-03): the suppression file
+      is the list of what 6.0.0 breaks for a consumer of 5.1.0.
     -->
     <PropertyGroup>
         <EnablePackageValidation>true</EnablePackageValidation>
-        <PackageValidationBaselineVersion>4.0.0</PackageValidationBaselineVersion>
+        <PackageValidationBaselineVersion>5.1.0</PackageValidationBaselineVersion>
     </PropertyGroup>
 
     <ItemGroup>

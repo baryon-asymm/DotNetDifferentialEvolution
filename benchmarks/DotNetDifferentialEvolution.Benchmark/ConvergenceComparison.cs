@@ -1,9 +1,7 @@
-using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
-
 // DifferentialEvolutionBuilder and its staged interfaces (IMutationStrategyRequired,
 // IPopulationSamplingRequired, ...) live in the root DotNetDifferentialEvolution namespace.
-using DotNetDifferentialEvolution;
+using DotNetDifferentialEvolution.TerminationStrategies;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.Benchmark;
 
@@ -29,6 +27,9 @@ public static class ConvergenceComparison
 
     private sealed record Problem(string Name, IFitnessFunctionEvaluator Evaluator, double LowerBound, double UpperBound);
 
+    /// <summary>
+    /// Runs every variant on every problem once and prints the table of best objective values.
+    /// </summary>
     public static void Run()
     {
         var problems = new[]
@@ -63,9 +64,12 @@ public static class ConvergenceComparison
 
         Console.WriteLine($"Convergence comparison — {Dimensions}D, budget {MaxEvaluationNumber:N0} evaluations (best objective, lower is better)");
         Console.WriteLine();
-        Console.Write($"{"Variant",-16}");
+        Console.Write("Variant".PadRight(16));
         foreach (var problem in problems)
+        {
             Console.Write($"{problem.Name,16}");
+        }
+
         Console.WriteLine();
 
         foreach (var variant in variants)
@@ -73,8 +77,8 @@ public static class ConvergenceComparison
             Console.Write($"{variant.Name,-16}");
             foreach (var problem in problems)
             {
-                var bounds = CreateBounds(problem.LowerBound, problem.UpperBound);
-                using var de = variant.Build(problem.Evaluator, bounds.lower, bounds.upper);
+                var (lower, upper) = CreateBounds(problem.LowerBound, problem.UpperBound);
+                using var de = variant.Build(problem.Evaluator, lower, upper);
                 var result = de.RunAsync().GetAwaiter().GetResult();
                 result.MoveCursorToBestIndividual();
                 Console.Write($"{result.IndividualCursor.FitnessFunctionValue,16:E3}");
@@ -101,7 +105,7 @@ public static class ConvergenceComparison
     {
         var lower = new double[Dimensions];
         var upper = new double[Dimensions];
-        for (int i = 0; i < Dimensions; i++)
+        for (var i = 0; i < Dimensions; i++)
         {
             lower[i] = lowerBound;
             upper[i] = upperBound;

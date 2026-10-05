@@ -1,6 +1,6 @@
 using DotNetDifferentialEvolution.Models;
 using DotNetDifferentialEvolution.TerminationStrategies;
-using DotNetDifferentialEvolution.Tests.Shared.FitnessFunctionEvaluators;
+using DotNetDifferentialEvolution.Tests.Common.FitnessFunctionEvaluators;
 
 namespace DotNetDifferentialEvolution.IntegrationTests.Concurrency;
 
@@ -22,55 +22,77 @@ public class SeededReproducibilityTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
 
+    /// <summary>
+    /// Two runs with the same seed and worker count report bit-identical best value, best genes and
+    /// population fitness values.
+    /// </summary>
+    /// <param name="workers">The number of worker threads both runs use.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
     public async Task TheSameSeedReproducesTheRunExactly(
         int workers)
     {
-        var first = await RunAsync(seed: 20260728, workers: workers);
-        var second = await RunAsync(seed: 20260728, workers: workers);
+        var first = await RunAsync(seed: 20260728, workers: workers).ConfigureAwait(true);
+        var second = await RunAsync(seed: 20260728, workers: workers).ConfigureAwait(true);
 
         Assert.Equal(first.BestFfValue, second.BestFfValue);
         Assert.Equal(first.BestGenes, second.BestGenes);
         Assert.Equal(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>
+    /// With zero generations the run reports the sampled initial population, and the same seed
+    /// samples it identically.
+    /// </summary>
+    /// <param name="workers">The number of worker threads both runs use.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
     public async Task TheSameSeedReproducesTheInitialPopulationToo(
         int workers)
     {
-        var first = await RunAsync(seed: 7, workers: workers, generations: 0);
-        var second = await RunAsync(seed: 7, workers: workers, generations: 0);
+        var first = await RunAsync(seed: 7, workers: workers, generations: 0).ConfigureAwait(true);
+        var second = await RunAsync(seed: 7, workers: workers, generations: 0).ConfigureAwait(true);
 
         Assert.Equal(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>
+    /// Two different seeds lead to different final populations.
+    /// </summary>
+    /// <param name="workers">The number of worker threads both runs use.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
     public async Task DifferentSeedsProduceDifferentRuns(
         int workers)
     {
-        var first = await RunAsync(seed: 1, workers: workers);
-        var second = await RunAsync(seed: 2, workers: workers);
+        var first = await RunAsync(seed: 1, workers: workers).ConfigureAwait(true);
+        var second = await RunAsync(seed: 2, workers: workers).ConfigureAwait(true);
 
         Assert.NotEqual(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>
+    /// Without <c>WithSeed</c> two runs differ, so the default builder chain stays unseeded.
+    /// </summary>
     [Fact]
     public async Task AnUnseededRunIsStillFreeToDiffer()
     {
         // The default must stay unseeded; otherwise every run of a program would follow the same
         // trajectory, which is not what an unqualified builder chain promises.
-        var first = await RunAsync(seed: null, workers: 4);
-        var second = await RunAsync(seed: null, workers: 4);
+        var first = await RunAsync(seed: null, workers: 4).ConfigureAwait(true);
+        var second = await RunAsync(seed: null, workers: 4).ConfigureAwait(true);
 
         Assert.NotEqual(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>
+    /// A seeded JADE run, which also draws from the control-parameter provider and from the
+    /// orchestrator's archive eviction, reproduces its best value and population exactly.
+    /// </summary>
+    /// <param name="workers">The number of worker threads both runs use.</param>
     [Theory]
     [InlineData(1)]
     [InlineData(4)]
@@ -80,8 +102,8 @@ public class SeededReproducibilityTests
         // JADE draws from three separate streams: the workers' (mutation and crossover), the
         // control-parameter provider's (which is handed a worker's provider), and the
         // orchestrator's own (random archive eviction once the archive is full).
-        var first = await RunAsync(seed: 99, workers: workers, configure: builder => builder.WithJade());
-        var second = await RunAsync(seed: 99, workers: workers, configure: builder => builder.WithJade());
+        var first = await RunAsync(seed: 99, workers: workers, configure: builder => builder.WithJade()).ConfigureAwait(true);
+        var second = await RunAsync(seed: 99, workers: workers, configure: builder => builder.WithJade()).ConfigureAwait(true);
 
         Assert.Equal(first.BestFfValue, second.BestFfValue);
         Assert.Equal(first.PopulationFfValues, second.PopulationFfValues);
@@ -116,7 +138,7 @@ public class SeededReproducibilityTests
 
         using var de = (seed is { } seedValue ? builder.WithSeed(seedValue) : builder).Build();
 
-        var population = await de.RunAsync().WaitAsync(Timeout);
+        var population = await de.RunAsync().WaitAsync(Timeout).ConfigureAwait(true);
 
         return RunResult.From(population);
     }
@@ -132,7 +154,7 @@ public class SeededReproducibilityTests
             population.MoveCursorToBestIndividual();
 
             var ffValues = new double[population.PopulationSize];
-            for (int i = 0; i < ffValues.Length; i++)
+            for (var i = 0; i < ffValues.Length; i++)
             {
                 population.MoveCursorTo(i);
                 ffValues[i] = population.IndividualCursor.FitnessFunctionValue;

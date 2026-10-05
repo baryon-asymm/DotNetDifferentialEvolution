@@ -1,4 +1,4 @@
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// One name a ✅ C# block of an <c>API.md</c> declares (<see cref="ApiDeclarations.Declarations"/>): a type, or a member

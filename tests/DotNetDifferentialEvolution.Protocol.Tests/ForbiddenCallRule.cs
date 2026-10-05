@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
 
-namespace ProtocolChecks;
+namespace DotNetDifferentialEvolution.Protocol.Tests;
 
 /// <summary>
 /// One rule against a call, configured in <see cref="ProtocolConfig.ForbiddenCallRules"/> and applied by

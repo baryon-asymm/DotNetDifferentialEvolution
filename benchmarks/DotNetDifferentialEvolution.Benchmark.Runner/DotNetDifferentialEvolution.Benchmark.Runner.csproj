@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- The command-line entry point of the benchmarks (BOOT.md). Everything else is in the
+         DotNetDifferentialEvolution.Benchmark library; settings come from
+         benchmarks/Directory.Build.props. -->
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DotNetDifferentialEvolution.Benchmark\DotNetDifferentialEvolution.Benchmark.csproj" />
+    </ItemGroup>
+
+</Project>

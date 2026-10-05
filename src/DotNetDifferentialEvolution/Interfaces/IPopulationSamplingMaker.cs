@@ -15,7 +15,7 @@ public interface IPopulationSamplingMaker
     /// <param name="population">A preallocated <see cref="Span{Double}"/> representing 
     /// the population as a continuous sequence of genes. The span is divided into 
     /// segments, where each segment corresponds to the genes of a single individual.</param>
-    public void SamplePopulation(
+    void SamplePopulation(
         Span<double> population);
 
     /// <summary>
@@ -28,7 +28,7 @@ public interface IPopulationSamplingMaker
     /// <see cref="DifferentialEvolutionBuilder.WithSeed"/> was used. Defaults to ignoring the
     /// provider, so an implementation with its own source of randomness — or none — is unaffected.
     /// </remarks>
-    public void UseRandomProvider(
+    void UseRandomProvider(
         BaseRandomProvider randomProvider)
     {
     }
