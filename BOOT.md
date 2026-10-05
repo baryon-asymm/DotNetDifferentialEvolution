@@ -132,7 +132,9 @@ Python 3.8+ (`tools/protocol-lint`).
       `release`, the secret `NUGET_USER`). Locally on 2026-10-05: the check job's shell
       steps on `v6.0.0`, `gpu-v1.0.0` (pass), `v1.0.0`, `gpu-v6.0.0`, `release-1`
       (refused) and both dispatch choices (pass); both packs as the workflow runs them;
-      `test-check-release.sh` 15 of 15. Reading is not proof (docs/protocol/lessons/releases.md).
+      `test-check-release.sh` 15 of 15, red on the tag check removed (3 cases), on a
+      version matched as a heading's prefix (1) and on a section run past its end (3).
+      Reading is not proof (docs/protocol/lessons/releases.md).
 
 ## Taboos
 
