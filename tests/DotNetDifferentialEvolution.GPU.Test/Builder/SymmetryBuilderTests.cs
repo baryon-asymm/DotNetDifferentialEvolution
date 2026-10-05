@@ -181,13 +181,19 @@ public class SymmetryBuilderTests
         Assert.Equal(GpuDevice.Cpu, optimizer.Device.Kind);
     }
 
-    /// <summary>B2: an archive of more than <see cref="int.MaxValue"/> genes is an <see cref="InvalidOperationException"/> from <c>Build</c>.</summary>
+    /// <summary>
+    /// B2: an archive of more than <see cref="int.MaxValue"/> genes is an <see cref="InvalidOperationException"/> from
+    /// <c>Build</c>. At the edge: N = 16 and a rate of 2²⁶ give a capacity of 2³⁰ and, with D = 2, 2³¹ genes, one more than
+    /// <see cref="int.MaxValue"/> (and a product that overflows an <see langword="int"/>). The largest archive that passes
+    /// would allocate 16 GiB, so the passing side is not built.
+    /// </summary>
     [Fact]
     public void AnArchiveBeyondTheIndexRangeIsRefusedByBuild()
     {
         var failure = Assert.Throws<InvalidOperationException>(
-            () => Stage(10).WithJade(archiveSizeRate: 1e9).WithGenerationLimit(1).OnDevice(GpuDevice.Cpu).Build());
+            () => Stage(16).WithJade(archiveSizeRate: 1 << 26).WithGenerationLimit(1).OnDevice(GpuDevice.Cpu).Build());
         Assert.Contains("archive", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("2147483648 genes", failure.Message, StringComparison.Ordinal);
     }
 
     private static IGpuMutationStrategyRequired<Sphere> Stage(int populationSize) =>
