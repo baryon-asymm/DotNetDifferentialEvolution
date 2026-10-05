@@ -1,26 +1,51 @@
 name: Release
 
-# Publishes a NuGet package and creates a GitHub Release when a version tag is pushed. Two
-# packages, two tag families: vX.Y.Z publishes the CPU package (DotNetDifferentialEvolution),
-# gpu-vX.Y.Z publishes the GPU package (DotNetDifferentialEvolution.GPU); a tag never publishes
-# the other package. Requires a repository secret named NUGET_API_KEY (nuget.org push key).
+# Publishes one package to nuget.org and creates its GitHub Release when a version tag is pushed.
+# Two packages, two tag families: vX.Y.Z publishes the CPU package (DotNetDifferentialEvolution),
+# gpu-vX.Y.Z the GPU package (DotNetDifferentialEvolution.GPU); a tag never publishes the other.
+#
+# A run started by hand (workflow_dispatch) is the rehearsal: it checks, tests and packs the chosen
+# package and uploads it as an artifact, and publishes nothing.
+#
+# Publishing uses NuGet Trusted Publishing, after APThermo's release.yml: the job exchanges a
+# GitHub OIDC token for a short-lived nuget.org key, so no long-lived key is stored. The owner sets
+# up, once: on nuget.org, a Trusted Publishing policy for this repository and the workflow file
+# `release.yml` (environment `release`); on GitHub, the environment `release` (approval by the
+# owner) and the repository secret NUGET_USER, the nuget.org account name.
 on:
   push:
     tags:
       - 'v*'
       - 'gpu-v*'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'The package to rehearse'
+        required: true
+        type: choice
+        options:
+          - cpu
+          - gpu
+
+concurrency:
+  group: release-${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
-  publish-cpu:
-    if: startsWith(github.ref_name, 'v')
+  check:
+    name: Tag and changelog check
     runs-on: ubuntu-latest
-
-    # contents:write is required for the gh CLI to create the GitHub Release.
-    permissions:
-      contents: write
-
+    timeout-minutes: 10
+    outputs:
+      project: ${{ steps.package.outputs.project }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -29,53 +54,107 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Restore
-        run: dotnet restore DotNetDifferentialEvolution.sln
+      # The tag family on a push, the input on a dispatch.
+      - name: Choose the package
+        id: package
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ "$EVENT" = "push" ]; then
+            case "$REF_NAME" in
+              gpu-v*) package=gpu ;;
+              v*) package=cpu ;;
+              *) echo "::error::'$REF_NAME' is neither a v* nor a gpu-v* tag" >&2; exit 1 ;;
+            esac
+          else
+            package="$INPUT_PACKAGE"
+          fi
+          if [ "$package" = "gpu" ]; then
+            echo "project=src/DotNetDifferentialEvolution.GPU/DotNetDifferentialEvolution.GPU.csproj" >> "$GITHUB_OUTPUT"
+            echo "prefix=gpu-v" >> "$GITHUB_OUTPUT"
+            echo "changelog=src/DotNetDifferentialEvolution.GPU/CHANGELOG.md" >> "$GITHUB_OUTPUT"
+          else
+            echo "project=src/DotNetDifferentialEvolution/DotNetDifferentialEvolution.csproj" >> "$GITHUB_OUTPUT"
+            echo "prefix=v" >> "$GITHUB_OUTPUT"
+            echo "changelog=CHANGELOG.md" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine the package version
+        id: version
+        shell: bash
+        run: |
+          version=$(dotnet msbuild "${{ steps.package.outputs.project }}" -getProperty:Version)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check the tag and extract the release notes
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          ref_name=""
+          if [ "$EVENT" = "push" ]; then
+            ref_name="$REF_NAME"
+          fi
+          bash .github/scripts/check-release.sh "${{ steps.version.outputs.version }}" \
+            "${{ steps.package.outputs.prefix }}" "${{ steps.package.outputs.changelog }}" \
+            release-notes.md "$ref_name"
+
+      - name: Upload the release notes
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+
+  test:
+    name: Build and test
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Protocol lint
+        run: python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates
 
       - name: Build
-        run: dotnet build DotNetDifferentialEvolution.sln --configuration Release --no-restore
+        run: dotnet build DotNetDifferentialEvolution.sln --configuration Release
 
-      # Safety gate: never publish if the deterministic unit suite is red.
-      - name: Unit tests
+      # CI's broad gate: everything but the long-running tests and those that need a real GPU (the
+      # hosted runners have none; the Category=Gpu checks run on the owner's machine before a gpu-v*
+      # tag). The GPU package's suite runs here on ILGPU's CPU accelerator.
+      - name: Tests (excluding slow and GPU)
         run: >-
           dotnet test DotNetDifferentialEvolution.sln
           --configuration Release --no-build
-          --filter "Category=Unit"
+          --filter "Category!=Slow&Category!=Gpu"
 
-      - name: Pack
-        run: >-
-          dotnet pack src/DotNetDifferentialEvolution/DotNetDifferentialEvolution.csproj
-          --configuration Release --no-build
-          --output ${{ github.workspace }}/artifacts
-
-      - name: Push to NuGet
-        run: >-
-          dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg"
-          --api-key ${{ secrets.NUGET_API_KEY }}
-          --source https://api.nuget.org/v3/index.json
-          --skip-duplicate
-
-      # Create the GitHub Release for this tag with auto-generated notes and
-      # the package attached. Uses the runner's built-in gh CLI + GITHUB_TOKEN.
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "${{ github.ref_name }}"
-          --title "${{ github.ref_name }}"
-          --generate-notes
-          --verify-tag
-          "${{ github.workspace }}"/artifacts/*.nupkg
-
-  publish-gpu:
-    if: startsWith(github.ref_name, 'gpu-v')
+  pack:
+    name: Pack
+    needs: [check, test]
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -84,39 +163,82 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Restore
-        run: dotnet restore DotNetDifferentialEvolution.sln
-
-      - name: Build
-        run: dotnet build DotNetDifferentialEvolution.sln --configuration Release --no-restore
-
-      # Safety gate: the GPU package's suite on ILGPU's CPU accelerator (the hosted runner has no
-      # GPU, so Category=Gpu is excluded; those checks are run on the owner's machine before the tag).
-      - name: GPU tests on the CPU accelerator
-        run: >-
-          dotnet test tests/DotNetDifferentialEvolution.GPU.Test/DotNetDifferentialEvolution.GPU.Test.csproj
-          --configuration Release --no-build
-          --filter "Category!=Gpu"
-
+      # The CPU package's pack runs its package validation against the last release.
       - name: Pack
         run: >-
-          dotnet pack src/DotNetDifferentialEvolution.GPU/DotNetDifferentialEvolution.GPU.csproj
-          --configuration Release --no-build
-          --output ${{ github.workspace }}/artifacts
+          dotnet pack "${{ needs.check.outputs.project }}"
+          --configuration Release
+          -p:ContinuousIntegrationBuild=true
+          --output artifacts/packages
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: artifacts/packages
+
+  publish:
+    name: Publish to NuGet
+    needs: pack
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      id-token: write
+    steps:
+      - name: Download the package
+        uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: artifacts/packages
+
+      - name: NuGet login (Trusted Publishing)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
 
       - name: Push to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: >-
-          dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg"
-          --api-key ${{ secrets.NUGET_API_KEY }}
+          dotnet nuget push "artifacts/packages/*.nupkg"
           --source https://api.nuget.org/v3/index.json
+          --api-key "$NUGET_API_KEY"
           --skip-duplicate
 
-      - name: Create GitHub Release
+  github-release:
+    name: Create the GitHub Release
+    needs: publish
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Download the package
+        uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: artifacts/packages
+
+      - name: Download the release notes
+        uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: .
+
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
+          REF_NAME: ${{ github.ref_name }}
         run: >-
-          gh release create "${{ github.ref_name }}"
-          --title "${{ github.ref_name }}"
-          --generate-notes
+          gh release create "$REF_NAME" artifacts/packages/*
+          --title "$REF_NAME"
+          --notes-file release-notes.md
           --verify-tag
-          "${{ github.workspace }}"/artifacts/*.nupkg

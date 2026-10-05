@@ -16,7 +16,7 @@ of 5.1.0 is reproduced exactly by 6.0.0. Measured 2026-10-03: Rastrigin 10-D, se
 nuget.org and this version give bit-identical best genes and fitness.
 
 The GPU package, `DotNetDifferentialEvolution.GPU`, is versioned and released separately
-(`gpu-v*` tags); its notes are in `src/DotNetDifferentialEvolution.GPU/README.md`.
+(`gpu-v*` tags); its notes are in `src/DotNetDifferentialEvolution.GPU/CHANGELOG.md`.
 
 ### Breaking
 

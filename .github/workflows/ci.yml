@@ -19,6 +19,10 @@ jobs:
       - name: Documentation references
         run: ./scripts/check-doc-references.sh
 
+      # The release gate's script (release.yml): tag against version, the changelog's section.
+      - name: Release gate self-tests
+        run: bash .github/scripts/test-check-release.sh
+
       # The BOOT.md/API.md tree (AGENTS.md) is checked twice: file by file here, by the protocol
       # linter, and against the compiled code by tests/DotNetDifferentialEvolution.Protocol.Tests,
       # which runs in the integration gate below and starts the same linter with --strict.

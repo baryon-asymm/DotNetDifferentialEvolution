@@ -69,6 +69,12 @@ Python 3.8+ (`tools/protocol-lint`).
   on a developer machine with CUDA and OpenCL.
 - Releases: `.github/workflows/release.yml` publishes the CPU package from a `v*` tag
   and the GPU package from a `gpu-v*` tag; a tag never publishes the other package.
+  Since 2026-10-05, after APThermo's: the tag must equal the package's version and its
+  changelog (`CHANGELOG.md`, the GPU package's own `CHANGELOG.md`) must carry the
+  version's section, which becomes the release notes (`.github/scripts/check-release.sh`,
+  self-tested in CI); the CI gate runs again; the package is published through NuGet
+  Trusted Publishing from the GitHub environment `release`, with no stored API key. A
+  `workflow_dispatch` run is the rehearsal: everything up to the pack, nothing published.
 - There is no external ancestor: the tree root is the repository root. The loader
   (`CLAUDE.md`) carries no subject-matter claims (AGENTS.md §2). `README.md` and
   `docs/*.md` are consumer documentation shipped in the package, not part of the tree.
@@ -120,6 +126,13 @@ Python 3.8+ (`tools/protocol-lint`).
 - [x] ⚠ The GPU tests ran in no CI: hosted runners have no OpenCL device. Closed
       2026-10-03: the GPU suite runs on ILGPU's CPU accelerator in the CI gate; only
       `Category=Gpu` stays local.
+- [ ] The release path of 2026-10-05 (check, test, pack, Trusted Publishing, release) is
+      proven on GitHub: a `workflow_dispatch` rehearsal green for `cpu` and for `gpu`,
+      after the owner's set-up (the nuget.org Trusted Publishing policy, the environment
+      `release`, the secret `NUGET_USER`). Locally on 2026-10-05: the check job's shell
+      steps on `v6.0.0`, `gpu-v1.0.0` (pass), `v1.0.0`, `gpu-v6.0.0`, `release-1`
+      (refused) and both dispatch choices (pass); both packs as the workflow runs them;
+      `test-check-release.sh` 15 of 15. Reading is not proof (docs/protocol/lessons/releases.md).
 
 ## Taboos
 
