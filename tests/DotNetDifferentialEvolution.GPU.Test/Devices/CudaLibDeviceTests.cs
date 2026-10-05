@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 
 /// <summary>
-/// Checks L5, L6, L7 and the device half of L9 of the GPU package's ACCEPTANCE.md: the post-link on the device, CUDA
+/// Checks L5, L6, L7 and the device half of L9 of the GPU package's Devices/LibDevice/ACCEPTANCE.md: the post-link on the device, CUDA
 /// without a toolkit, a bad library, and several CUDA contexts in one process. L6 runs everywhere and asserts the branch
 /// that matches the machine, as D1 does; the others are <c>Gpu</c> and name the owner's RTX 5070 Ti. After APThermo's
 /// <c>BadLibraryTests</c> and <c>CudaWslDevicesTests</c> (commit <c>5fdd82c</c>).

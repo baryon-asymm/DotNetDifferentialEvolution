@@ -109,7 +109,7 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-→ checks L1–L5 and L9 of the package's [ACCEPTANCE.md](../../ACCEPTANCE.md).
+→ [ACCEPTANCE.md](ACCEPTANCE.md)
 
 ## Taboos
 

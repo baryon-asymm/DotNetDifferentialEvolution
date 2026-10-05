@@ -63,7 +63,8 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-→ checks 7b, D1, D2 and L5–L8 of the package's [ACCEPTANCE.md](../ACCEPTANCE.md).
+→ checks 7b, D1 and D2 of the package's [ACCEPTANCE.md](../ACCEPTANCE.md), and L5–L8 of
+[LibDevice/ACCEPTANCE.md](LibDevice/ACCEPTANCE.md).
 
 ## Decomposition
 

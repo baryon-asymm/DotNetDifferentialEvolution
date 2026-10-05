@@ -4,7 +4,7 @@ using ILGPU.Runtime.Cuda;
 namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 
 /// <summary>
-/// Check L3 of the GPU package's ACCEPTANCE.md: the post-link's check after compilation and its result-to-exception
+/// Check L3 of the GPU package's Devices/LibDevice/ACCEPTANCE.md: the post-link's check after compilation and its result-to-exception
 /// check, both driven without a GPU. After APThermo's <c>PostLinkTests</c> (commit <c>5fdd82c</c>).
 /// </summary>
 public class PostLinkGuardTests

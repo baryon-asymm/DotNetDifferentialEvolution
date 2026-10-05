@@ -57,3 +57,18 @@ internal static class GpuKernels
   generation-0 draws, then evaluates. `Generation`: thread i builds its trial, evaluates
   it and writes the survivor and its fitness into slot i of `Next`.
 - `DrawSequence` and `PhiloxBlocks` exist for the cross-backend checks 3a and 4b.
+
+## Symmetry ⏳
+
+Designed 2026-10-05; the signatures are written here when built.
+
+- `StepParameters` gains the scheme, the parameter rule, whether ties are accepted, the
+  p-best range and the memory size; N is the current population size (L-SHADE).
+- A `StrategyViews` record carries the device state the generation reads and writes: the
+  best index, the ranking, the archive and its size, the means or the memory, jDE's F and
+  CR per individual, the trial records (F, CR, outcome), the stop word.
+- `Schemes`: the trial of rand/1, best/1, current-to-best/1, rand/2, best/2 and
+  current-to-pbest/1 over a draw source, each the CPU class's (S2, S3).
+- `ControlParameters`: jDE's regeneration, JADE's and SHADE's sampling, the CPU
+  package's Gaussian and Cauchy (S4).
+- `Selection`: improved, accepted or kept, with ties accepted or not (S5).

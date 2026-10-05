@@ -3,7 +3,7 @@ using DotNetDifferentialEvolution.GPU.Devices.LibDevice;
 namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 
 /// <summary>
-/// Check L1 of the GPU package's ACCEPTANCE.md: libdevice discovery over fake toolkit trees built in a temporary
+/// Check L1 of the GPU package's Devices/LibDevice/ACCEPTANCE.md: libdevice discovery over fake toolkit trees built in a temporary
 /// directory, through the locator's seam (platform, environment and base directory given), so both platforms and both
 /// Windows layouts are covered from one host. After APThermo's <c>LibDeviceDiscoveryTests</c> (commit <c>5fdd82c</c>).
 /// </summary>

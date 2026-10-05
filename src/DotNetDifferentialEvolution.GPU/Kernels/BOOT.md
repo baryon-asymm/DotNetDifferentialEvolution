@@ -6,6 +6,12 @@ The device side of a run: the initial-sampling kernel, the generation kernel, an
 DE/rand/1/bin step they share, written as static functions over a draw source so the
 step can be tested on the host with scripted draws. One thread per individual.
 
+⏳ Designed 2026-10-05 (the package's
+[HISTORY.md](../HISTORY.md#symmetry-decided-2026-10-05)): the generation kernel builds the
+trial by any of the CPU package's schemes, draws F and CR by its parameter rules (fixed,
+jDE, JADE, SHADE), and selects with or without ties, recording what the
+[Bookkeeping](../Bookkeeping/API.md) passes need.
+
 ## Invariants
 
 - **The step is the CPU package's.** Donors, mutant, binomial crossover with `jrand`,
@@ -16,6 +22,11 @@ step can be tested on the host with scripted draws. One thread per individual.
   current population; nothing else is written. A launch therefore needs no
   synchronisation. Held by check 2b.
 - **Survival is `f(u) ≤ f(x)`, `NaN` worst, two `NaN`s no tie.** Held by check 1e.
+  ⏳ Under JADE ties are refused: survival is `f(u) < f(x)` (S5).
+- ⏳ **The draw order of the CPU executor**: F and CR first (its control-parameter
+  provider), then the scheme's indices, then `jrand` and the crossover draws. Each
+  scheme and rule is the CPU class's, draw for draw (S2–S4).
+- ⏳ **Thread i also writes only entry i** of jDE's F and CR and of the trial records.
 - **Kernel code compiles on every backend**: nothing a kernel reaches throws, allocates
   or boxes; `Math` only from the allow-list. Held by checks 8a–8c.
 - **Populations are individual-major**: individual i is genes `[i·D, (i+1)·D)`.
@@ -39,7 +50,7 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-→ checks 1b–1g, 2b and 8a–8c of the package's [ACCEPTANCE.md](../ACCEPTANCE.md).
+→ checks 1b–1g, 2b, 8a–8c and S2–S6, S16 of the package's [ACCEPTANCE.md](../ACCEPTANCE.md).
 
 ## Taboos
 

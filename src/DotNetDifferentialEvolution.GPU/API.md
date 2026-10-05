@@ -46,7 +46,8 @@ public interface IGpuDifferentialEvolutionBuilder<TFunction> where TFunction : s
 public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
 ```
 
-- **DE/rand/1/bin is the only scheme**, named as in the CPU builder.
+- **DE/rand/1/bin**, named as in the CPU builder; the other schemes and the variants
+  below ⏳.
 - **The limits.** A generation limit runs exactly that many generations (≥ 1). An
   evaluation limit stops at the first generation boundary where the count, starting at
   N, is ≥ the limit; at least one generation runs.
@@ -67,6 +68,50 @@ public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
   `RandomNumberGenerator.GetInt32(int.MaxValue)`.
 - **The objective type** must be visible to ILGPU's runtime assembly
   ([Objectives](Objectives/API.md)).
+
+## Symmetry with the CPU package ⏳
+
+Designed 2026-10-05 (HISTORY.md#symmetry-decided-2026-10-05), checks S1–S17 frozen.
+
+```csharp
+public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+{
+    IGpuTerminationConditionRequired<TFunction> WithDefaultMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithBestMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithCurrentToBestMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithRandTwoMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithBestTwoMutationStrategy(double mutationForce, double crossoverProbability);
+    IGpuTerminationConditionRequired<TFunction> WithJde(double initialMutationForce = 0.5, double initialCrossoverProbability = 0.9);
+    IGpuTerminationConditionRequired<TFunction> WithJade(double pBestRate = 0.1, double archiveSizeRate = 1.0, double adaptationRate = 0.1);
+    IGpuTerminationConditionRequired<TFunction> WithShade(double pBestRate = 0.2, double archiveSizeRate = 1.0, int memorySize = 100);
+    IGpuTerminationConditionRequired<TFunction> WithLShade(long maxEvaluationNumber, double pBestRate = 0.11,
+        double archiveSizeRate = 2.6, int memorySize = 6);
+}
+
+public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+{
+    IGpuDeviceRequired<TFunction> WithGenerationLimit(int maxGenerations);
+    IGpuDeviceRequired<TFunction> WithEvaluationLimit(long maxEvaluations);
+    IGpuDeviceRequired<TFunction> WithStagnationLimit(int maxStagnationStreak, double stagnationThreshold);
+}
+```
+
+- **The CPU builder's names, parameters, order and defaults** (check S1), and its
+  semantics (`docs/ALGORITHMS.md` §§3–7, §9): each fixed scheme with F and CR and
+  ties accepted; jDE on rand/1, F and CR per individual, inherited on survival; JADE on
+  current-to-pbest/1 with an archive, ties refused; SHADE with a success-history memory
+  and p drawn from [min(2/N, p), p]; L-SHADE with the Lehmer CR mean, the terminal CR
+  and linear population reduction to 4 at `maxEvaluationNumber`.
+- **The minimum population** is the scheme's, as in the CPU package: rand/1, jDE, JADE,
+  SHADE and L-SHADE 4; best/1 and current-to-best/1 3; rand/2 6; best/2 5.
+- **The stagnation limit** is the CPU package's `StagnationStreakTerminationStrategy`:
+  after each generation, if `|best − last| > threshold` then `last = best` and the streak
+  is 0, else the streak grows; the run stops when the streak reaches `maxStagnationStreak`.
+  `last` starts at `double.MinValue`.
+- **L-SHADE** with an evaluation limit other than `maxEvaluationNumber` makes `Build`
+  throw, as the CPU package's `LShadeVariant.Validate` does; with a generation or a
+  stagnation limit it runs, and its population reaches 4 at the budget.
+- **The observer** sees the current population size: under L-SHADE it shrinks.
 
 ## Optimizer and result ✅
 
@@ -127,6 +172,13 @@ public sealed class GpuPopulationSnapshot
 |---|---|
 | Bounds of different lengths, empty, not finite, or lower > upper | `ArgumentException` from `WithBounds` |
 | `populationSize < 4` (rand/1 needs four distinct individuals), or N·D > `int.MaxValue` | `ArgumentOutOfRangeException` |
+| ⏳ ⚠ 2026-10-05: the row above becomes: `populationSize < 1`, or N·D > `int.MaxValue` | `ArgumentOutOfRangeException` |
+| ⏳ N below the scheme's minimum (L-SHADE: below 4) | `InvalidOperationException` from `Build`, naming the scheme and its minimum |
+| ⏳ `pBestRate` outside (0, 1]; `archiveSizeRate` negative or not finite; `adaptationRate` outside [0, 1]; `memorySize < 1`; `maxEvaluationNumber < 1` | `ArgumentOutOfRangeException` |
+| ⏳ jDE's initial F not finite or ≤ 0, or initial CR outside [0, 1] | `ArgumentOutOfRangeException` |
+| ⏳ `maxStagnationStreak < 1`; `stagnationThreshold` negative or not finite | `ArgumentOutOfRangeException` |
+| ⏳ L-SHADE with an evaluation limit other than its `maxEvaluationNumber` | `InvalidOperationException` from `Build` |
+| ⏳ The archive's capacity·D above `int.MaxValue` | `InvalidOperationException` from `Build` |
 | `mutationForce` not finite or ≤ 0; `crossoverProbability` outside [0, 1] | `ArgumentOutOfRangeException` |
 | A limit < 1 | `ArgumentOutOfRangeException` |
 | `everyNGenerations < 1` | `ArgumentOutOfRangeException` |
@@ -142,7 +194,8 @@ public sealed class GpuPopulationSnapshot
 ## Side effects
 
 `Build` opens a device context unless one is passed, allocates `3·N·D + 2·N + 2·D`
-doubles on the device and compiles two kernels. A run copies the population to the host
+doubles on the device and compiles two kernels; ⏳ a configuration that needs bookkeeping
+allocates its buffers and compiles its kernels too ([Bookkeeping](Bookkeeping/API.md)). A run copies the population to the host
 once at the end, and once per observer call. No `GC.Collect`.
 
 ## Children
@@ -150,11 +203,14 @@ once at the end, and once per observer call. No `GC.Collect`.
 - [Objectives](Objectives/API.md) — the objective's contract and the gene view.
 - [Devices](Devices/API.md) — device selection, ownership, the math probe (internal).
 - [Kernels](Kernels/API.md) — the kernels and the DE step (internal).
+- [Bookkeeping](Bookkeeping/API.md) ⏳ — the work between generations (internal).
 - [Random](Random/API.md) — Philox4x32-10 and the draw conversions (internal).
 
 ## Out of scope
 
-- `float`, jDE and the other adaptive variants, schemes other than DE/rand/1/bin.
-- Stop rules other than the two limits, and a public termination interface.
+- `float`.
+- A caller's own scheme, variant, parameter provider (so the CPU package's dithered
+  provider, reached only through its open interface), selection, stop rule, local
+  search or initial sampling.
 - An objective on the host or through `IFitnessFunctionEvaluator`: a `ReadOnlySpan`
   cannot cross into an ILGPU kernel.

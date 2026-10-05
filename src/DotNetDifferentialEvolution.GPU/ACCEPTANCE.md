@@ -1,7 +1,8 @@
 # ACCEPTANCE.md — DotNetDifferentialEvolution.GPU
 
 The node's acceptance criteria (AGENTS.md 3.2, §6): the checks of v1, frozen on 2026-10-03
-before any v1 code, and the state of each.
+before any v1 code, and those of the symmetry with the CPU package, frozen on 2026-10-05
+before its code; and the state of each.
 
 The criteria of 0.x left with its code on 2026-10-03 → HISTORY.md#v1-built-2026-10-03.
 
@@ -287,112 +288,99 @@ Written 2026-10-03, before any v1 code.
       `gpu-v*` and a `publish-cpu` job only for `v*`. A local `dotnet pack` gives the DLL, the XML
       documentation, `README.md`, `LICENSE` and `ILGPU_LICENSE`. Not yet run on GitHub.
 
+### CUDA math through libdevice — checks L1–L9 ✅
 
-### CUDA math through libdevice — checks added 2026-10-03, before the port's code ✅
+Moved unchanged on 2026-10-05 to the node they are about, when this file reached its
+limit (AGENTS.md §15) → [Devices/LibDevice/ACCEPTANCE.md](Devices/LibDevice/ACCEPTANCE.md).
 
-⚠ 2026-10-03: added on the owner's decision to resolve D2 as APThermo does: libdevice
-completed by a post-link of the package's own, in place of ILGPU.Algorithms →
-HISTORY.md#libdevice-port-2026-10-03. D1, D2 and 7b stay as written; only the contexts
-they open change.
+## Symmetry with the CPU package — checks frozen 2026-10-05, before code ⏳
 
-- [x] **L1, discovery** (CI). Over fake toolkit trees in a temporary directory, through the
-      locator's seam (platform, environment and base directory given, not read):
-      - Windows: `CUDA_PATH` before the versioned directories; `v13.3` before `v9.0` (by
-        parsed version, not by string); both the `nvvm\bin` and the `nvvm\bin\x64` layout; a
-        root with the library and no bitcode passed over for the next; a root named twice
-        tried once; no `CUDA_PATH` and no base directory → nothing tried.
-      - Linux: `CUDA_PATH`, then `CUDA_HOME`, then `<base>/cuda`, then `cuda-*` newest
-        first; a root named twice tried once.
-      - Any other platform: nothing tried.
-      Red: the versions sorted as strings; the bitcode check removed.
-      2026-10-03: `Devices/LibDeviceDiscoveryTests`, 12 cases, green. Red: the versions sorted
-      as strings (`WindowsOrdersTheVersionedDirectoriesNewestFirst`,
-      `LinuxOrdersTheVersionedDirectoriesNewestFirst`); the bitcode check removed
-      (`ALibraryWithoutBitcodeIsPassedOverForTheNextRoot` and both "a root named twice" cases).
-- [x] **L2, wrapper inventory** (CI). Over two committed PTX texts of `MathProbe.Probe`,
-      their provenance recorded beside them: ILGPU 1.5.3's own for `sm_120` and the same
-      after the post-link. The called set is the same in both and not empty; the first
-      defines none of it; in the second, called = defined; no parameter name is read as a
-      call; LF and CRLF give the same sets. Red: the call pattern without its trailing
-      comma.
-      ⚠ 2026-10-03, changed before it was ticked: **a third text, and another red mutation.** The
-      named mutation, the call pattern without its trailing comma, stayed green, on APT's
-      regular expression and on the hand-written reading alike: in every PTX text ILGPU 1.5.3
-      and libnvvm emit here, the callee is the first wrapper name after `call` in its
-      statement, so the comma decides nothing. What keeps a definition's parameter
-      (`__ilgpu__nv_pow_param_0,` on a line of its own) from being read as a call is the `call`
-      anchor. Now the red mutation is the anchor removed, and the texts are three: ILGPU's own
-      PTX for `SM_89`, where ILGPU defines the wrappers itself, is added (provenance in
-      `tests/…/Devices/BOOT.md`). Nothing loosened: the five relations of the check hold on all
-      three texts, plus "below compute 10.0 ILGPU defines every wrapper it calls".
-      2026-10-03: `Devices/WrapperInventoryTests`, 6 facts, green. Red with the `call` anchor
-      removed: 4 of 6 (`NoParameterNameIsReadAsACall`, `TheLinkedPtxDefinesEveryWrapperItCalls`,
-      `BelowCompute10IlgpuDefinesEveryWrapperItCalls`, `AllThreeTextsCallTheSameWrappers`).
-      The trailing comma made optional: green, as above.
-- [x] **L3, post-link guards** (CI). The check after compilation names exactly the wrappers
-      left without a definition and is not fooled by a call site. Every non-success
-      `NvvmResult` and `CudaError`, read from the enums, throws naming the post-link, the
-      library, the call, the result and the target; a log is carried, trimmed of NUL
-      padding, and a log that trims to nothing leaves no trailing ": ". Red: the
-      definition check run over the whole linked text; the trim without `'\0'`.
-      2026-10-03: `Devices/PostLinkGuardTests`, 73 cases (every `NvvmResult` and `CudaError`
-      but success), green. Red: the definition check run as a substring search of the body
-      (`ACallSiteIsNotADefinition`); the trim without NUL (`ALogIsCarriedWithoutItsPadding`,
-      `ALogThatTrimsToNothingIsNoLog`).
-- [x] **L4, the ILGPU pin** (CI). The assertion of the ILGPU version and of the reflected
-      members passes on the referenced ILGPU and, for another expected version, throws
-      naming both. The WSL workaround's reflection names a member it cannot find. Red: the
-      version comparison removed.
-      2026-10-03: `Devices/IlgpuPinTests`, the first three facts, green. Red with the version
-      comparison removed: `AnotherExpectedVersionThrowsNamingBoth`.
-- [x] **L5, the post-link on the device** (**Gpu**). On the RTX 5070 Ti the probe kernel's
-      own PTX calls wrappers and defines none; `Link` compiles exactly those, and the
-      result loads. CUDA counts as opened only after the probe kernel has loaded through
-      the post-link. Red: `Link` returning the kernel unchanged → `Open(Cuda)` throws with
-      the driver's result.
-      2026-10-03: `Devices/CudaLibDeviceTests.OnTheRtx5070TiThePostLinkCompletesExactlyTheMissingWrappers`,
-      green with the toolkits 13.4 and 12.9: ILGPU's PTX calls `__nv_exp`, `__nv_log`,
-      `__nv_pow`, `__nv_sqrt` and defines none; `Link` compiles exactly those four and the
-      kernel loads. Red with `Link` returning the kernel unchanged: `Open(Cuda)` throws "The
-      CUDA device was requested and cannot be used: the math probe kernel could not be loaded:
-      a PTX JIT compilation failed; releasing it also failed: invalid resource handle", and
-      D2, L7 and L9's device case fail the same way. The first run of this mutation found that
-      ILGPU's accelerator throws from `Dispose` after its loader failed a kernel, and that
-      exception escaped `Open`; fixed before this tick (`Devices/LibDevice/BOOT.md`, the
-      post-link, stage 3).
-- [x] **L6, no toolkit** (CI, conditional like D1). With the locator finding nothing, on a
-      machine with a CUDA device: an explicit `Cuda` throws naming CUDA, libnvvm and
-      libdevice; `Auto` skips CUDA with that reason. With no CUDA device the reason is the
-      missing device, as in D1. Red: CUDA opened without libdevice.
-      2026-10-03: `Devices/CudaLibDeviceTests.WithoutAToolkitCudaIsRefusedWithTheReason`, green;
-      the device branch, here: "The CUDA device was requested and cannot be used: libnvvm
-      (nvvm64_40_0.dll) and libdevice (libdevice.10.bc) of a CUDA Toolkit were not found; there
-      was no CUDA_PATH and no toolkit directory to look in.", and Auto gave OpenCL with that
-      reason. Red with CUDA opened without libdevice (the "not found" branch removed): the
-      probe then fails to compile and the message names neither file. The no-device
-      branch, with the GPUs hidden (`CUDA_VISIBLE_DEVICES=-1`, `GPU_DEVICE_ORDINAL=7`): "The
-      CUDA device was requested and cannot be used: no such device is present.", and Auto
-      gave `Cpu` with "CUDA: no such device is present.; OpenCL: no such device is
-      present." Not yet run on a hosted runner.
-- [x] **L7, a bad library** (**Gpu**). A file named as libnvvm that is not a library, with
-      the real bitcode: an explicit `Cuda` throws naming its path; 20 `Auto` opens fall
-      back and cost at most 64 MiB of free device memory (APT's bound for the same check).
-      Red: the library checked only after the accelerator is created.
-      2026-10-03: `Devices/CudaLibDeviceTests.ABadLibraryIsNamedAndNeverReachesTheDevice`, green:
-      "libnvvm (…\nvvm64_40_0.dll) or libdevice (…\libdevice.10.bc) could not be loaded: An
-      attempt was made to load a program with an incorrect format. (0x8007000B)"; free device
-      memory 15 037 MiB before and after 20 failed opens. Red with the library checked after the
-      accelerator is created.
-- [x] **L8, no ILGPU.Algorithms** (CI, Protocol.Tests). The GPU assembly references no
-      `ILGPU.Algorithms`. Red: the reference and `EnableAlgorithms()` restored.
-      2026-10-03: `Protocol.Tests/GpuGuardTests.TheGpuPackageUsesNoIlgpuAlgorithms`, green. Red with
-      the package reference and `EnableAlgorithms()` restored.
-- [x] **L9, every CUDA context of a process binds** (CI and **Gpu**). The WSL resolver
-      failure is recognised by where it was thrown, not by its message. Under **Gpu**,
-      three CUDA optimizers built one after another each bind. Red: recognition by
-      message.
+Decided 2026-10-05 → [HISTORY.md](HISTORY.md#symmetry-decided-2026-10-05). The rules of
+v1 apply: proven twice, frozen, CI unless marked **Gpu**. "Parity" means: the CPU
+package's code runs on a `RecordingRandomProvider`, its draws are replayed in order into
+the GPU function on the host, and the GPU consumes exactly those draws (kind, range and
+number) and gives the same values bit for bit.
 
-      2026-10-03: `Devices/IlgpuPinTests.TheResolverFailureIsRecognisedByWhereItWasThrownNotByItsMessage`,
-      green; under **Gpu**, `Devices/CudaLibDeviceTests.EveryCudaOptimizerOfTheProcessBinds`, green
-      on Windows. Red with recognition by message. Not yet run under WSL, where the workaround's
-      own branch runs.
+- [ ] **S1, builder symmetry.** For every method of the CPU `IMutationStrategyRequired`
+      except `WithMutationStrategy` and `WithVariant`, `IGpuMutationStrategyRequired<T>`
+      has one of the same name, parameter names, types, order and default values, and it
+      has no other. Red: L-SHADE's `memorySize` default 5.
+- [ ] **S2, fixed schemes, parity.** 100 random cases each (N in [6, 40], D in [1, 12], F
+      in [0.1, 2), CR with 0 and 1, boxes the mutants leave, a random best index) for
+      rand/1 (`RandMutationStrategy`), best/1, current-to-best/1, rand/2 and best/2. The
+      repair fires below and above. Red: best/1's base taken as `x_r1`; rand/2's second
+      difference reversed.
+- [ ] **S3, current-to-pbest, parity.** 100 random cases against
+      `CurrentToPBestMutationStrategy`, with a random ranking and an archive of random
+      size in [0, N]: with p fixed (JADE, L-SHADE) and p drawn from [min(2/N, p), p]
+      (SHADE). Asserted: r2 fell into the archive in some case, and `topCount` was
+      clamped up to 2 in some case. Red: the union size taken as N; `topCount` by `Floor`.
+- [ ] **S4, control parameters, parity.** 10⁴ draws each, from random states, against
+      `JdeStrategy`, `JadeStrategy`, `ShadeStrategy` and `LShadeStrategy`
+      `.GetControlParameters`: F and CR bit for bit, the same draws. The states include
+      a terminal (negative) memory slot, and the cases include a Cauchy redraw (F ≤ 0)
+      and F clamped to 1, each counted and asserted. Red: the Gaussian's `u1` not
+      complemented; jDE's F as `0.1 + u`.
+- [ ] **S5, selection outcomes.** The nine cases of 1e, with ties accepted (jDE, SHADE,
+      L-SHADE, the fixed schemes) and refused (JADE): improved, accepted or kept as the
+      CPU `SelectionStrategy` reports. Red: JADE accepting ties.
+- [ ] **S6, jDE inheritance** (device). After one generation of jDE (N = 64, D = 4), F_i
+      and CR_i are the values the trial used exactly where the trial replaced the parent,
+      ties included, and unchanged elsewhere. Red: inheritance on improvement only.
+- [ ] **S7, adaptation, parity.** From 200 random sets of trial records (N in [4, 1 024],
+      improved, accepted and kept; infinite and `NaN` fitness among them), JADE's μCR and
+      μF and the SHADE and L-SHADE memories equal the CPU strategies' after
+      `AfterGeneration` with the same records, bit for bit; the CPU state is read through
+      `GetControlParameters` with draws that return the means exactly. The device kernels
+      equal the host functions bit for bit, also for N up to 5 000 (several chunks). Red:
+      SHADE's CR mean taken as Lehmer; the memory index advanced with no success.
+- [ ] **S8, archive.** The host functions equal `AdaptiveStrategyBase.UpdateArchive`
+      (through `JadeStrategy.AfterGeneration` with a recording provider) given the same
+      slot draws in index order: filling, filling into overflow, full with collisions,
+      capacity 0. The device kernels equal the host functions bit for bit, archive and
+      size. Red: a collision kept for the earlier index; the fill position ignoring the
+      size before.
+- [ ] **S9, ranking** (device). For 200 random arrays (N in [1, 20 000], with `NaN`, ±∞,
+      ±0 and ties), ranking by counting and the bitonic sort each give exactly the order
+      by (key, index), `NaN` as +∞; where the keys are distinct, the CPU
+      `PopulationSortHelper`'s order. Red: `NaN` not mapped; ties by the higher index.
+- [ ] **S10, best index** (device). The best-index kernels equal `BestPick.IndexOf` on
+      200 random arrays (N in [1, 5 000], ties across the 1 024-chunk boundary, all
+      `NaN`). Red: `<=` for `<`.
+- [ ] **S11, L-SHADE's schedule.** N per generation equals `LShadeStrategy`'s formula:
+      for N_init 100 and a budget of 10 000, the known answer (computed 2026-10-05 with
+      exact decimal rounding, outside the package) is 98, 97, 96, 95, 94, 93, 93, 92, 91,
+      90, 89, 88 for the first twelve generations, 333 generations in all, N = 4 at the
+      end and 10 000 evaluations. A device run's observer sees that N each generation and the
+      first N of the ranking, in order; the archive capacity is `round(2.6·N)` and its
+      size is truncated. `Build` refuses an evaluation limit other than the budget with
+      `InvalidOperationException`. Red: midpoint to even; survivors from the unranked
+      population.
+- [ ] **S12, stagnation.** The device rule equals `StagnationStreakTerminationStrategy`
+      on 100 scripted sequences of best values (`NaN`, ±∞, threshold 0, a first value
+      equal to `double.MinValue`). A run whose objective stops improving ends at the
+      generation that rule gives for its observed best values, with the same generations,
+      evaluations and result for a read every generation and every 16. Red: the streak
+      reset on equality.
+- [ ] **S13, convergence** (positive control; CI, and **Gpu** on CUDA). Seed 1, Sphere
+      D = 10 in [−5, 5], 2·10⁵ evaluations, N = 100 (L-SHADE N_init 180): each of the nine
+      configurations reaches f ≤ 1e-6 on the CPU accelerator and on CUDA, and the CPU
+      package with the same configuration does too (asserted in the same test). Red: a
+      trial never survives.
+- [ ] **S14, reproducibility** (CI, and **Gpu** on CUDA). Each of the nine configurations
+      and the stagnation rule, run twice with one seed on one device: bit-identical
+      results and observer snapshots. Red: the archive's slot draws on a stream keyed by
+      the time.
+- [ ] **S15, D3** (**Gpu**). On CUDA, `Cos` on [0, 2π] and `Tan` on [−π/2, π/2), 10⁴
+      arguments each, within 4 ULP of `System.Math`, as D2. Red: the post-link returning
+      the kernel unchanged.
+- [ ] **S16, 8b, ⚠.** 2026-10-05: was `Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`,
+      `Max`, `IsNaN`; now also `Cos`, `Tan` and `IsFinite`, for the CPU package's
+      samplers and SHADE's weight test → HISTORY.md#symmetry-decided-2026-10-05. The
+      fact stays red on any other member. Red: a kernel calling `Sin`.
+- [ ] **S17, transfers, ⚠ 5b.** 2026-10-05: was "only the observer's downloads and one
+      at the end"; now also, with a stagnation limit, one control block every 16
+      generations and before each observer call → HISTORY.md#symmetry-decided-2026-10-05.
+      Counted: none without a stagnation limit; ⌈G/16⌉ + observer calls + 1 at most
+      with one. Red: a read every generation.
+- [ ] **B2.** Every new row of `API.md`'s error table has a test that triggers it.

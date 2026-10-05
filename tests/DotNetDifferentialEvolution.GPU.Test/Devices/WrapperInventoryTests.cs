@@ -3,7 +3,7 @@ using DotNetDifferentialEvolution.GPU.Devices.LibDevice;
 namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 
 /// <summary>
-/// Check L2 of the GPU package's ACCEPTANCE.md: the post-link's wrapper inventory over three committed PTX texts of
+/// Check L2 of the GPU package's Devices/LibDevice/ACCEPTANCE.md: the post-link's wrapper inventory over three committed PTX texts of
 /// <c>MathProbe.Probe</c> (provenance in this node's BOOT.md): ILGPU 1.5.3's own for the RTX 5070 Ti (<c>SM_120</c>),
 /// which calls the wrappers and defines none; the same text after the post-link, which defines every wrapper it calls;
 /// and ILGPU's own for <c>SM_89</c>, an architecture below compute 10.0, where ILGPU defines them itself. No fact names a

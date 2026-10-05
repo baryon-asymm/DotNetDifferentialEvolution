@@ -2,6 +2,100 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="symmetry-decided-2026-10-05"></a>
+## 2026-10-05 — symmetry with the CPU package decided, in the v1 PR
+
+The owner asked whether the package is symmetric with the CPU package ("стратегии такие
+же имеются?"). It was not: 1.0.0 had DE/rand/1/bin and two limits. The owner: "Давай в
+этом PR", and asked for what has been published on these algorithms on a GPU.
+
+**Scope.** Every built-in of the CPU package that a caller reaches by name:
+- the five fixed-F schemes `WithDefaultMutationStrategy` (rand/1),
+  `WithBestMutationStrategy`, `WithCurrentToBestMutationStrategy`,
+  `WithRandTwoMutationStrategy`, `WithBestTwoMutationStrategy`;
+- the four variants `WithJde`, `WithJade`, `WithShade`, `WithLShade`, with the CPU
+  package's parameter names, order and defaults;
+- the stagnation stop rule beside the two limits.
+
+Out of scope, because kernel code is a struct compiled into the kernel and these are
+open interfaces of the CPU package: a caller's `IMutationStrategy`, `IDeVariant`,
+`IControlParameterProvider` (and so the dithered provider), `ISelectionStrategy`,
+`ITerminationStrategy`, `ILocalSearchRefiner`, `IPopulationSamplingMaker`.
+
+**The semantics are the CPU package's, draw for draw.** Each scheme and each parameter
+rule consumes draws in the CPU step's order and computes with its formulas: the Gaussian
+is the CPU package's two-uniform transform (`RandomDistributionHelper.NextGaussian` for a
+provider other than `SeededRandomProvider`, the sine half discarded), the Cauchy its
+`location + scale·tan(π(u − 0.5))`. So the same draws give the same trial, F and CR bit
+for bit on the host, as check 1g already holds for rand/1. Where the CPU package is
+sequential and the GPU is not, the result is the same set of operations in a fixed order:
+- **Best index and ranking** are computed on the device every generation the
+  configuration needs them, `NaN` worst, ties to the lower index. The CPU package's
+  `Array.Sort` leaves ties among equal keys unordered; this order is one of its orders.
+- **Adaptation sums** (JADE's μ, SHADE's memory) are summed in index order within chunks
+  of 1 024 and the chunk sums in chunk order. For N ≤ 1 024 that is the CPU package's
+  order, bit for bit; above it, rounding differs.
+- **The archive** follows `AdaptiveStrategyBase.UpdateArchive`: improved parents in index
+  order fill the free slots, the rest overwrite a uniform slot each, and of two parents
+  drawn to one slot the later index stays. Each overflowing parent draws its slot from its
+  own stream; the CPU package draws them from one sequential provider.
+- **L-SHADE's population sizes** are computed on the host, from the evaluation count,
+  which the host knows exactly; the survivors are the first N of the ranking, stored in
+  ranking order, as in `LShadeStrategy`.
+
+**Alternatives considered.**
+1. *A different, GPU-friendly design per variant* (no archive, Normal F, non-distinct
+   donors, as EvoX does). Rejected: not the same algorithms, and not symmetric.
+2. *ILGPU.Algorithms' radix sort and reductions.* Rejected: removed on 2026-10-03
+   (check L8), and their order of summation is not ours to fix.
+3. *One thread for all bookkeeping.* Rejected: O(N) on one GPU thread per generation.
+4. *Shared-memory reductions and sorts* (explicitly grouped kernels). Deferred: chunked
+   passes over global memory need no new kernel loading path; they are measured once
+   built, and replaced if they dominate.
+5. *Ranking by counting* (rank i = the number of keys before it) for N ≤ 8 192, one
+   launch; a bitonic network over global memory above it. Taken: both give the one total
+   order by (key, index), so the choice is invisible in the result.
+6. *Stagnation read every generation* (one value, one synchronisation). Rejected for a
+   device control block: the stop rule runs on the device after each generation, every
+   later kernel does nothing once it has fired, and the host reads the block every 16
+   generations and when the observer is due. The result is that of a check every
+   generation.
+
+**Changed openly in the frozen v1 checks** (each with ⚠ in `ACCEPTANCE.md`):
+- 8b: `Cos`, `Tan` and `IsFinite` join the kernel `Math` allow-list, for the CPU
+  package's samplers and SHADE's weight test; D3 holds `Cos` and `Tan` on CUDA to the
+  4 ULP of D2.
+- Invariant 5 and check 5b: with a stagnation limit, a control block of a few words is
+  read every 16 generations.
+- B1's row "`populationSize < 4`": the minimum is now the scheme's, refused by `Build`
+  with `InvalidOperationException`, as the CPU package does; `WithPopulationSize` refuses
+  N < 1 only.
+
+**What has been published** (searched 2026-10-05 by a research agent; sources read in
+full unless marked):
+- Janssen, Pullan, Liew, "GPU Based Differential Evolution: New Insights and Comparative
+  Study", arXiv:2405.16551 (2024): the one recent survey. Only one GPU DE code is fully
+  open (cujDE); SHADE-family DE on a GPU is named as future work. All-on-device designs
+  measured 6–10.6 times faster than ones that copy fitness to the host every generation.
+- cujDE (Boiani, Dominico, Parpinelli, ISDA 2018; github.com/mateuz/cujDE): jDE in CUDA,
+  `float`, curand XORWOW seeded from `random_device` and indexed `rng[id_d * id_p]`, so
+  threads share states: neither reproducible nor race-free. Donors by cyclic
+  displacement, not uniform.
+- EvoX (Huang et al., IEEE TEVC 2025): `JaDE` and `SHADE` on PyTorch, with F from a
+  Normal instead of a Cauchy, no archive, donors neither distinct nor different from i,
+  and a crossover mask from Gaussian draws. No jDE, no L-SHADE. evosax: classic DE only.
+- Mexicano et al., DSPAI 1(4), 2022: a CUDA "JADE" run with fixed F and CR on Sphere
+  only. 62.6 times faster at D = 100, N = 10 000; 0.33 times (slower) at D = 30, N = 100.
+- No GPU implementation of L-SHADE's population reduction or of a JADE/SHADE archive was
+  found. Tanabe's `lshade.cc` (CEC 2014) is the reference the CPU package already cites.
+- What was taken from them: the archive by an exclusive scan and an integer `atomicMax`
+  for the later index (the agent's construction, matching the serial loop); the host-side
+  L-SHADE schedule; ranking by counting for small N; stagnation as a device flag read in
+  batches. Every listed deviation of EvoX and cujDE is one this design avoids by parity
+  with the CPU package.
+
+Checks frozen for it before its code: `ACCEPTANCE.md`, S1–S17.
+
 <a id="libdevice-port-2026-10-03"></a>
 ## 2026-10-03 — CUDA math through libdevice, as APThermo does; ILGPU.Algorithms removed
 

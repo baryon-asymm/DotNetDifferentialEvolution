@@ -5,7 +5,7 @@ using DotNetDifferentialEvolution.GPU.Devices.LibDevice;
 namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 
 /// <summary>
-/// Check L4 of the GPU package's ACCEPTANCE.md, the ILGPU pin, and the part of L9 that runs without a GPU: the ILGPU
+/// Check L4 of the GPU package's Devices/LibDevice/ACCEPTANCE.md, the ILGPU pin, and the part of L9 that runs without a GPU: the ILGPU
 /// internals the post-link and the WSL workaround read are asserted and fail loudly, by name. After APThermo's
 /// <c>CudaWslDevicesTests</c> (commit <c>5fdd82c</c>).
 /// </summary>

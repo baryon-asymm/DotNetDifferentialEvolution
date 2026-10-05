@@ -3,9 +3,11 @@
 ## Purpose
 
 The GPU package's device selection, its CUDA math through libdevice, and its math probe:
-checks D1, D2 and L1–L7, L9 of the package's
-[ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md), and B1's row
-"an explicit device that is not present" (L8 lives in Protocol.Tests). The checks are
+checks D1 and D2 of the package's
+[ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md) and B1's row
+"an explicit device that is not present", and L1–L7, L9 of
+[LibDevice/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Devices/LibDevice/ACCEPTANCE.md)
+(L8 lives in Protocol.Tests). The checks are
 frozen; their numbers (4 ULP, 10⁴ arguments, 64 MiB) are copied, never chosen here.
 
 ## Invariants
@@ -92,7 +94,7 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       green through libdevice; the check and its argument grid unchanged → the package's
       [HISTORY.md](../../../src/DotNetDifferentialEvolution.GPU/HISTORY.md#libdevice-port-2026-10-03).
 - [x] L1–L7 and L9 are green and each was red once on its mutation: 2026-10-03, local,
-      listed per check in the package's `ACCEPTANCE.md`. L6 ran both branches, the
+      listed per check in `Devices/LibDevice/ACCEPTANCE.md`. L6 ran both branches, the
       no-device one with the GPUs hidden.
 - [ ] ⚠ The hosted-runner branch was run here only with the GPUs hidden by environment
       variables, not yet on a hosted runner.
