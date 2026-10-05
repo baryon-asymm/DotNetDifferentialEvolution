@@ -4,7 +4,7 @@ using DotNetDifferentialEvolution.GPU.Kernels;
 namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 
 /// <summary>
-/// The archive's update on the host, by the package's rule as BOOT.md states it (ACCEPTANCE.md, S8): the size before
+/// The archive's update on the host, by the package's rule as BOOT.md states it (Bookkeeping/ACCEPTANCE.md, S8): the size before
 /// cut to the capacity; each improved parent, in index order, at its fill position or a drawn slot
 /// (<see cref="ArchiveRules.SlotOf"/>); on a shared slot the highest index; then the copies.
 /// </summary>

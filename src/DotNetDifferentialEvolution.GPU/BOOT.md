@@ -14,7 +14,7 @@ ILGPU's CPU accelerator. It replaces every public type of 0.x (0.1.0, 0.0.2 and 
 nuget.org, 2024-08). The 0.x description, the design text and what the implementation
 decided against it → HISTORY.md#v1-built-2026-10-03.
 
-**Symmetric with the CPU package** ⏳ (decided 2026-10-05, in the v1 PR →
+**Symmetric with the CPU package** (decided and built 2026-10-05, in the v1 PR →
 HISTORY.md#symmetry-decided-2026-10-05): the five fixed-F schemes, jDE, JADE, SHADE and
 L-SHADE, and the stagnation rule beside the two limits, by the CPU package's names,
 parameters and defaults, with its semantics draw for draw. Between generations the
@@ -41,13 +41,14 @@ Each is checked by the item of the same number in [ACCEPTANCE.md](ACCEPTANCE.md)
    - Survival is `f(u) <= f(x)`; `NaN` is worse than every real value, and two `NaN`s
      are not a tie.
    - The best individual: `NaN` is worst, and a tie goes to the lowest index.
-   - ⏳ The other schemes, jDE, JADE, SHADE and L-SHADE (§§3–7 and §9), selection with
+   - The other schemes, jDE, JADE, SHADE and L-SHADE (§§3–7 and §9), selection with
      and without ties, the archive and the stagnation rule are the CPU package's:
-     the same draws give the same trial, F and CR bit for bit (ACCEPTANCE.md, S2–S12).
+     the same draws give the same trial, F and CR bit for bit (ACCEPTANCE.md, S2–S6;
+     Bookkeeping/ACCEPTANCE.md, S7–S12).
 2. **The kernel, not the user, prevents races.** Thread i writes only trial slot i and
    next slot i, and the objective gets a view it cannot write through.
 3. **A random draw is a pure function of (seed, individual, generation, stream, draw
-   index).** Stream 0 is the generation's; stream 1 ⏳ the archive's slot draws.
+   index).** Stream 0 is the generation's; stream 1 the archive's slot draws.
    It is the same on every backend: the RNG uses integer arithmetic only.
 4. **Reproducibility.**
    - The same seed, device and package and ILGPU versions give a bit-identical result.
@@ -55,7 +56,7 @@ Each is checked by the item of the same number in [ACCEPTANCE.md](ACCEPTANCE.md)
      code generation and math-library ULPs are the backend's. Measured once, 2026-10-03:
      the CPU accelerator and OpenCL agreed bit for bit on a Sphere run, CUDA did not.
 5. **No host round trip per generation.** The limits are host counters. The population
-   reaches the host only when the observer is due and once at the end. ⏳ With a
+   reaches the host only when the observer is due and once at the end. With a
    stagnation limit, the stop rule runs on the device, and its control block of a few
    words reaches the host every 16 generations and before each observer call.
    ⚠ 2026-10-05: the control block added → HISTORY.md#symmetry-decided-2026-10-05
@@ -102,7 +103,10 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
   `LibDevice`, and every kernel loads through `Devices.KernelLoader`, which completes the
   libdevice wrappers ILGPU 1.5.3 leaves undefined for compute 10.0 and newer
   (`Devices/LibDevice/BOOT.md`). No ILGPU.Algorithms. The package's own kernels call no
-  `Exp`, `Log` or `Pow`; a caller's objective can.
+  `Exp` or `Pow`; JADE's, SHADE's and L-SHADE's call `Log`, `Cos` and `Tan` (the CPU
+  package's Gaussian and Cauchy samplers), the fixed schemes' and jDE's none of them (the
+  parameter rule is a type argument of the generation kernel). A caller's objective can
+  call any.
 
   Measured once, 2026-10-03, RTX 5070 Ti, CUDA Toolkit 13.4, a scratch program outside the
   tree: an objective of `Exp(−x) + Log(x)² + Pow(x, 1.37)` per gene, N = 65 536, D = 10,
@@ -139,14 +143,13 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 | this node | yes | builder, optimizer, result, `GpuDevice`, observer and snapshot; `KernelLauncher`, `PopulationTransfers`, `BestPick`, `RunSettings` inside |
 | [Objectives](Objectives/API.md) | yes | `IGpuFitnessFunction`, `GeneView` |
 | [Devices](Devices/API.md) | no | device selection with fallback reasons, accelerator ownership, kernel loading, the math probe kernel; child [LibDevice](Devices/LibDevice/API.md): libdevice and the post-link |
-| [Kernels](Kernels/API.md) | no | the init and generation kernels, the DE step over a draw source; ⏳ every scheme, the parameter rules, selection with or without ties |
-| [Bookkeeping](Bookkeeping/API.md) ⏳ | no | between generations, on the device: best index, ranking, archive, adaptation, L-SHADE's reduction, the stagnation rule |
+| [Kernels](Kernels/API.md) | no | the init and generation kernels, the DE step over a draw source; every scheme, the parameter rules, selection with or without ties |
+| [Bookkeeping](Bookkeeping/API.md) | no | between generations, on the device: best index, ranking, archive, adaptation, L-SHADE's reduction, the stagnation rule |
 | [Random](Random/API.md) | no | Philox4x32-10, uniform doubles from 53 bits, Lemire index draws |
 
 The dependencies run one way: this node uses all of them; `Kernels` uses `Objectives` and
-`Random`; ⏳ `Bookkeeping` uses `Kernels` and `Random`; `Devices`, `Objectives` and
-`Random` use nothing. No cycle (by the `using`
-directives, 2026-10-03).
+`Random`; `Bookkeeping` uses `Kernels`, `Random` and `Devices`; `Devices`, `Objectives`
+and `Random` use nothing. No cycle (by the `using` directives, 2026-10-05).
 
 Tests: `tests/DotNetDifferentialEvolution.GPU.Test`, run on the CPU accelerator in hosted
 CI and on CUDA and OpenCL locally under `Category=Gpu`. The kernel guards (invariant 8)

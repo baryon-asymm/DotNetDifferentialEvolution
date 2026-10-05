@@ -92,8 +92,12 @@ Python 3.8+ (`tools/protocol-lint`).
       38/38, GPU.Test 225/225, D2 green. The CI filter with the GPUs hidden
       (`CUDA_VISIBLE_DEVICES=-1`, `GPU_DEVICE_ORDINAL=7`, `Category!=Gpu`): GPU.Test
       202/202.
+      Again after the symmetry with the CPU package, 2026-10-05, the same machine (Debug): 0
+      warnings and 0 errors; UnitTests 240/240, IntegrationTests 76/76, Protocol.Tests
+      38/38, GPU.Test 351/351 with `Gpu`; the CI filter with the GPUs hidden 308/308.
 - [x] The tree passes `protocol_lint` without errors or warnings: 2026-10-03, 75 nodes;
-      again after GPU v1, 2026-10-03, 70 nodes; after the libdevice port, 71,
+      again after GPU v1, 2026-10-03, 70 nodes; after the libdevice port, 71; after the
+      symmetry with the CPU package, 2026-10-05, 73,
       `python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates`.
 - [x] Every test node of the repository was shown red once: 2026-10-02, mutations in
       scratch clones (GPU tests in slice 2, unit tests in slice 7, integration tests in
@@ -132,17 +136,17 @@ Python 3.8+ (`tools/protocol-lint`).
 
 ## Decomposition
 
-71 nodes (2026-10-03). `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
+73 nodes (2026-10-05). `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
 nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 
 | Node | Role | Nodes | Readiness defined by |
 |---|---|---|---|
 | [DotNetDifferentialEvolution](src/DotNetDifferentialEvolution/API.md) | the CPU package | 28 | UnitTests (U0–U2, surface) and IntegrationTests (I0–I3) |
-| [DotNetDifferentialEvolution.GPU](src/DotNetDifferentialEvolution.GPU/API.md) | the GPU package | 6 | its frozen checks: GPU.Test and the guards of Protocol.Tests |
+| [DotNetDifferentialEvolution.GPU](src/DotNetDifferentialEvolution.GPU/API.md) | the GPU package | 7 | its frozen checks: GPU.Test and the guards of Protocol.Tests |
 | [Tests.Common](tests/DotNetDifferentialEvolution.Tests.Common/API.md) | CPU test support: benchmark functions, fakes, context helper | 5 | its consumers |
 | [UnitTests](tests/DotNetDifferentialEvolution.UnitTests/API.md) | the CPU package part by part | 15 | — |
 | [IntegrationTests](tests/DotNetDifferentialEvolution.IntegrationTests/API.md) | the CPU engine as a whole | 4 | — |
-| [GPU.Test](tests/DotNetDifferentialEvolution.GPU.Test/API.md) | the GPU package's frozen checks, CPU accelerator in CI, CUDA and OpenCL locally | 7 | — |
+| [GPU.Test](tests/DotNetDifferentialEvolution.GPU.Test/API.md) | the GPU package's frozen checks, CPU accelerator in CI, CUDA and OpenCL locally | 8 | — |
 | [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/API.md) | throughput and convergence measurement, no assertions; with its executable, [Benchmark.Runner](benchmarks/DotNetDifferentialEvolution.Benchmark.Runner/API.md) | 3 | — |
 | [protocol-lint](tools/protocol-lint/API.md) | the tree's file-level checks | 1 | its own tests |
 | [Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/API.md) | the reflection checks (§13): documents against compiled code; the GPU kernel guards; no suppression anywhere | 1 | mutations, once |

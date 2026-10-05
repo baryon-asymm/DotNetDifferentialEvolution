@@ -92,6 +92,9 @@ Each one is marked in the code at the place it changes.
     tree, which a constrained call on a struct type parameter names, is followed into its
     implementations in the interface's own assembly (`PhiloxDraws`). A call token that does
     not resolve is a finding. The walk returns its methods, and 8a and 8b scan them.
+    2026-10-05: a generic method instantiated on a value type (the parameter rules'
+    `Draw<TDraws>`) is resolved by .NET to an instantiation, not the definition; the walk
+    maps it back with `GetGenericMethodDefinition`, and the unresolved-call finding stays.
   - `ConstantLeftComparisons.cs`, from APT's file of that name. It compiles against the
     host's trusted platform assemblies, which include ILGPU, instead of the assemblies
     already loaded. It adds the SDK's implicit usings, parses as C# 12 (the package's), and
@@ -103,7 +106,8 @@ Each one is marked in the code at the place it changes.
     `NumericalNodesCallOnlyTheAllowedMathAndDoubleMembers`, but over the kernel-reachable
     methods. Its frozen list is names only: APT's double-only overloads and its
     `KernelMath`-only `IsNaN` are not adopted. 8c and 8d follow APT's facts of the same
-    subject.
+    subject. ⚠ 2026-10-05: the list gains `Cos`, `Tan` and `IsFinite` (the package's
+    check S16, its [HISTORY.md](../../src/DotNetDifferentialEvolution.GPU/HISTORY.md#symmetry-decided-2026-10-05)).
   - `GpuPackage.cs`: the package's node, assembly and sources, from
     `ProtocolConfig.GpuPackagePath`. `ConfigTests` checks that path like the other node
     paths of the configuration.

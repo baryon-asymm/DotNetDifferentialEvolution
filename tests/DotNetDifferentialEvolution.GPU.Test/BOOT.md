@@ -11,10 +11,11 @@ here. The tests of 0.x left with its code → HISTORY.md#tests-of-0x-2026-10-03.
 | Level | What it checks | Against what | Child |
 |---|---|---|---|
 | G0 | the RNG: known answers, uniformity, index draws, the same words on every backend | Random123's KAT vectors; closed forms; χ² quantiles computed and checked | [Random](Random/API.md) |
-| G1 | one DE step: donors, crossover, repair, survival, best pick, slot discipline | closed forms; the CPU package's step, bit for bit | [Kernels](Kernels/API.md) |
+| G1 | one DE step: donors, crossover, repair, survival, best pick, slot discipline; every scheme, the parameter rules, selection outcomes, jDE's inheritance | closed forms; the CPU package's step, strategies and selection, bit for bit | [Kernels](Kernels/API.md) |
+| G1 | between generations: adaptation, archive, ranking, best index, L-SHADE's reduction, the stop rule | the CPU package's strategies and helpers, bit for bit; the schedule's known answers | [Bookkeeping](Bookkeeping/API.md) |
 | G1 | the objective's view cannot write | reflection | [Objectives](Objectives/API.md) |
 | G2 | the builder's argument errors, the device choice, the math probe | the error table of the package's `API.md`; `System.Math` | [Builder](Builder/API.md), [Devices](Devices/API.md) |
-| G3 | whole runs: sampling, convergence, reproducibility, transfers, asynchrony, ownership | known optima; counts | [EndToEnd](EndToEnd/API.md) |
+| G3 | whole runs: sampling, convergence, reproducibility, transfers, asynchrony, ownership; the nine configurations and the stop rule | known optima; counts; the CPU package's run beside each | [EndToEnd](EndToEnd/API.md) |
 
 ## Invariants
 
@@ -34,8 +35,8 @@ None.
 
 No type of this node's own directory refers to the package; each child declares the package
 nodes it checks. Outside the tree: xUnit 2.9.3, xunit.runner.visualstudio 3.1.4, Microsoft.NET.Test.Sdk 17.14.1, coverlet.collector 6.0.0;
-ILGPU 1.5.3. The project also references the CPU package, for check 1g only; the GPU package
-does not.
+ILGPU 1.5.3. The project also references the CPU package, the reference of check 1g and of
+the symmetry checks S1–S14; the GPU package does not.
 
 ## Constraints
 

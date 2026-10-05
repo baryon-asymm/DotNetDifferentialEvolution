@@ -10,7 +10,7 @@ using ILGPU.Runtime;
 namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 
 /// <summary>
-/// ACCEPTANCE.md, check S11: L-SHADE's linear population size reduction.
+/// Bookkeeping/ACCEPTANCE.md of the GPU package, check S11: L-SHADE's linear population size reduction.
 /// <list type="bullet">
 /// <item>The schedule's known answers, computed outside the package (2026-10-05, exact decimal rounding): for N_init 100
 /// and a budget of 10 000, 98, 97, 96, 95, 94, 93, 93, 92, 91, 90, 89, 88 first, 333 generations, N = 4 and 10 000

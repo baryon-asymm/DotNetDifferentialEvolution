@@ -9,7 +9,7 @@ using ILGPU.Runtime;
 namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 
 /// <summary>
-/// ACCEPTANCE.md, check S8: the archive.
+/// Bookkeeping/ACCEPTANCE.md of the GPU package, check S8: the archive.
 /// <list type="bullet">
 /// <item>The package's rule (<see cref="ArchiveRules.SlotOf"/>, fill positions from the size before plus the improved
 /// parents before, the later parent kept on a shared slot) equals the CPU package's <c>UpdateArchive</c>, run through

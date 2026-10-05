@@ -74,6 +74,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       `AnObjectiveIlgpuCannotCompileFailsBuildWithIlgpusException` red.
 - [ ] ⚠ The accelerator-type guard is reachable only through a hand-made accelerator:
       the case depends on ILGPU keeping `DeviceTypeAttribute` public.
+- [x] S1 and B2 are green; S1 was red on its named mutation and B2 on each of its 17 guards
+      weakened in turn: 2026-10-05, the evidence in the package's
+      [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md).
 
 ## Taboos
 

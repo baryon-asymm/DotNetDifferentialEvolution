@@ -5,7 +5,10 @@
 The semantics of one DE step on the GPU (`docs/ALGORITHMS.md` §§2–3, §9) and the
 kernel's slot discipline: ACCEPTANCE.md checks **1b** (donors), **1c** (crossover with
 `jrand`), **1d** (midpoint repair), **1e** (selection), **1f** (best pick), **1g**
-(parity with the CPU package) and **2b** (slot i holds parent i or trial i).
+(parity with the CPU package) and **2b** (slot i holds parent i or trial i); since
+2026-10-05 also **S2** (fixed schemes), **S3** (current-to-pbest), **S4** (control
+parameters), **S5** (selection outcomes and each configuration's tie rule) and **S6**
+(jDE inheritance).
 
 | Check | Test | How |
 |---|---|---|
@@ -16,6 +19,11 @@ kernel's slot discipline: ACCEPTANCE.md checks **1b** (donors), **1c** (crossove
 | 1f | `BestPickTests` | `BestPick.IndexOf([NaN, 3, 1, 1])` |
 | 1g | `CpuParityTests` | CPU `MutationStrategy.Mutate` on `RecordingRandomProvider`, replayed into the GPU step |
 | 2b | `GenerationSlotTests` | `KernelLauncher` `Initialize` + one `Generation`, N = 64, D = 4, recomputed on the host |
+| S2 | `SchemeParityTests` | the CPU strategies on `RecordingRandomProvider`, replayed into `Schemes.BuildTrial` (`HostStep.BuildSchemeTrial`) |
+| S3 | `PBestParityTests` | `CurrentToPBestMutationStrategy` with a random ranking and archive, replayed likewise |
+| S4 | `ControlParameterParityTests` | the CPU strategies' `GetControlParameters` on a recording provider, replayed into `ControlParameters` |
+| S5 | `SelectionOutcomeTests`, `TieRuleTests` | `Selection.Outcome` against the CPU `SelectionStrategy`; each configuration's run on a flat objective against the CPU variant's selection |
+| S6 | `JdeInheritanceTests` | one jDE generation, N = 64, D = 4, recomputed on the host |
 
 ## Invariants
 
@@ -28,11 +36,12 @@ kernel's slot discipline: ACCEPTANCE.md checks **1b** (donors), **1c** (crossove
   N·(N − 2): 8 for N = 4, 2400 for N = 50, at the 0.999 quantile of
   [`ChiSquared`](../Random/API.md). Six joint tests rather than 162 per-(N, i, role)
   ones, which at 0.999 each would fail by chance about one run in seven.
-- **1e mirrors eight of the nine CPU cases.** The GPU package has no ties-rejected
-  mode: `WithTiesRejectedKeepsTheParentOnEqualFitness` has no counterpart (⚠ for
-  ACCEPTANCE.md); `WithTiesRejectedStillTakesAStrictlyBetterTrial` and
-  `WithTiesRejectedAParentScoredNaNIsStillReplaced` have the same survivor under the
-  GPU rule and are mirrored.
+- **1e mirrors eight of the nine CPU cases**; S5 (`SelectionOutcomeTests`) holds all
+  nine, with ties accepted and refused, since JADE refuses ties (2026-10-05).
+- **S6's expected F and CR come from `ControlParameters.Jde`** on the host, which S4
+  holds to the CPU package; what S6 tests is the kernel's write, so the taboo below is
+  kept. S6 asserts a tie whose F or CR differs from the parent's: without one, a write on
+  improvement only would pass.
 - **1g's draws are exact multiples of 2⁻⁵³**, so the CPU's
   `RandomThreshold.Scale(d)` is exactly `m << 11`, the word replayed to the GPU.
   Parity is bitwise (`DoubleToInt64Bits`), and the call kinds and ranges match one to
@@ -99,6 +108,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       (`BestPickTests.cs` line 13).
 - [x] 2b red: 2026-10-03, `GpuKernels.Generation` writing next slot `(i + 1) % N`:
       `GenerationSlotTests.cs` line 68, "slot 0 is neither its parent nor its trial".
+- [x] S2–S6 are green and each was red once on its named mutation: 2026-10-05, the
+      evidence in the package's [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md);
+      S5's `TieRuleTests` and S6's tie with new parameters added when a first red run stayed green.
 
 ## Taboos
 

@@ -33,9 +33,9 @@ internal interface IDrawSource
 
 internal struct PhiloxDraws : IDrawSource
 {
-    public PhiloxDraws(int seed, int individual, int generation);
-    // ⏳ 2026-10-05: an overload with a stream, the fourth counter word; stream 0 is the
-    // constructor above, stream 1 the archive's slot draws.
+    public const int ArchiveStream = 1;                       // the archive's slot draws
+    public PhiloxDraws(int seed, int individual, int generation);  // stream 0
+    public PhiloxDraws(int seed, int individual, int generation, int stream);  // the fourth counter word
 }
 
 internal static class DrawConversions

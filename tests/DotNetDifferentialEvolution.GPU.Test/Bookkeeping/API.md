@@ -6,13 +6,13 @@ Nothing outward. What this node proves about the GPU package's work between gene
 
 | Claim | Confirmed by | State |
 |---|---|---|
-| JADE's means and the SHADE and L-SHADE memories are the CPU strategies' bit for bit; the kernels are the rules in chunks of 1 024 (S7) | `AdaptationParityTests` | ⏳ green, red pending |
-| The archive is the CPU package's `UpdateArchive` given the same slot draws; the kernels are the rule (S8) | `ArchiveParityTests` | ⏳ green, red pending |
-| Both rankings give the order by (key, index), `NaN` as +∞ (S9); the best index is `BestPick`'s (S10) | `RankingTests` | ⏳ green, red pending |
-| L-SHADE's sizes are the known answers and the CPU package's; the reduction keeps the ranking's first N (S11) | `LShadeReductionTests` | ⏳ green, red pending |
-| The stop rule is the CPU package's; a run stops where it says, whatever the read interval (S12) | `StagnationTests` | ⏳ green, red pending |
+| JADE's means and the SHADE and L-SHADE memories are the CPU strategies' bit for bit; the kernels are the rules in chunks of 1 024 (S7) | `AdaptationParityTests` | ✅ |
+| The archive is the CPU package's `UpdateArchive` given the same slot draws; the kernels are the rule (S8) | `ArchiveParityTests` | ✅ |
+| Both rankings give the order by (key, index), `NaN` as +∞ (S9); the best index is `BestPick`'s (S10) | `RankingTests` | ✅ |
+| L-SHADE's sizes are the known answers and the CPU package's; the reduction keeps the ranking's first N (S11) | `LShadeReductionTests` | ✅ |
+| The stop rule is the CPU package's; a run stops where it says, whatever the read interval (S12) | `StagnationTests` | ✅ |
 
-## Tests ⏳
+## Tests ✅
 
 ```csharp
 [Trait("Category", "Integration")] public class AdaptationParityTests;

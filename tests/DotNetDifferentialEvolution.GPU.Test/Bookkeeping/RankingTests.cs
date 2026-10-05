@@ -8,7 +8,7 @@ using ILGPU.Runtime;
 namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 
 /// <summary>
-/// ACCEPTANCE.md, checks S9 and S10, on ILGPU's CPU accelerator.
+/// Bookkeeping/ACCEPTANCE.md of the GPU package, checks S9 and S10, on ILGPU's CPU accelerator.
 /// <list type="bullet">
 /// <item>S9: for 200 random arrays, the bitonic network, and ranking by counting where N ≤ 8 192, each give exactly the
 /// order by (key, index), <see cref="double.NaN"/> as +∞. N: 150 arrays in [1, 3 000], 44 in [8 193, 20 000], and 1, 2,

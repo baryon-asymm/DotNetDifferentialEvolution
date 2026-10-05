@@ -2,8 +2,8 @@
 
 ## Purpose
 
-⏳ Designed 2026-10-05 (the package's
-[HISTORY.md](../HISTORY.md#symmetry-decided-2026-10-05)); no code yet.
+Designed and built 2026-10-05 (the package's
+[HISTORY.md](../HISTORY.md#symmetry-decided-2026-10-05)).
 
 The work between two generations, on the device, for the configurations that need it:
 the best index (best/1, best/2, current-to-best/1, the stagnation rule), the fitness
@@ -57,7 +57,7 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-→ checks S6–S12 and S14 of the package's [ACCEPTANCE.md](../ACCEPTANCE.md).
+→ [ACCEPTANCE.md](ACCEPTANCE.md)
 
 ## Taboos
 

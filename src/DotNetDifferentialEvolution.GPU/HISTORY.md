@@ -2,6 +2,41 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="symmetry-built-2026-10-05"></a>
+## 2026-10-05 — symmetry built; what the red runs found in the tests
+
+Built on the design below (commits `2cb39ab`, the code; `d1ecb52`, the tests). Each of
+S1–S17 and B2 was then run red once on its named mutation, from a commit, the source
+restored by `git checkout` after each run. Five runs first showed the tests, not the
+code, short; each test was strengthened and the run repeated (the frozen checks'
+text unchanged):
+
+- **S5**, JADE accepting ties, stayed green: the cases called `Selection.Outcome` with
+  the tie rule as an argument, so no case tied a configuration to its rule. Added
+  `TieRuleTests`: each configuration, run on a flat objective, replaces tied parents
+  exactly when the CPU variant's `SelectionStrategy` accepts a tie.
+- **S6**, inheritance on improvement only, stayed green: jDE keeps the parent's F and
+  CR nine times in ten, and the five ties of seed 91 all kept them. The objective became
+  ⌊Σx²/4⌋, and a tie with a new F or CR is asserted.
+- **S7**, the memory index advanced without success, stayed green: the device case
+  had a success in every generation. It now runs three generations, the first without.
+- **S9**'s expected order was computed with `FitnessOrder.KeyOf`, the code under test;
+  it now maps `NaN` itself.
+- **S12**, the streak reset on equality, hung: the stop rule never fired and the run
+  had no other bound. An observer now ends any run of the test at generation 10 000.
+- **B2**'s archive case asked for 2·10¹⁰ genes, which an off-by-far guard also refuses;
+  it now asks for 2³¹, one more than `int.MaxValue`.
+
+Three mutations did not compile under the analyzers (IDE0059, IDE0060, CA1508) and were
+rewritten to the same defect. A fourth, for S13 (the trial's fitness replaced by a
+constant `NaN` in `Selection.Outcome`), left best/1 and current-to-best/1 converging on
+CUDA only: a constant on the left of an ordered comparison after inlining, the hazard
+check 8c keeps out of the package, is the likely reason (not investigated further). The
+mutation used is "the survivor is always the parent", red in all 18 cases.
+
+S7–S12 moved unchanged to `Bookkeeping/ACCEPTANCE.md` when the package's file reached its
+limit (AGENTS.md §15).
+
 <a id="symmetry-decided-2026-10-05"></a>
 ## 2026-10-05 — symmetry with the CPU package decided, in the v1 PR
 

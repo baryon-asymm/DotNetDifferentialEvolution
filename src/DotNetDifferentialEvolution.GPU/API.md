@@ -47,7 +47,7 @@ public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
 ```
 
 - **DE/rand/1/bin**, named as in the CPU builder; the other schemes and the variants
-  below ⏳.
+  below.
 - **The limits.** A generation limit runs exactly that many generations (≥ 1). An
   evaluation limit stops at the first generation boundary where the count, starting at
   N, is ≥ the limit; at least one generation runs.
@@ -61,6 +61,9 @@ public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
     own `ArrayView`s must live on it. For a CUDA accelerator, an objective that calls
     `Exp`, `Log` or `Pow` needs a context built with `LibDevice(libnvvm, libdevice)`;
     without it `Build` throws ILGPU's `InternalCompilerException` (measured 2026-10-03).
+    So do JADE, SHADE and L-SHADE, whose samplers call `Log`, `Cos` and `Tan`: without
+    `LibDevice` their `Build` throws the same, while the fixed schemes and jDE build and run
+    (measured 2026-10-05, RTX 5070 Ti, a scratch program outside the tree).
 - **`Build`** opens the device, compiles the kernels, samples the population on the
   device and evaluates it: it costs N evaluations and the compile time. Kernel compile
   errors surface here.
@@ -69,9 +72,9 @@ public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
 - **The objective type** must be visible to ILGPU's runtime assembly
   ([Objectives](Objectives/API.md)).
 
-## Symmetry with the CPU package ⏳
+## Symmetry with the CPU package ✅
 
-Designed 2026-10-05 (HISTORY.md#symmetry-decided-2026-10-05), checks S1–S17 frozen.
+Designed and built 2026-10-05 (HISTORY.md#symmetry-decided-2026-10-05), checks S1–S17.
 
 ```csharp
 public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
@@ -171,14 +174,13 @@ public sealed class GpuPopulationSnapshot
 | Situation | Behaviour |
 |---|---|
 | Bounds of different lengths, empty, not finite, or lower > upper | `ArgumentException` from `WithBounds` |
-| `populationSize < 4` (rand/1 needs four distinct individuals), or N·D > `int.MaxValue` | `ArgumentOutOfRangeException` |
-| ⏳ ⚠ 2026-10-05: the row above becomes: `populationSize < 1`, or N·D > `int.MaxValue` | `ArgumentOutOfRangeException` |
-| ⏳ N below the scheme's minimum (L-SHADE: below 4) | `InvalidOperationException` from `Build`, naming the scheme and its minimum |
-| ⏳ `pBestRate` outside (0, 1]; `archiveSizeRate` negative or not finite; `adaptationRate` outside [0, 1]; `memorySize < 1`; `maxEvaluationNumber < 1` | `ArgumentOutOfRangeException` |
-| ⏳ jDE's initial F not finite or ≤ 0, or initial CR outside [0, 1] | `ArgumentOutOfRangeException` |
-| ⏳ `maxStagnationStreak < 1`; `stagnationThreshold` negative or not finite | `ArgumentOutOfRangeException` |
-| ⏳ L-SHADE with an evaluation limit other than its `maxEvaluationNumber` | `InvalidOperationException` from `Build` |
-| ⏳ The archive's capacity·D above `int.MaxValue` | `InvalidOperationException` from `Build` |
+| `populationSize < 1`, or N·D > `int.MaxValue` ⚠ 2026-10-05: was `populationSize < 4`, now each scheme's minimum is checked by `Build` (next row) → HISTORY.md#symmetry-decided-2026-10-05 | `ArgumentOutOfRangeException` |
+| N below the scheme's minimum (L-SHADE: below 4) | `InvalidOperationException` from `Build`, naming the scheme and its minimum |
+| `pBestRate` outside (0, 1]; `archiveSizeRate` negative or not finite; `adaptationRate` outside [0, 1]; `memorySize < 1`; `maxEvaluationNumber < 1` | `ArgumentOutOfRangeException` |
+| jDE's initial F not finite or ≤ 0, or initial CR outside [0, 1] | `ArgumentOutOfRangeException` |
+| `maxStagnationStreak < 1`; `stagnationThreshold` negative or not finite | `ArgumentOutOfRangeException` |
+| L-SHADE with an evaluation limit other than its `maxEvaluationNumber` | `InvalidOperationException` from `Build` |
+| The archive's capacity·D above `int.MaxValue` | `InvalidOperationException` from `Build` |
 | `mutationForce` not finite or ≤ 0; `crossoverProbability` outside [0, 1] | `ArgumentOutOfRangeException` |
 | A limit < 1 | `ArgumentOutOfRangeException` |
 | `everyNGenerations < 1` | `ArgumentOutOfRangeException` |
@@ -194,7 +196,7 @@ public sealed class GpuPopulationSnapshot
 ## Side effects
 
 `Build` opens a device context unless one is passed, allocates `3·N·D + 2·N + 2·D`
-doubles on the device and compiles two kernels; ⏳ a configuration that needs bookkeeping
+doubles on the device and compiles two kernels; a configuration that needs bookkeeping
 allocates its buffers and compiles its kernels too ([Bookkeeping](Bookkeeping/API.md)). A run copies the population to the host
 once at the end, and once per observer call. No `GC.Collect`.
 
@@ -203,7 +205,7 @@ once at the end, and once per observer call. No `GC.Collect`.
 - [Objectives](Objectives/API.md) — the objective's contract and the gene view.
 - [Devices](Devices/API.md) — device selection, ownership, the math probe (internal).
 - [Kernels](Kernels/API.md) — the kernels and the DE step (internal).
-- [Bookkeeping](Bookkeeping/API.md) ⏳ — the work between generations (internal).
+- [Bookkeeping](Bookkeeping/API.md) — the work between generations (internal).
 - [Random](Random/API.md) — Philox4x32-10 and the draw conversions (internal).
 
 ## Out of scope

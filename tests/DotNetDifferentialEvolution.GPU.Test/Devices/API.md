@@ -13,6 +13,8 @@ math through libdevice, and its math probe.
 | D1 (`Gpu`): explicit `Cuda` is the RTX 5070 Ti, explicit `OpenCL` is `gfx1036`, no fallback reason | `AnExplicitDeviceIsTheOwnersGpu` | ✅ local, owner's machine only |
 | D2 (`Gpu`): on CUDA, `Exp`, `Log`, `Pow(x, 1.37)`, `Sqrt` within 4 ULP of `System.Math` on 10⁴ arguments | `OnCudaTheFourFunctionsAreWithinFourUlpOfSystemMath` | ✅ local: 1, 1, 1, 0 ULP |
 | The same probe on OpenCL runs; its distances are reported, not held to a tolerance | `OnOpenClTheProbeRunsAndItsDistancesAreReported` | ✅ informative |
+| S15 / D3 (`Gpu`): on CUDA, `Cos` on [0, 2π] and `Tan` on [−π/2, π/2) within 4 ULP of `System.Math` on 10⁴ arguments each | `TrigProbeTests.OnCudaCosAndTanAreWithinFourUlpOfSystemMath` | ✅ local: 1 and 2 ULP |
+| The trig probe on OpenCL runs; its distances are reported | `TrigProbeTests.OnOpenClTheTrigProbeRunsAndItsDistancesAreReported` | ✅ informative: 1 and 1 ULP |
 | The ULP distance is right at neighbours, across an exponent boundary and across zero | `UlpTests` | ✅ |
 | L1: libdevice discovery keeps its order on Windows and Linux, by parsed version, both layouts, bitcode required, each root once | `LibDeviceDiscoveryTests` | ✅ |
 | L2: the wrapper inventory reads calls and definitions apart, on three PTX texts | `WrapperInventoryTests` | ✅ |
@@ -42,6 +44,14 @@ public class MathProbeTests
     public void OnCudaTheFourFunctionsAreWithinFourUlpOfSystemMath();
     [Trait("Category", "Gpu")]
     public void OnOpenClTheProbeRunsAndItsDistancesAreReported();
+}
+public class TrigProbeTests
+{
+    public TrigProbeTests(ITestOutputHelper output);
+    [Trait("Category", "Gpu")]
+    public void OnCudaCosAndTanAreWithinFourUlpOfSystemMath();
+    [Trait("Category", "Gpu")]
+    public void OnOpenClTheTrigProbeRunsAndItsDistancesAreReported();
 }
 public class UlpTests
 {

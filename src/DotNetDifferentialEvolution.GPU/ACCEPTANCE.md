@@ -293,7 +293,7 @@ Written 2026-10-03, before any v1 code.
 Moved unchanged on 2026-10-05 to the node they are about, when this file reached its
 limit (AGENTS.md §15) → [Devices/LibDevice/ACCEPTANCE.md](Devices/LibDevice/ACCEPTANCE.md).
 
-## Symmetry with the CPU package — checks frozen 2026-10-05, before code ⏳
+## Symmetry with the CPU package — checks frozen 2026-10-05, before code ✅
 
 Decided 2026-10-05 → [HISTORY.md](HISTORY.md#symmetry-decided-2026-10-05). The rules of
 v1 apply: proven twice, frozen, CI unless marked **Gpu**. "Parity" means: the CPU
@@ -301,86 +301,93 @@ package's code runs on a `RecordingRandomProvider`, its draws are replayed in or
 the GPU function on the host, and the GPU consumes exactly those draws (kind, range and
 number) and gives the same values bit for bit.
 
-- [ ] **S1, builder symmetry.** For every method of the CPU `IMutationStrategyRequired`
+- [x] **S1, builder symmetry.** For every method of the CPU `IMutationStrategyRequired`
       except `WithMutationStrategy` and `WithVariant`, `IGpuMutationStrategyRequired<T>`
       has one of the same name, parameter names, types, order and default values, and it
       has no other. Red: L-SHADE's `memorySize` default 5.
-- [ ] **S2, fixed schemes, parity.** 100 random cases each (N in [6, 40], D in [1, 12], F
+      2026-10-05: `Builder/SymmetryBuilderTests`, by reflection on both interfaces; red with
+      L-SHADE's `memorySize` default 5 ("Strings differ").
+- [x] **S2, fixed schemes, parity.** 100 random cases each (N in [6, 40], D in [1, 12], F
       in [0.1, 2), CR with 0 and 1, boxes the mutants leave, a random best index) for
       rand/1 (`RandMutationStrategy`), best/1, current-to-best/1, rand/2 and best/2. The
       repair fires below and above. Red: best/1's base taken as `x_r1`; rand/2's second
       difference reversed.
-- [ ] **S3, current-to-pbest, parity.** 100 random cases against
+      2026-10-05: `Kernels/SchemeParityTests` (seed 20261005), 100 cases per scheme; red with
+      best/1's base as `x_r1` (Best case 0, gene 0) and with rand/2's second difference
+      reversed (RandTwo case 0, gene 0).
+- [x] **S3, current-to-pbest, parity.** 100 random cases against
       `CurrentToPBestMutationStrategy`, with a random ranking and an archive of random
       size in [0, N]: with p fixed (JADE, L-SHADE) and p drawn from [min(2/N, p), p]
       (SHADE). Asserted: r2 fell into the archive in some case, and `topCount` was
       clamped up to 2 in some case. Red: the union size taken as N; `topCount` by `Floor`.
-- [ ] **S4, control parameters, parity.** 10⁴ draws each, from random states, against
+      2026-10-05: `Kernels/PBestParityTests` (seed 20261006); red with the union size N (the
+      step asked for an index in [0, 8), the script held [0, 11)) and with `Floor` ([0, 10)
+      against [0, 11)).
+- [x] **S4, control parameters, parity.** 10⁴ draws each, from random states, against
       `JdeStrategy`, `JadeStrategy`, `ShadeStrategy` and `LShadeStrategy`
       `.GetControlParameters`: F and CR bit for bit, the same draws. The states include
       a terminal (negative) memory slot, and the cases include a Cauchy redraw (F ≤ 0)
       and F clamped to 1, each counted and asserted. Red: the Gaussian's `u1` not
       complemented; jDE's F as `0.1 + u`.
-- [ ] **S5, selection outcomes.** The nine cases of 1e, with ties accepted (jDE, SHADE,
+      2026-10-05: `Kernels/ControlParameterParityTests` (seed 20261007, 100 states); red with
+      `u1` not complemented (JADE, SHADE, L-SHADE: CR differs at draw 0) and with jDE's F as
+      `0.1 + u` (draw 9).
+- [x] **S5, selection outcomes.** The nine cases of 1e, with ties accepted (jDE, SHADE,
       L-SHADE, the fixed schemes) and refused (JADE): improved, accepted or kept as the
       CPU `SelectionStrategy` reports. Red: JADE accepting ties.
-- [ ] **S6, jDE inheritance** (device). After one generation of jDE (N = 64, D = 4), F_i
+      2026-10-05: `Kernels/SelectionOutcomeTests` (the nine cases, every pair of seven values
+      in both modes) and `Kernels/TieRuleTests` (each configuration on a flat objective
+      against its CPU variant's selection, added after a first red run stayed green →
+      HISTORY.md#symmetry-built-2026-10-05); red with JADE accepting ties (`WithJade`).
+- [x] **S6, jDE inheritance** (device). After one generation of jDE (N = 64, D = 4), F_i
       and CR_i are the values the trial used exactly where the trial replaced the parent,
       ties included, and unchanged elsewhere. Red: inheritance on improvement only.
-- [ ] **S7, adaptation, parity.** From 200 random sets of trial records (N in [4, 1 024],
-      improved, accepted and kept; infinite and `NaN` fitness among them), JADE's μCR and
-      μF and the SHADE and L-SHADE memories equal the CPU strategies' after
-      `AfterGeneration` with the same records, bit for bit; the CPU state is read through
-      `GetControlParameters` with draws that return the means exactly. The device kernels
-      equal the host functions bit for bit, also for N up to 5 000 (several chunks). Red:
-      SHADE's CR mean taken as Lehmer; the memory index advanced with no success.
-- [ ] **S8, archive.** The host functions equal `AdaptiveStrategyBase.UpdateArchive`
-      (through `JadeStrategy.AfterGeneration` with a recording provider) given the same
-      slot draws in index order: filling, filling into overflow, full with collisions,
-      capacity 0. The device kernels equal the host functions bit for bit, archive and
-      size. Red: a collision kept for the earlier index; the fill position ignoring the
-      size before.
-- [ ] **S9, ranking** (device). For 200 random arrays (N in [1, 20 000], with `NaN`, ±∞,
-      ±0 and ties), ranking by counting and the bitonic sort each give exactly the order
-      by (key, index), `NaN` as +∞; where the keys are distinct, the CPU
-      `PopulationSortHelper`'s order. Red: `NaN` not mapped; ties by the higher index.
-- [ ] **S10, best index** (device). The best-index kernels equal `BestPick.IndexOf` on
-      200 random arrays (N in [1, 5 000], ties across the 1 024-chunk boundary, all
-      `NaN`). Red: `<=` for `<`.
-- [ ] **S11, L-SHADE's schedule.** N per generation equals `LShadeStrategy`'s formula:
-      for N_init 100 and a budget of 10 000, the known answer (computed 2026-10-05 with
-      exact decimal rounding, outside the package) is 98, 97, 96, 95, 94, 93, 93, 92, 91,
-      90, 89, 88 for the first twelve generations, 333 generations in all, N = 4 at the
-      end and 10 000 evaluations. A device run's observer sees that N each generation and the
-      first N of the ranking, in order; the archive capacity is `round(2.6·N)` and its
-      size is truncated. `Build` refuses an evaluation limit other than the budget with
-      `InvalidOperationException`. Red: midpoint to even; survivors from the unranked
-      population.
-- [ ] **S12, stagnation.** The device rule equals `StagnationStreakTerminationStrategy`
-      on 100 scripted sequences of best values (`NaN`, ±∞, threshold 0, a first value
-      equal to `double.MinValue`). A run whose objective stops improving ends at the
-      generation that rule gives for its observed best values, with the same generations,
-      evaluations and result for a read every generation and every 16. Red: the streak
-      reset on equality.
-- [ ] **S13, convergence** (positive control; CI, and **Gpu** on CUDA). Seed 1, Sphere
+      2026-10-05: `Kernels/JdeInheritanceTests` (seed 91, objective ⌊Σx²/4⌋), kept, tied and
+      improved each occurring, and a tie with a new F or CR (strengthened after a green red
+      run → HISTORY.md#symmetry-built-2026-10-05); red on improvement only (individual 26,
+      a tie: F 0.378 expected, 0.5 kept).
+S7–S12, the checks of the work between generations, moved unchanged on 2026-10-05 to
+the node they are about, when this file reached its limit (AGENTS.md §15) →
+[Bookkeeping/ACCEPTANCE.md](Bookkeeping/ACCEPTANCE.md).
+
+- [x] **S13, convergence** (positive control; CI, and **Gpu** on CUDA). Seed 1, Sphere
       D = 10 in [−5, 5], 2·10⁵ evaluations, N = 100 (L-SHADE N_init 180): each of the nine
       configurations reaches f ≤ 1e-6 on the CPU accelerator and on CUDA, and the CPU
       package with the same configuration does too (asserted in the same test). Red: a
       trial never survives.
-- [ ] **S14, reproducibility** (CI, and **Gpu** on CUDA). Each of the nine configurations
+      2026-10-05: `EndToEnd/SymmetryRunTests`, one run each, local: largest final f on the
+      CPU accelerator 1.46e-8 and on CUDA 1.46e-8 (best/1; its CPU-package run 1.4e-18),
+      the other eight at most 4.1e-36 (rand/2) on both; the CPU package at most 1.4e-18
+      throughout. Red with the survivor always the parent: 18 of 18 (a first mutation with a
+      constant `NaN` trial left two CUDA cases green → HISTORY.md#symmetry-built-2026-10-05).
+- [x] **S14, reproducibility** (CI, and **Gpu** on CUDA). Each of the nine configurations
       and the stagnation rule, run twice with one seed on one device: bit-identical
       results and observer snapshots. Red: the archive's slot draws on a stream keyed by
       the time.
-- [ ] **S15, D3** (**Gpu**). On CUDA, `Cos` on [0, 2π] and `Tan` on [−π/2, π/2), 10⁴
+      2026-10-05: `EndToEnd/SymmetryRunTests`, CPU accelerator and CUDA: each configuration
+      bit-identical twice, 3 snapshots alike (L-SHADE 8); the stagnation run likewise. Red with
+      the archive's seed XORed with `Environment.TickCount`: JADE, SHADE, L-SHADE on both
+      devices and the stagnation run (SHADE), 7 cases.
+- [x] **S15, D3** (**Gpu**). On CUDA, `Cos` on [0, 2π] and `Tan` on [−π/2, π/2), 10⁴
       arguments each, within 4 ULP of `System.Math`, as D2. Red: the post-link returning
       the kernel unchanged.
-- [ ] **S16, 8b, ⚠.** 2026-10-05: was `Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`,
+      2026-10-05: `Devices/TrigProbeTests`, RTX 5070 Ti, CUDA Toolkit 13.4: Cos 1 ULP, Tan
+      2 ULP; OpenCL `gfx1036` 1 and 1 (informative). Red with the post-link returning the
+      kernel unchanged: the probe kernel fails PTX JIT.
+- [x] **S16, 8b, ⚠.** 2026-10-05: was `Abs`, `Sqrt`, `Exp`, `Log`, `Pow`, `Floor`, `Min`,
       `Max`, `IsNaN`; now also `Cos`, `Tan` and `IsFinite`, for the CPU package's
       samplers and SHADE's weight test → HISTORY.md#symmetry-decided-2026-10-05. The
       fact stays red on any other member. Red: a kernel calling `Sin`.
-- [ ] **S17, transfers, ⚠ 5b.** 2026-10-05: was "only the observer's downloads and one
+      2026-10-05: `Protocol.Tests` `GpuGuardTests` green with the allow-list extended
+      (`ProtocolConfig.KernelMathAllowList`); red with the Cauchy's `Tan` as `Sin`.
+- [x] **S17, transfers, ⚠ 5b.** 2026-10-05: was "only the observer's downloads and one
       at the end"; now also, with a stagnation limit, one control block every 16
       generations and before each observer call → HISTORY.md#symmetry-decided-2026-10-05.
       Counted: none without a stagnation limit; ⌈G/16⌉ + observer calls + 1 at most
       with one. Red: a read every generation.
-- [ ] **B2.** Every new row of `API.md`'s error table has a test that triggers it.
+      2026-10-05: `EndToEnd/SymmetryRunTests.TheStopWordIsReadOnlyEverySixteenGenerations…`
+      (`PopulationTransfers.StopReadCount`); red with a read every generation (out of range).
+- [x] **B2.** Every new row of `API.md`'s error table has a test that triggers it.
+      2026-10-05: `Builder/SymmetryBuilderTests` (every new row, each with its edge passing;
+      the archive at 2³¹ genes) and `BuilderErrorTests` (N < 1). Red: each of the 17 guards
+      weakened in turn, each red on its own case.

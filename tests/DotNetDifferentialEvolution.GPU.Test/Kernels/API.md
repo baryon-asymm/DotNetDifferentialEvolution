@@ -13,6 +13,11 @@ Nothing outward. What this node proves about the DE step of the GPU package.
 | The best index ranks NaN worst and gives a tie to the lowest index (1f) | `BestPickTests` | ✅ |
 | The same draws give bit-identical trials on GPU and CPU, 100 random cases (1g) | `CpuParityTests` | ✅ |
 | After one generation, slot i holds parent i or trial i, as selection decides (2b) | `GenerationSlotTests` | ✅ |
+| best/1, current-to-best/1, rand/2, best/2 and rand/1 build the CPU strategies' trials bit for bit from the same draws, 100 cases each (S2) | `SchemeParityTests` | ✅ |
+| current-to-pbest/1 is `CurrentToPBestMutationStrategy`'s, with the archive drawn into and `topCount` clamped (S3) | `PBestParityTests` | ✅ |
+| jDE's, JADE's, SHADE's and L-SHADE's F and CR are the CPU strategies', 10⁴ draws each, redraws and clamps counted (S4) | `ControlParameterParityTests` | ✅ |
+| Selection outcomes are the CPU `SelectionStrategy`'s with ties accepted and refused; each configuration's tie rule is its CPU variant's (S5) | `SelectionOutcomeTests`, `TieRuleTests` | ✅ |
+| jDE's F and CR follow the trial exactly where it replaced the parent, ties included (S6) | `JdeInheritanceTests` | ✅ |
 
 ## Tests ✅
 
@@ -24,7 +29,14 @@ Nothing outward. What this node proves about the DE step of the GPU package.
 [Trait("Category", "Unit")] public class BestPickTests;
 [Trait("Category", "Unit")] public class CpuParityTests;
 [Trait("Category", "Integration")] public class GenerationSlotTests;
+[Trait("Category", "Unit")] public class SchemeParityTests;
+[Trait("Category", "Unit")] public class PBestParityTests;
+[Trait("Category", "Unit")] public class ControlParameterParityTests;
+[Trait("Category", "Unit")] public class SelectionOutcomeTests;
+[Trait("Category", "Integration")] public class TieRuleTests;
+[Trait("Category", "Integration")] public class JdeInheritanceTests;
 ```
 
 Helpers, internal to the node: `ScriptedDraws` (with `ScriptedDraw`, `DrawKind`),
-`HostStep`, `RecordingRandomProvider`, `DonorPickKernel`.
+`HostStep`, `RecordingRandomProvider`, `DonorPickKernel`, `ParityCases` (random cases and
+bitwise asserts), `SchemeState` (the best index, ranking and archive a scheme reads).

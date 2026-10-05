@@ -76,6 +76,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 - [ ] ⚠ The CPU accelerator's run time follows machine load: the whole CPU set took
       2–3 s on most runs and up to 53 s while other test processes ran on the machine;
       pinned to 2 cores, every case took at most 4 s. Nothing asserts time.
+- [x] S13, S14 and S17 are green, on the CPU accelerator and (S13, S14) on CUDA, and each was
+      red once on its named mutation: 2026-10-05, the evidence in the package's
+      [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md).
 
 ## Taboos
 

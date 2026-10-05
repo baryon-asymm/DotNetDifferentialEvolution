@@ -4,8 +4,9 @@
 
 The work between generations of the GPU package's
 [Bookkeeping](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/API.md), held to the
-CPU package's classes: ACCEPTANCE.md checks **S7** (adaptation), **S8** (archive), **S9**
-(ranking), **S10** (best index), **S11** (L-SHADE's reduction) and **S12** (stagnation).
+CPU package's classes: checks **S7** (adaptation), **S8** (archive), **S9**
+(ranking), **S10** (best index), **S11** (L-SHADE's reduction) and **S12** (stagnation) of
+[Bookkeeping/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/ACCEPTANCE.md).
 The checks are frozen; their numbers are copied, never chosen here.
 
 | Check | Test | How |
@@ -64,7 +65,8 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-- [ ] S7–S12 are green and each was red once on its named mutation.
+- [x] S7–S12 are green and each was red once on its named mutation: 2026-10-05, the
+      evidence and the mutations in [Bookkeeping/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/ACCEPTANCE.md).
 
 ## Taboos
 

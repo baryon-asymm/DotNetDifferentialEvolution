@@ -17,6 +17,9 @@ accelerator, and the run errors of the v1 contract.
 | 6c: after the run a second `RunAsync` returns the same task; during it, `InvalidOperationException` (also B1's row) | `ASecondCallAfterTheRunReturnsTheSameTask`, `ACallDuringTheRunThrows` | ✅ |
 | 7b: a caller-owned accelerator still allocates, runs a kernel into and reads back a buffer after the optimizer's `Dispose` | `OwnershipTests`, CPU accelerator; CUDA and OpenCL under `Gpu` | ✅ |
 | B1: an observer that throws faults the task with that same exception | `AThrowingObserverFaultsTheTaskWithItsException` | ✅ |
+| S13: seed 1, Sphere 10-D, 2·10⁵ evaluations: each of the nine configurations reaches 1e-6 on the CPU accelerator and on CUDA, and the CPU package with the same configuration does too | `SymmetryRunTests.EachConfigurationConverges…`; CUDA under `Gpu` | ✅ |
+| S14: each configuration and the stagnation rule, twice with one seed: bit-identical results and snapshots | `SymmetryRunTests.EachConfigurationIsReproducible…`, `TheStagnationLimitIsReproducible`; CUDA under `Gpu` | ✅ |
+| S17: with a stagnation limit the stop word is read at most ⌈G/16⌉ + observer calls + 1 times; without one, never | `TheStopWordIsReadOnlyEverySixteenGenerationsAndForTheObserver` | ✅ |
 | The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 | `DocumentedExampleTests` | ✅ |
 
 ## Tests ✅
@@ -73,6 +76,23 @@ public class OwnershipTests
 public class RunErrorTests
 {
     public async Task AThrowingObserverFaultsTheTaskWithItsException();
+}
+public class SymmetryRunTests
+{
+    public SymmetryRunTests(ITestOutputHelper output);
+    public static TheoryData<string> Configurations();
+    [Trait("Category", "Integration")]
+    public Task EachConfigurationConvergesOnTheCpuAccelerator(string configuration);
+    [Trait("Category", "Gpu")]
+    public Task EachConfigurationConvergesOnCuda(string configuration);
+    [Trait("Category", "Integration")]
+    public Task EachConfigurationIsReproducibleOnTheCpuAccelerator(string configuration);
+    [Trait("Category", "Gpu")]
+    public Task EachConfigurationIsReproducibleOnCuda(string configuration);
+    [Trait("Category", "Integration")]
+    public async Task TheStagnationLimitIsReproducible();
+    [Trait("Category", "Integration")]
+    public async Task TheStopWordIsReadOnlyEverySixteenGenerationsAndForTheObserver();
 }
 ```
 

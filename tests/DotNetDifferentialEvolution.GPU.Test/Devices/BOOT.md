@@ -98,6 +98,8 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       no-device one with the GPUs hidden.
 - [ ] ⚠ The hosted-runner branch was run here only with the GPUs hidden by environment
       variables, not yet on a hosted runner.
+- [x] S15 (D3) is green on CUDA and red with the post-link returning the kernel unchanged:
+      2026-10-05, the evidence in the package's [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md).
 
 ## Taboos
 

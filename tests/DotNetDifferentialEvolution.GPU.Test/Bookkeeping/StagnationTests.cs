@@ -7,7 +7,7 @@ using DotNetDifferentialEvolution.TerminationStrategies;
 namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 
 /// <summary>
-/// ACCEPTANCE.md, check S12: the stagnation limit.
+/// Bookkeeping/ACCEPTANCE.md of the GPU package, check S12: the stagnation limit.
 /// <list type="bullet">
 /// <item><see cref="StagnationRule.Apply"/> equals the CPU package's <see cref="StagnationStreakTerminationStrategy"/>,
 /// step by step, on 100 scripted sequences of best values with <see cref="double.NaN"/>, ±∞, a threshold of 0 in some,

@@ -7,8 +7,9 @@ runs on NVIDIA GPUs through CUDA, on other GPUs through OpenCL, and on ILGPU's C
 accelerator when there is no GPU.
 
 It pays off when the objective is cheap per call and the population is large: thousands
-of individuals, one GPU thread each. For expensive objectives, adaptive variants (jDE,
-JADE, SHADE, L-SHADE) or host-side code, use the CPU package,
+of individuals, one GPU thread each. Its builder has the schemes, variants and stop rules
+of the CPU package, by the same names and defaults. For expensive objectives, host-side
+code or your own strategies, use the CPU package,
 [DotNetDifferentialEvolution](https://www.nuget.org/packages/DotNetDifferentialEvolution).
 
 ## Installation
@@ -96,13 +97,17 @@ ILGPU reports code it cannot compile when the optimizer is built, not when C# co
 - `OnAccelerator(accelerator)` runs on your own ILGPU accelerator, which the optimizer
   never disposes. On CUDA, build its context with
   `.Math(MathMode.Default).LibDevice(libnvvmPath, libdevicePath)` if the objective calls
-  `Exp`, `Log` or `Pow`.
+  `Exp`, `Log` or `Pow`, and for JADE, SHADE and L-SHADE, whose samplers call `Log`, `Cos`
+  and `Tan`.
 
 ## The run
 
 - **Stop rules:** `WithGenerationLimit(n)` runs exactly `n` generations;
   `WithEvaluationLimit(m)` stops at the first generation boundary where the evaluation
-  count, which starts at N for the initial population, reaches `m`.
+  count, which starts at N for the initial population, reaches `m`;
+  `WithStagnationLimit(streak, threshold)` stops when the best value has moved by no more
+  than `threshold` for `streak` generations in a row, as the CPU package's
+  `StagnationStreakTerminationStrategy`.
 - **Asynchronous:** `RunAsync` returns at once and runs the generations on a thread of its
   own. A cancellation token is observed between generations and ends the task as
   canceled. After a run, calling `RunAsync` again returns the same task.
@@ -117,10 +122,19 @@ ILGPU reports code it cannot compile when the optimizer is built, not when C# co
   `DotNetOptimization.Abstractions`), with the number of generations and evaluations and
   the device it ran on.
 
-The algorithm is DE/rand/1/bin with the CPU package's semantics: three donors distinct
-from each other and from the target, binomial crossover with one guaranteed mutant gene,
-out-of-box genes repaired to the midpoint between the bound and the parent, and the trial
-surviving when it is at least as good as its parent. Details:
+## Schemes and variants
+
+The same as the CPU builder's, with its semantics draw for draw:
+
+- fixed F and CR: `WithDefaultMutationStrategy` (rand/1), `WithBestMutationStrategy`,
+  `WithCurrentToBestMutationStrategy`, `WithRandTwoMutationStrategy`,
+  `WithBestTwoMutationStrategy`;
+- adaptive: `WithJde()`, `WithJade()`, `WithShade()`, `WithLShade(maxEvaluationNumber)`
+  (with an evaluation limit, it must equal `maxEvaluationNumber`).
+
+Every scheme draws distinct donors, crosses binomially with one guaranteed mutant gene,
+repairs out-of-box genes to the midpoint between the bound and the parent, and keeps the
+trial when it is at least as good as its parent (JADE: strictly better). Details:
 [docs/ALGORITHMS.md](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/ALGORITHMS.md).
 
 ## Version 1.0.0
@@ -129,7 +143,8 @@ surviving when it is at least as good as its parent. Details:
 hand-assembled `KernelController`, the strategy structs and `XorShift32` states are
 replaced by the builder; the objective returns its value instead of writing into the
 population; the result is an `ISolution`; runs are seeded; `RunAsync` no longer blocks;
-`Dispose` no longer forces a garbage collection.
+`Dispose` no longer forces a garbage collection. Besides DE/rand/1/bin it has the CPU package's other
+four schemes, jDE, JADE, SHADE, L-SHADE and the stagnation stop rule, which 0.x had not.
 
 ## License
 

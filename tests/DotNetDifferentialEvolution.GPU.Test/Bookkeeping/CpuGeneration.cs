@@ -7,7 +7,7 @@ using DotNetDifferentialEvolution.TerminationStrategies;
 namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 
 /// <summary>
-/// The CPU package's side of the bookkeeping parity checks (ACCEPTANCE.md, S7, S8): a <see cref="GenerationContext"/>
+/// The CPU package's side of the bookkeeping parity checks (Bookkeeping/ACCEPTANCE.md, S7, S8): a <see cref="GenerationContext"/>
 /// over one-gene individuals, with an archive, as the CPU engine hands it to a generation strategy, and the trial records
 /// it is given.
 /// </summary>

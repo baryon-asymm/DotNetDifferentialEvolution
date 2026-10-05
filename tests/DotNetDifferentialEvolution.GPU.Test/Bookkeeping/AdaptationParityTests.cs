@@ -13,7 +13,7 @@ using ILGPU.Runtime;
 namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 
 /// <summary>
-/// ACCEPTANCE.md, check S7: JADE's means and the SHADE and L-SHADE memories after two generations of trial records.
+/// Bookkeeping/ACCEPTANCE.md of the GPU package, check S7: JADE's means and the SHADE and L-SHADE memories after two generations of trial records.
 /// <list type="bullet">
 /// <item>The package's rules (<see cref="SuccessSums"/>, <see cref="AdaptationRules"/>), summed in one chunk as the
 /// device sums N ≤ 1 024, equal the CPU strategies after <c>AfterGeneration</c> with the same records, bit for bit, on 200
