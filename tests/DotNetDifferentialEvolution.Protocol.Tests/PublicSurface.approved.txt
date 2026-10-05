@@ -477,7 +477,15 @@ interface DotNetDifferentialEvolution.GPU.IGpuDifferentialEvolutionBuilder`1
     IGpuDifferentialEvolutionBuilder<TFunction> WithSeed(Int32 seed)
 
 interface DotNetDifferentialEvolution.GPU.IGpuMutationStrategyRequired`1
+    IGpuTerminationConditionRequired<TFunction> WithBestMutationStrategy(Double mutationForce, Double crossoverProbability)
+    IGpuTerminationConditionRequired<TFunction> WithBestTwoMutationStrategy(Double mutationForce, Double crossoverProbability)
+    IGpuTerminationConditionRequired<TFunction> WithCurrentToBestMutationStrategy(Double mutationForce, Double crossoverProbability)
     IGpuTerminationConditionRequired<TFunction> WithDefaultMutationStrategy(Double mutationForce, Double crossoverProbability)
+    IGpuTerminationConditionRequired<TFunction> WithJade(Double pBestRate = 0.1, Double archiveSizeRate = 1, Double adaptationRate = 0.1)
+    IGpuTerminationConditionRequired<TFunction> WithJde(Double initialMutationForce = 0.5, Double initialCrossoverProbability = 0.9)
+    IGpuTerminationConditionRequired<TFunction> WithLShade(Int64 maxEvaluationNumber, Double pBestRate = 0.11, Double archiveSizeRate = 2.6, Int32 memorySize = 6)
+    IGpuTerminationConditionRequired<TFunction> WithRandTwoMutationStrategy(Double mutationForce, Double crossoverProbability)
+    IGpuTerminationConditionRequired<TFunction> WithShade(Double pBestRate = 0.2, Double archiveSizeRate = 1, Int32 memorySize = 100)
 
 interface DotNetDifferentialEvolution.GPU.IGpuPopulationSizeRequired`1
     IGpuMutationStrategyRequired<TFunction> WithPopulationSize(Int32 populationSize)
@@ -488,6 +496,7 @@ interface DotNetDifferentialEvolution.GPU.IGpuPopulationUpdatedHandler
 interface DotNetDifferentialEvolution.GPU.IGpuTerminationConditionRequired`1
     IGpuDeviceRequired<TFunction> WithEvaluationLimit(Int64 maxEvaluations)
     IGpuDeviceRequired<TFunction> WithGenerationLimit(Int32 maxGenerations)
+    IGpuDeviceRequired<TFunction> WithStagnationLimit(Int32 maxStagnationStreak, Double stagnationThreshold)
 
 readonly struct DotNetDifferentialEvolution.GPU.Objectives.GeneView : IEquatable<GeneView>
     Boolean Equals(GeneView other)

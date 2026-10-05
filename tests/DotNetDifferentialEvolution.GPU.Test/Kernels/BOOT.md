@@ -45,6 +45,7 @@ kernel's slot discipline: ACCEPTANCE.md checks **1b** (donors), **1c** (crossove
 - [Kernels](../../../src/DotNetDifferentialEvolution.GPU/Kernels/API.md) — the DE step and the kernels (internal).
 - [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
 - [Random](../../../src/DotNetDifferentialEvolution.GPU/Random/API.md) — Philox4x32-10, the draw sources and conversions (internal).
+- [Bookkeeping](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/API.md) — `GenerationBookkeeping`, `BookkeepingPlan`: the device state a generation reads (internal).
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md) —
   internal `DeStep`, `GpuKernels`, `KernelLauncher<T>`, `PopulationViews`,
   `StepParameters`, `BestPick`, `IDrawSource`, `PhiloxDraws`; public `GeneView`,

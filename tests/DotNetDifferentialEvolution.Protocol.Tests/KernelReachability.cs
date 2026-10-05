@@ -177,8 +177,16 @@ internal static class KernelReachability
 
     /// <summary>The definition behind a method: an instantiation of a generic method, or a method of an instantiated
     /// generic type, resolved back to the method its metadata token names, so its body's tokens resolve against its own
-    /// type parameters.</summary>
-    private static MethodBase Definition(MethodBase method) => method.Module.ResolveMethod(method.MetadataToken) ?? method;
+    /// type parameters. For a generic method of a value type, .NET 8's <c>ResolveMethod</c> answers with a method that
+    /// is generic but not the definition (measured 2026-10-05 on the parameter rules of the GPU package, which then
+    /// resolved none of their calls); that one is taken back to its definition too.</summary>
+    private static MethodBase Definition(MethodBase method)
+    {
+        var resolved = method.Module.ResolveMethod(method.MetadataToken) ?? method;
+        return resolved is MethodInfo { IsGenericMethod: true, IsGenericMethodDefinition: false } instantiated
+            ? instantiated.GetGenericMethodDefinition()
+            : resolved;
+    }
 
     private static string? ForbiddenInstruction(Instruction instruction) =>
         instruction.Code == OpCodes.Throw || instruction.Code == OpCodes.Rethrow ? $"throws ({instruction.Code.Name})"

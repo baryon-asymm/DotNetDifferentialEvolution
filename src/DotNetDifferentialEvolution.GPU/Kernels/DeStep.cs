@@ -41,18 +41,35 @@ internal static class DeStep
     public static void PickDonors<TDraws>(ref TDraws draws, int individual, int populationSize, out int r1, out int r2, out int r3)
         where TDraws : struct, IDrawSource
     {
-        r1 = DrawOther(ref draws, individual, populationSize);
-        r2 = DrawOther(ref draws, individual, populationSize);
-        while (r2 == r1)
-        {
-            r2 = DrawOther(ref draws, individual, populationSize);
-        }
+        r1 = DrawDistinct(ref draws, individual, populationSize, -1, -1, -1, -1);
+        r2 = DrawDistinct(ref draws, individual, populationSize, r1, -1, -1, -1);
+        r3 = DrawDistinct(ref draws, individual, populationSize, r1, r2, -1, -1);
+    }
 
-        r3 = DrawOther(ref draws, individual, populationSize);
-        while (r3 == r1 || r3 == r2)
+    /// <summary>
+    /// One donor index of the CPU package's <c>RandomIndexSelector.FillDistinctIndices</c>: a draw from the
+    /// <c>N − 1</c> indices other than <paramref name="individual"/>, redrawn while it equals one taken before.
+    /// </summary>
+    /// <typeparam name="TDraws">The draw source.</typeparam>
+    /// <param name="draws">The individual's draws.</param>
+    /// <param name="individual">The index i.</param>
+    /// <param name="populationSize">N.</param>
+    /// <param name="taken0">An index taken before, or −1.</param>
+    /// <param name="taken1">An index taken before, or −1.</param>
+    /// <param name="taken2">An index taken before, or −1.</param>
+    /// <param name="taken3">An index taken before, or −1.</param>
+    /// <returns>The index.</returns>
+    public static int DrawDistinct<TDraws>(ref TDraws draws, int individual, int populationSize, int taken0, int taken1, int taken2, int taken3)
+        where TDraws : struct, IDrawSource
+    {
+        int candidate;
+        do
         {
-            r3 = DrawOther(ref draws, individual, populationSize);
+            candidate = DrawOther(ref draws, individual, populationSize);
         }
+        while (candidate == taken0 || candidate == taken1 || candidate == taken2 || candidate == taken3);
+
+        return candidate;
     }
 
     /// <summary>
@@ -92,11 +109,41 @@ internal static class DeStep
                                 + parameters.MutationForce * (population[minuendOffset + j] - population[subtrahendOffset + j]);
         }
 
+        CrossAndRepair(ref draws, individual, genomeSize, parameters.CrossoverThreshold, population, trial, lowerBound, upperBound);
+    }
+
+    /// <summary>
+    /// The CPU package's <c>CrossoverHelper.BinomialCrossoverAndRepair</c> over slot i of <paramref name="trial"/>, which
+    /// holds the mutant: <c>jrand</c> is drawn; gene <c>jrand</c>, and every other gene whose 64-bit draw is at most the
+    /// threshold, keeps the mutant gene, repaired to the midpoint between the violated bound and the parent's gene;
+    /// every other gene is the parent's. No draw is consumed for gene <c>jrand</c>.
+    /// </summary>
+    /// <typeparam name="TDraws">The draw source.</typeparam>
+    /// <param name="draws">The individual's draws.</param>
+    /// <param name="individual">The index i.</param>
+    /// <param name="genomeSize">D.</param>
+    /// <param name="crossoverThreshold">CR scaled to 64 bits (<see cref="CrossoverThreshold"/>).</param>
+    /// <param name="population">The current population, read only.</param>
+    /// <param name="trial">The trial buffer; only slot i is read and written.</param>
+    /// <param name="lowerBound">The lower bound of each gene.</param>
+    /// <param name="upperBound">The upper bound of each gene.</param>
+    public static void CrossAndRepair<TDraws>(
+        ref TDraws draws,
+        int individual,
+        int genomeSize,
+        ulong crossoverThreshold,
+        ArrayView<double> population,
+        ArrayView<double> trial,
+        ArrayView<double> lowerBound,
+        ArrayView<double> upperBound)
+        where TDraws : struct, IDrawSource
+    {
+        var offset = individual * genomeSize;
         var guaranteedGene = draws.NextIndex(genomeSize);
         for (var j = 0; j < genomeSize; j++)
         {
             var parentGene = population[offset + j];
-            if (j == guaranteedGene || draws.NextULong() <= parameters.CrossoverThreshold)
+            if (j == guaranteedGene || draws.NextULong() <= crossoverThreshold)
             {
                 var mutantGene = trial[offset + j];
                 if (mutantGene < lowerBound[j])

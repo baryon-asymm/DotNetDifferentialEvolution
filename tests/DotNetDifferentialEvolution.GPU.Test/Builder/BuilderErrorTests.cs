@@ -72,13 +72,15 @@ public class BuilderErrorTests
         _ = Assert.Throws<ArgumentException>(() => stage.WithBounds(new double[] { 0.0, lower }, new double[] { 1.0, upper }));
     }
 
-    /// <summary>A population of fewer than four is an <see cref="ArgumentOutOfRangeException"/>: rand/1 needs four distinct individuals.</summary>
+    /// <summary>
+    /// A population of fewer than one is an <see cref="ArgumentOutOfRangeException"/>. The scheme's own minimum is refused
+    /// by <c>Build</c> (<see cref="SymmetryBuilderTests"/>). ⚠ 2026-10-05: was "fewer than four", rand/1's minimum, here.
+    /// </summary>
     /// <param name="populationSize">N.</param>
     [Theory]
-    [InlineData(3)]
     [InlineData(0)]
     [InlineData(-1)]
-    public void APopulationOfFewerThanFourIsRejected(int populationSize)
+    public void APopulationOfFewerThanOneIsRejected(int populationSize)
     {
         var stage = GpuDifferentialEvolutionBuilder.ForFunction(default(Sphere)).WithBounds(Lower, Upper);
 

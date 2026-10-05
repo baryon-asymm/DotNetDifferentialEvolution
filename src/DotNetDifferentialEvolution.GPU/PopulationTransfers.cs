@@ -5,14 +5,18 @@ namespace DotNetDifferentialEvolution.GPU;
 
 /// <summary>
 /// The package's only host transfers (ACCEPTANCE.md, check 5a): the bounds up once, the population
-/// down when the observer is due and once at the end. It counts the downloads, so a test can prove
-/// there is no per-generation round trip (check 5b). Host arrays cross only through the array
+/// down when the observer is due and once at the end, and under a stagnation limit the stop word
+/// every few generations (S17). It counts the downloads and the reads, so a test can prove there is
+/// no per-generation round trip (checks 5b, S17). Host arrays cross only through the array
 /// overloads, which pin them (check 8d).
 /// </summary>
 internal sealed class PopulationTransfers
 {
     /// <summary>Gets the number of population downloads so far.</summary>
     public int DownloadCount { get; private set; }
+
+    /// <summary>Gets the number of stop-word reads so far.</summary>
+    public int StopReadCount { get; private set; }
 
     /// <summary>Copies <paramref name="source"/> into <paramref name="destination"/> on the device.</summary>
     /// <param name="destination">The device buffer, as long as the array.</param>
@@ -37,5 +41,16 @@ internal sealed class PopulationTransfers
         genes.CopyToCPU(hostGenes);
         fitness.CopyToCPU(hostFitness);
         DownloadCount++;
+    }
+
+    /// <summary>Copies the stop word to the host, after the device has finished its work.</summary>
+    /// <param name="accelerator">The accelerator, synchronized first.</param>
+    /// <param name="stop">The device stop word.</param>
+    /// <param name="hostStop">Receives the stop word.</param>
+    public void ReadStop(Accelerator accelerator, ArrayView1D<int, Stride1D.Dense> stop, int[] hostStop)
+    {
+        accelerator.Synchronize();
+        stop.CopyToCPU(hostStop);
+        StopReadCount++;
     }
 }

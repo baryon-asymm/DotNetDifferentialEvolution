@@ -37,7 +37,7 @@ public class BuilderErrorTests
     public void ALowerBoundAboveItsUpperBoundIsRejected();
     public void EqualBoundsAreAccepted();
     public void NonFiniteBoundsAreRejected(double lower, double upper);
-    public void APopulationOfFewerThanFourIsRejected(int populationSize);
+    public void APopulationOfFewerThanOneIsRejected(int populationSize);
     public void APopulationOfFourIsAccepted();
     public void APopulationBeyondTheKernelsIndexRangeIsRejected();
     public void AMutationForceNotFiniteOrNotPositiveIsRejected(double mutationForce);

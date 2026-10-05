@@ -36,6 +36,8 @@ frozen before the code; their numbers are copied, never chosen here.
 - [Kernels](../../../src/DotNetDifferentialEvolution.GPU/Kernels/API.md) — the DE step and the kernels (internal).
 - [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
 - [Random](../Random/API.md) — `ChiSquared`, the quantile helper.
+- [DotNetDifferentialEvolution](../../../src/DotNetDifferentialEvolution/API.md) — the CPU
+  builder's `IMutationStrategyRequired`, whose methods check S1 compares.
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md)
   — the builder and `GpuDifferentialEvolution`; internally `KernelLauncher<TFunction>`,
   `PopulationViews`, `StepParameters`, `DeStep.CrossoverThreshold` (its child

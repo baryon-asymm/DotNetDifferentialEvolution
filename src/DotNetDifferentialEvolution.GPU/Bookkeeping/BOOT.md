@@ -41,6 +41,7 @@ generation itself stays in [Kernels](../Kernels/API.md).
 
 - [Kernels](../Kernels/API.md) — `PopulationViews`, `StepParameters`, the strategy views.
 - [Random](../Random/API.md) — `PhiloxDraws` on stream 1.
+- [Devices](../Devices/API.md) — `KernelLoader`, through which every kernel is loaded.
 
 Outside the tree: ILGPU 1.5.3 (`Index1D`, `ArrayView<T>`, `Atomic.Max`).
 

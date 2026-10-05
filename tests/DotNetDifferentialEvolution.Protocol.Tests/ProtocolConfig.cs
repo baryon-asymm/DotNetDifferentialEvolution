@@ -91,10 +91,11 @@ internal static class ProtocolConfig
     public const string GpuTransferHelper = "DotNetDifferentialEvolution.GPU.PopulationTransfers";
 
     /// <summary>The members of <c>System.Math</c> and <c>System.Double</c> that code reachable from a GPU kernel may call,
-    /// by name (check 8b, <see cref="GpuGuardTests"/>): the frozen list of the GPU package's ACCEPTANCE.md.</summary>
+    /// by name (check 8b, <see cref="GpuGuardTests"/>): the frozen list of the GPU package's ACCEPTANCE.md. ⚠ 2026-10-05:
+    /// <c>Cos</c>, <c>Tan</c> and <c>IsFinite</c> added (check S16), for the CPU package's samplers and SHADE's weight test.</summary>
     public static readonly IReadOnlySet<string> KernelMathAllowList = new HashSet<string>(StringComparer.Ordinal)
     {
-        "Abs", "Sqrt", "Exp", "Log", "Pow", "Floor", "Min", "Max", "IsNaN",
+        "Abs", "Sqrt", "Exp", "Log", "Pow", "Floor", "Min", "Max", "IsNaN", "Cos", "Tan", "IsFinite",
     };
 
     /// <summary>A node whose code lives in a namespace other than the one its path gives, keyed by the node's path, with

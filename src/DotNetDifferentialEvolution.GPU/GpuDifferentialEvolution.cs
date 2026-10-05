@@ -1,3 +1,4 @@
+using DotNetDifferentialEvolution.GPU.Bookkeeping;
 using DotNetDifferentialEvolution.GPU.Devices;
 using DotNetDifferentialEvolution.GPU.Kernels;
 using ILGPU;
@@ -15,13 +16,15 @@ public sealed class GpuDifferentialEvolution : IDisposable
     private readonly AcceleratorLease _lease;
     private readonly RunSettings _settings;
     private readonly ulong _crossoverThreshold;
+    private readonly double _pBestRateMin;
     private readonly List<MemoryBuffer> _allocated = [];
     private readonly PopulationTransfers _transfers = new();
     private readonly CancellationTokenSource _disposal = new();
     private readonly object _gate = new();
     private readonly KernelLauncher _launcher;
-    private PopulationViews _views;
-    private int _generations;
+    private readonly GenerationBookkeeping _bookkeeping;
+    private readonly List<RunState> _sinceStopRead = [];
+    private RunState _state;
     private Task<GpuOptimizationResult>? _run;
     private Thread? _runThread;
     private bool _disposed;
@@ -38,7 +41,9 @@ public sealed class GpuDifferentialEvolution : IDisposable
     {
         _lease = lease;
         _settings = settings;
-        _crossoverThreshold = DeStep.CrossoverThreshold(settings.CrossoverProbability);
+        var strategy = settings.Strategy;
+        _crossoverThreshold = strategy.Rule == ParameterRule.Fixed ? DeStep.CrossoverThreshold(strategy.CrossoverProbability) : 0UL;
+        _pBestRateMin = strategy.PBestRateMin(settings.PopulationSize);
         Device = new GpuDeviceInfo(KindOf(lease.Backend), lease.Accelerator.Name, lease.FallbackReason);
 
         var accelerator = lease.Accelerator;
@@ -56,12 +61,29 @@ public sealed class GpuDifferentialEvolution : IDisposable
             PopulationTransfers.Upload(lowerBound, settings.LowerBound);
             PopulationTransfers.Upload(upperBound, settings.UpperBound);
 
+            var archiveCapacity = ArchiveRules.Capacity(strategy.ArchiveSizeRate, settings.PopulationSize);
+            _bookkeeping = new GenerationBookkeeping(
+                accelerator,
+                new BookkeepingPlan(
+                    settings.PopulationSize,
+                    settings.GenomeSize,
+                    strategy.Scheme,
+                    strategy.Rule,
+                    archiveCapacity,
+                    strategy.MemorySize,
+                    strategy.AdaptationRate,
+                    strategy.LShadeBudget is not null,
+                    strategy.MutationForce,
+                    strategy.CrossoverProbability,
+                    settings.Stagnation),
+                settings.Seed);
             _launcher = compile(accelerator);
-            _views = new PopulationViews(
+            var views = new PopulationViews(
                 currentGenes.View, currentFitness.View, nextGenes.View, nextFitness.View, trial.View, lowerBound.View, upperBound.View);
-            _launcher.Initialize(Parameters(0), _views);
+            _launcher.Initialize(Parameters(0, settings.PopulationSize), views);
+            _bookkeeping.AfterInitialization(views);
             accelerator.Synchronize();
-            EvaluationCount = settings.PopulationSize;
+            _state = new RunState(0, settings.PopulationSize, settings.PopulationSize, archiveCapacity, views);
         }
         catch
         {
@@ -76,8 +98,11 @@ public sealed class GpuDifferentialEvolution : IDisposable
     /// <summary>Gets the number of population downloads so far (ACCEPTANCE.md, check 5b).</summary>
     internal int PopulationDownloadCount => _transfers.DownloadCount;
 
+    /// <summary>Gets the number of stop-word reads so far (ACCEPTANCE.md, S17).</summary>
+    internal int StopReadCount => _transfers.StopReadCount;
+
     /// <summary>Gets the number of evaluations so far: N after <c>Build</c> (ACCEPTANCE.md, check 1a).</summary>
-    internal long EvaluationCount { get; private set; }
+    internal long EvaluationCount => _state.Evaluations;
 
     /// <summary>
     /// Starts the run on a thread of its own and returns at once. The token is observed between
@@ -169,16 +194,21 @@ public sealed class GpuDifferentialEvolution : IDisposable
                     return;
                 }
 
-                _generations++;
-                _launcher.Generation(Parameters(_generations), _views);
-                _views = _views.Swapped();
-                EvaluationCount += _settings.PopulationSize;
-                if (_settings.Handler is { } handler && _generations % _settings.EveryNGenerations == 0)
+                RunGeneration();
+                var observerDue = _settings.Handler is not null && _state.Generation % _settings.EveryNGenerations == 0;
+                if (_settings.Stagnation is not null
+                    && (observerDue || _state.Generation % _settings.StopReadInterval == 0)
+                    && Stopped())
                 {
-                    handler.Handle(Snapshot());
+                    break;
+                }
+
+                if (observerDue)
+                {
+                    _settings.Handler!.Handle(Snapshot());
                 }
             }
-            while (!_settings.LimitReached(_generations, EvaluationCount));
+            while (!_settings.LimitReached(_state.Generation, _state.Evaluations));
 
             _ = completion.TrySetResult(Result());
         }
@@ -201,26 +231,88 @@ public sealed class GpuDifferentialEvolution : IDisposable
         }
     }
 
-    private StepParameters Parameters(int generation) => new(
-        _settings.Seed,
-        generation,
-        _settings.PopulationSize,
-        _settings.GenomeSize,
-        _settings.MutationForce,
-        _crossoverThreshold);
+    /// <summary>
+    /// Enqueues one generation and the bookkeeping after it, and advances the host's counters: the generation, the
+    /// evaluations, and under L-SHADE the population size and the archive's capacity, which the host computes.
+    /// </summary>
+    private void RunGeneration()
+    {
+        var generation = _state.Generation + 1;
+        var populationSize = _state.PopulationSize;
+        var views = _state.Views;
+        _launcher.Generation(Parameters(generation, populationSize), views, _bookkeeping.Views);
+        views = views.Swapped();
+        var evaluations = _state.Evaluations + populationSize;
+
+        var strategy = _settings.Strategy;
+        var nextPopulationSize = strategy.LShadeBudget is { } budget
+            ? LShadeSchedule.NextPopulationSize(_settings.PopulationSize, budget, evaluations, populationSize)
+            : populationSize;
+        var nextArchiveCapacity = nextPopulationSize < populationSize
+            ? ArchiveRules.Capacity(strategy.ArchiveSizeRate, nextPopulationSize)
+            : _state.ArchiveCapacity;
+        _bookkeeping.AfterGeneration(ref views, generation, populationSize, _state.ArchiveCapacity, nextPopulationSize, nextArchiveCapacity);
+        _state = new RunState(generation, evaluations, nextPopulationSize, nextArchiveCapacity, views);
+        if (_settings.Stagnation is not null)
+        {
+            _sinceStopRead.Add(_state);
+        }
+    }
+
+    /// <summary>
+    /// Reads the stop word. When the stagnation rule has fired, every kernel since has done nothing, and the host's
+    /// counters go back to the generation it fired in, so the run ends as if the word had been read every generation.
+    /// </summary>
+    /// <returns>Whether the run stops.</returns>
+    private bool Stopped()
+    {
+        var stop = new int[BookkeepingKernels.StopLength];
+        _transfers.ReadStop(_lease.Accelerator, _bookkeeping.Views.Stop, stop);
+        var states = _sinceStopRead.ToArray();
+        _sinceStopRead.Clear();
+        if (stop[BookkeepingKernels.StopSet] == 0)
+        {
+            return false;
+        }
+
+        _state = Array.Find(states, state => state.Generation == stop[BookkeepingKernels.StopGeneration])!;
+        return true;
+    }
+
+    private StepParameters Parameters(int generation, int populationSize)
+    {
+        var strategy = _settings.Strategy;
+        return new StepParameters(
+            _settings.Seed,
+            generation,
+            populationSize,
+            _settings.GenomeSize,
+            strategy.MutationForce,
+            _crossoverThreshold,
+            strategy.Scheme,
+            strategy.Rule,
+            strategy.AcceptsTies ? TieRule.Accepted : TieRule.Refused,
+            _pBestRateMin,
+            strategy.PBestRate,
+            strategy.MemorySize);
+    }
 
     private (double[] Genes, double[] Fitness) DownloadCurrent()
     {
-        var genes = new double[_settings.PopulationSize * _settings.GenomeSize];
-        var fitness = new double[_settings.PopulationSize];
-        _transfers.Download(_lease.Accelerator, _views.Current, _views.CurrentFitness, genes, fitness);
+        var populationSize = _state.PopulationSize;
+        var genomeSize = _settings.GenomeSize;
+        var genes = new double[populationSize * genomeSize];
+        var fitness = new double[populationSize];
+        var views = _state.Views;
+        _transfers.Download(
+            _lease.Accelerator, views.Current.SubView(0, genes.Length), views.CurrentFitness.SubView(0, populationSize), genes, fitness);
         return (genes, fitness);
     }
 
     private GpuPopulationSnapshot Snapshot()
     {
         var (genes, fitness) = DownloadCurrent();
-        return new GpuPopulationSnapshot(_generations, EvaluationCount, _settings.PopulationSize, _settings.GenomeSize, genes, fitness);
+        return new GpuPopulationSnapshot(_state.Generation, _state.Evaluations, _state.PopulationSize, _settings.GenomeSize, genes, fitness);
     }
 
     private GpuOptimizationResult Result()
@@ -228,7 +320,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
         var (genes, fitness) = DownloadCurrent();
         var best = BestPick.IndexOf(fitness);
         var bestGenes = genes.AsSpan(best * _settings.GenomeSize, _settings.GenomeSize).ToArray();
-        return new GpuOptimizationResult(bestGenes, fitness[best], _generations, EvaluationCount, Device);
+        return new GpuOptimizationResult(bestGenes, fitness[best], _state.Generation, _state.Evaluations, Device);
     }
 
     private MemoryBuffer1D<double, Stride1D.Dense> Allocate(Accelerator accelerator, long length)
@@ -254,11 +346,20 @@ public sealed class GpuDifferentialEvolution : IDisposable
         {
             ReleaseBuffers();
 
-            // Null only when building failed before the kernels were loaded.
+            // Null only when building failed before they were created.
+            _bookkeeping?.Dispose();
             _launcher?.Dispose();
         }
 
         _lease.Dispose();
         _disposal.Dispose();
     }
+
+    /// <summary>The host's counters after a generation, and where the population is.</summary>
+    /// <param name="Generation">The generations run.</param>
+    /// <param name="Evaluations">The evaluations so far.</param>
+    /// <param name="PopulationSize">N of the next generation.</param>
+    /// <param name="ArchiveCapacity">The archive's capacity for the next generation.</param>
+    /// <param name="Views">The population, the current one in <c>Current</c>.</param>
+    private sealed record RunState(int Generation, long Evaluations, int PopulationSize, int ArchiveCapacity, PopulationViews Views);
 }

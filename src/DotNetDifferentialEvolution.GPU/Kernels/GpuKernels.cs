@@ -38,35 +38,63 @@ internal static class GpuKernels
     }
 
     /// <summary>
-    /// One generation for individual <paramref name="index"/>: builds its trial from the current
-    /// population (<see cref="DeStep.BuildTrial"/>), evaluates it, and writes the survivor and its
-    /// fitness into slot i of the next population. Reads every slot of the current population and
-    /// writes only slot i of the trial and next populations, so a launch needs no synchronisation.
+    /// One generation for individual <paramref name="index"/>, in the CPU executor's order: F and CR
+    /// (<typeparamref name="TRule"/>), the trial (<see cref="Schemes.BuildTrial"/>), its evaluation, and the
+    /// selection (<see cref="Selection.Outcome"/>) into slot i of the next population. Under jDE a trial that replaces its
+    /// parent hands its F and CR to it; under JADE and SHADE the trial's F, CR and outcome are recorded for the
+    /// bookkeeping. Reads every slot of the current population and writes only entry i of everything else, so a launch
+    /// needs no synchronisation. Does nothing once the stop word is set.
     /// </summary>
     /// <typeparam name="TFunction">The objective.</typeparam>
+    /// <typeparam name="TRule">The parameter rule, the one <paramref name="parameters"/> names.</typeparam>
     /// <param name="index">The individual.</param>
     /// <param name="function">The objective.</param>
-    /// <param name="parameters">The seed, the generation, N, D, F and the crossover threshold.</param>
-    /// <param name="views">The device memory.</param>
-    public static void Generation<TFunction>(Index1D index, TFunction function, StepParameters parameters, PopulationViews views)
+    /// <param name="parameters">The seed, the generation, N, D, the scheme and the parameter rule.</param>
+    /// <param name="views">The device memory of the population.</param>
+    /// <param name="strategy">The device state of the scheme and the rule.</param>
+    public static void Generation<TFunction, TRule>(Index1D index, TFunction function, StepParameters parameters, PopulationViews views, StrategyViews strategy)
         where TFunction : struct, IGpuFitnessFunction
+        where TRule : struct, IControlParameterRule
     {
+        if (strategy.Stop[0] != 0)
+        {
+            return;
+        }
+
         int individual = index;
         var draws = new PhiloxDraws(parameters.Seed, individual, parameters.Generation);
-        DeStep.BuildTrial(ref draws, individual, parameters, views.Current, views.Trial, views.LowerBound, views.UpperBound);
+        default(TRule).Draw(ref draws, individual, parameters, strategy, out var mutationForce, out var crossoverProbability);
+        var crossoverThreshold = parameters.Rule == ParameterRule.Fixed
+            ? parameters.CrossoverThreshold
+            : DeStep.CrossoverThreshold(crossoverProbability);
+        Schemes.BuildTrial(ref draws, individual, parameters, mutationForce, crossoverThreshold, views, strategy);
 
         var genomeSize = parameters.GenomeSize;
         var offset = individual * genomeSize;
         var trialFitness = function.Evaluate(new GeneView(views.Trial.SubView(offset, genomeSize)));
         var parentFitness = views.CurrentFitness[individual];
-        var trialSurvives = DeStep.Survives(trialFitness, parentFitness);
-        var survivors = trialSurvives ? views.Trial : views.Current;
+        var outcome = Selection.Outcome(trialFitness, parentFitness, parameters.Ties == TieRule.Accepted);
+        var survivors = outcome != Selection.Kept ? views.Trial : views.Current;
         for (var j = 0; j < genomeSize; j++)
         {
             views.Next[offset + j] = survivors[offset + j];
         }
 
-        views.NextFitness[individual] = trialSurvives ? trialFitness : parentFitness;
+        views.NextFitness[individual] = outcome != Selection.Kept ? trialFitness : parentFitness;
+        if (parameters.Rule == ParameterRule.Jde)
+        {
+            if (outcome != Selection.Kept)
+            {
+                strategy.MutationForces[individual] = mutationForce;
+                strategy.CrossoverProbabilities[individual] = crossoverProbability;
+            }
+        }
+        else if (parameters.Rule != ParameterRule.Fixed)
+        {
+            strategy.MutationForces[individual] = mutationForce;
+            strategy.CrossoverProbabilities[individual] = crossoverProbability;
+            strategy.Outcomes[individual] = outcome;
+        }
     }
 
     /// <summary>

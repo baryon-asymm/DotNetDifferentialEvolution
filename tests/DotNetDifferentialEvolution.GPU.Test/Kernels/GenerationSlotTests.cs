@@ -1,3 +1,4 @@
+using DotNetDifferentialEvolution.GPU.Bookkeeping;
 using DotNetDifferentialEvolution.GPU.Kernels;
 using DotNetDifferentialEvolution.GPU.Objectives;
 using DotNetDifferentialEvolution.GPU.Random;
@@ -39,6 +40,10 @@ public class GenerationSlotTests
         using var upperBuffer = step.Upload(upper);
         var views = new PopulationViews(current.View, currentFitness.View, next.View, nextFitness.View, trial.View, lowerBuffer.View, upperBuffer.View);
         using var launcher = new KernelLauncher<ShiftedSphere>(accelerator, default);
+        using var bookkeeping = new GenerationBookkeeping(
+            accelerator,
+            new BookkeepingPlan(PopulationSize, GenomeSize, SchemeKind.RandOne, ParameterRule.Fixed, 0, 0, 0.0, false, double.NaN, double.NaN, null),
+            Seed);
         var parameters = new StepParameters(Seed, 0, PopulationSize, GenomeSize, MutationForce, DeStep.CrossoverThreshold(CrossoverProbability));
 
         launcher.Initialize(parameters, views);
@@ -47,7 +52,7 @@ public class GenerationSlotTests
         var parentFitness = new double[PopulationSize];
         current.View.CopyToCPU(parents);
         currentFitness.View.CopyToCPU(parentFitness);
-        launcher.Generation(parameters with { Generation = 1 }, views);
+        launcher.Generation(parameters with { Generation = 1 }, views, bookkeeping.Views);
         accelerator.Synchronize();
         var survivors = new double[genes];
         var survivorFitness = new double[PopulationSize];
