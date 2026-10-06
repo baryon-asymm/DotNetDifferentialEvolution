@@ -5,8 +5,8 @@ namespace DotNetDifferentialEvolution.GPU.Test.Kernels;
 
 /// <summary>
 /// ACCEPTANCE.md, check S5: <see cref="Selection.Outcome"/> reports what the CPU package's
-/// <see cref="SelectionStrategy"/> reports, with ties accepted (the fixed schemes, jDE, SHADE, L-SHADE) and refused
-/// (JADE). The nine cases of the CPU package's <c>SelectionStrategyTests</c> by name, and every pair of seven fitness
+/// <see cref="SelectionStrategy"/> reports, with ties accepted (the fixed schemes, SHADE, L-SHADE) and refused
+/// (jDE, JADE). The nine cases of the CPU package's <c>SelectionStrategyTests</c> by name, and every pair of seven fitness
 /// values (−∞, −1, −0, 0, 1, +∞, NaN) in both modes.
 /// </summary>
 [Trait("Category", "Unit")]

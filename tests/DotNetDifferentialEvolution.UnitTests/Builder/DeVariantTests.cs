@@ -69,13 +69,13 @@ public class DeVariantTests
     }
 
     /// <summary>
-    /// Each preset's selection strategy resolves a fitness tie by its own paper's rule: JADE keeps the
-    /// parent, SHADE and L-SHADE take the trial, and jDE keeps the engine default of taking the trial.
+    /// Each preset's selection strategy resolves a fitness tie by its own paper's rule: jDE and JADE keep
+    /// the parent, SHADE and L-SHADE take the trial.
     /// </summary>
     /// <param name="preset">The preset under test.</param>
     /// <param name="expected">The selection outcome the preset's rule prescribes for a tie.</param>
     [Theory]
-    [InlineData("jde", SelectionOutcome.TrialAccepted)]
+    [InlineData("jde", SelectionOutcome.ParentKept)]
     [InlineData("jade", SelectionOutcome.ParentKept)]
     [InlineData("shade", SelectionOutcome.TrialAccepted)]
     [InlineData("lshade", SelectionOutcome.TrialAccepted)]
@@ -83,13 +83,12 @@ public class DeVariantTests
         string preset,
         SelectionOutcome expected)
     {
-        // The survival threshold belongs to the variant, not to the engine. JADE Table I line 20
-        // keeps the parent when f(x) <= f(u); SHADE Eq. (6) and L-SHADE Algorithm 2 line 12 take
-        // the trial, as does Tanabe's reference implementation in its `==` branch. Checked through
-        // the assembled preset rather than on SelectionStrategy directly, because the defect this
-        // guards against is a variant being wired to the wrong rule. jDE installs no rule of its
-        // own and keeps the engine default, which takes the trial; that row pins the current
-        // behaviour, not a paper (no source for jDE's tie rule is cited yet).
+        // The survival threshold belongs to the variant, not to the engine. jDE (Brest et al. 2006,
+        // §III-C) takes the trial "if, and only if" f(u) < f(x); JADE Table I line 20 keeps the
+        // parent when f(x) <= f(u); SHADE Eq. (6) and L-SHADE Algorithm 2 line 12 take the trial, as
+        // does Tanabe's reference implementation in its `==` branch. Checked through the assembled
+        // preset rather than on SelectionStrategy directly, because the defect this guards against
+        // is a variant being wired to the wrong rule.
         using var de = BuildPreset(builder => preset switch
         {
             "jde" => builder.WithJde(),

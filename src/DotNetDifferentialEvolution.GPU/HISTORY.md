@@ -2,6 +2,24 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="jde-strict-selection-2026-10-06"></a>
+## 2026-10-06 — jDE refuses ties, as its paper does, in both packages
+
+An algorithm audit of 2026-10-06 (two read-only auditors, the CPU package against the papers,
+this package against the CPU package) read Brest et al. 2006 (IEEE TEVC 10(6), p. 646 ff.,
+§III-C): "x_{i,G+1} = u_{i,G+1} if f(u_{i,G+1}) < f(x_{i,G})", and "If, and only if, the trial
+vector yields a better cost function value than x_{i,G}, then x_{i,G+1} is set to
+u_{i,G+1}". Both packages let a jDE tie survive: the CPU package's `JdeVariant` installed the
+engine's default selection, whose tie rule the CPU tree had marked as without a source
+(`Algorithms/Jde/BOOT.md`, `Variants/BOOT.md`). The owner: "Давай (а)", jDE to its paper's
+rule. With strict selection, survival and improvement are one event, so jDE's inheritance
+(on survival) now follows improvement; a tie keeps the parent and its F and CR.
+
+Changed openly: S5 (jDE moves from the ties-accepted list to the refused one) and S6 (the
+inheritance "exactly where the trial improved", a tie keeping the parent; red: inheritance on
+a tie). `TieRuleTests` needed no change: it takes each configuration's rule from the CPU
+variant.
+
 <a id="libdevice-kept-2026-10-05"></a>
 ## 2026-10-05 — libdevice kept, though APThermo has left it
 
