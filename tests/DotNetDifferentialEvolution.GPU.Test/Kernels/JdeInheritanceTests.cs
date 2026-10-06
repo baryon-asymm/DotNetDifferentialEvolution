@@ -47,7 +47,7 @@ public class JdeInheritanceTests
             new BookkeepingPlan(
                 PopulationSize, GenomeSize, SchemeKind.RandOne, ParameterRule.Jde, 0, 0, 0.0, false, InitialMutationForce, InitialCrossoverProbability, null),
             Seed);
-        var parameters = new StepParameters(Seed, 0, PopulationSize, GenomeSize, double.NaN, 0UL, SchemeKind.RandOne, ParameterRule.Jde);
+        var parameters = new StepParameters(Seed, 0, PopulationSize, GenomeSize, double.NaN, 0UL, SchemeKind.RandOne, ParameterRule.Jde, TieRule.Refused);
 
         launcher.Initialize(parameters, views);
         accelerator.Synchronize();
