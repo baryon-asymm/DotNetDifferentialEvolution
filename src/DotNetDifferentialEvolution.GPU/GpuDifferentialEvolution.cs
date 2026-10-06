@@ -193,10 +193,19 @@ public sealed class GpuDifferentialEvolution : IDisposable
         try
         {
             using var binding = _lease.Accelerator.BindScoped();
+            var stopped = false;
             do
             {
                 if (cancellationToken.IsCancellationRequested || _disposal.IsCancellationRequested)
                 {
+                    // As in the CPU package, the stop rule is tested before the cancellation: a rule that fired before
+                    // the request, between two reads of the stop word, ends the run with its result (ACCEPTANCE.md, S18).
+                    if (_settings.Stagnation is not null && Stopped())
+                    {
+                        stopped = true;
+                        break;
+                    }
+
                     _ = completion.TrySetCanceled(cancellationToken.IsCancellationRequested ? cancellationToken : _disposal.Token);
                     return;
                 }
@@ -216,6 +225,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
                         _settings.Handler!.Handle(Snapshot());
                     }
 
+                    stopped = true;
                     break;
                 }
 
@@ -225,6 +235,13 @@ public sealed class GpuDifferentialEvolution : IDisposable
                 }
             }
             while (!_settings.LimitReached(_state.Generation, _state.Evaluations));
+
+            // A limit beside the rule (RunSettings allows it; the public builder does not) can end the run between two reads
+            // of the stop word: a rule that fired before it ends the run at its own generation (ACCEPTANCE.md, S18).
+            if (!stopped && _settings.Stagnation is not null)
+            {
+                _ = Stopped();
+            }
 
             _ = completion.TrySetResult(Result());
         }
