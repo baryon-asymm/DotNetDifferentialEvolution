@@ -335,16 +335,27 @@ number) and gives the same values bit for bit.
       2026-10-05: `Kernels/ControlParameterParityTests` (seed 20261007, 100 states); red with
       `u1` not complemented (JADE, SHADE, L-SHADE: CR differs at draw 0) and with jDE's F as
       `0.1 + u` (draw 9).
-- [x] **S5, selection outcomes.** The nine cases of 1e, with ties accepted (jDE, SHADE,
-      L-SHADE, the fixed schemes) and refused (JADE): improved, accepted or kept as the
-      CPU `SelectionStrategy` reports. Red: JADE accepting ties.
+- [x] **S5, selection outcomes.** The nine cases of 1e, with ties accepted (SHADE,
+      L-SHADE, the fixed schemes) and refused (jDE, JADE): improved, accepted or kept as the
+      CPU `SelectionStrategy` reports. Red: JADE accepting ties; jDE accepting ties.
+      ⚠ 2026-10-06: was "accepted (jDE, SHADE, L-SHADE, the fixed schemes) and refused
+      (JADE)"; jDE now refuses ties, as Brest et al. 2006 §III-C, in both packages →
+      HISTORY.md#jde-strict-selection-2026-10-06.
+      2026-10-06: the same two classes green with jDE refusing ties; red with jDE accepting
+      them (the GPU builder left accepting while the CPU variant refused: "WithJde: the CPU
+      package refuses a tie, the GPU run replaced the parents"). Of the old text:
       2026-10-05: `Kernels/SelectionOutcomeTests` (the nine cases, every pair of seven values
       in both modes) and `Kernels/TieRuleTests` (each configuration on a flat objective
       against its CPU variant's selection, added after a first red run stayed green →
       HISTORY.md#symmetry-built-2026-10-05); red with JADE accepting ties (`WithJade`).
 - [x] **S6, jDE inheritance** (device). After one generation of jDE (N = 64, D = 4), F_i
-      and CR_i are the values the trial used exactly where the trial replaced the parent,
-      ties included, and unchanged elsewhere. Red: inheritance on improvement only.
+      and CR_i are the values the trial used exactly where the trial improved on the parent,
+      and unchanged elsewhere, ties included: a tie keeps the parent. Red: inheritance on a
+      tie. ⚠ 2026-10-06: was "exactly where the trial replaced the parent, ties included …
+      Red: inheritance on improvement only" → HISTORY.md#jde-strict-selection-2026-10-06.
+      2026-10-06: `Kernels/JdeInheritanceTests` (seed 91, ⌊Σx²/4⌋, ties refused), kept and
+      improved occurring and a tie with a new F or CR kept the parent's; red with inheritance
+      on a tie (individual 26, a tie: F 0.5 kept expected, 0.378 written). Of the old text:
       2026-10-05: `Kernels/JdeInheritanceTests` (seed 91, objective ⌊Σx²/4⌋), kept, tied and
       improved each occurring, and a tie with a new F or CR (strengthened after a green red
       run → HISTORY.md#symmetry-built-2026-10-05); red on improvement only (individual 26,

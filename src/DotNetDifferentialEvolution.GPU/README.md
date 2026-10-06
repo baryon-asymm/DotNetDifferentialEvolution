@@ -134,7 +134,7 @@ The same as the CPU builder's, with its semantics draw for draw:
 
 Every scheme draws distinct donors, crosses binomially with one guaranteed mutant gene,
 repairs out-of-box genes to the midpoint between the bound and the parent, and keeps the
-trial when it is at least as good as its parent (JADE: strictly better). Details:
+trial when it is at least as good as its parent (jDE and JADE: strictly better). Details:
 [docs/ALGORITHMS.md](https://github.com/baryon-asymm/DotNetDifferentialEvolution/blob/main/docs/ALGORITHMS.md).
 
 ## Version 1.0.0

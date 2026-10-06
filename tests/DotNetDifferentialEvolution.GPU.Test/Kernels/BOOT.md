@@ -37,11 +37,13 @@ parameters), **S5** (selection outcomes and each configuration's tie rule) and *
   [`ChiSquared`](../Random/API.md). Six joint tests rather than 162 per-(N, i, role)
   ones, which at 0.999 each would fail by chance about one run in seven.
 - **1e mirrors eight of the nine CPU cases**; S5 (`SelectionOutcomeTests`) holds all
-  nine, with ties accepted and refused, since JADE refuses ties (2026-10-05).
+  nine, with ties accepted and refused, since jDE and JADE refuse ties (2026-10-05; jDE
+  2026-10-06).
 - **S6's expected F and CR come from `ControlParameters.Jde`** on the host, which S4
   holds to the CPU package; what S6 tests is the kernel's write, so the taboo below is
-  kept. S6 asserts a tie whose F or CR differs from the parent's: without one, a write on
-  improvement only would pass.
+  kept. S6 asserts a tie whose F or CR differs from the parent's: without one, an
+  inheritance on a tie would pass (until 2026-10-06, when jDE accepted ties, the same tie
+  guarded the opposite mistake).
 - **1g's draws are exact multiples of 2⁻⁵³**, so the CPU's
   `RandomThreshold.Scale(d)` is exactly `m << 11`, the word replayed to the GPU.
   Parity is bitwise (`DoubleToInt64Bits`), and the call kinds and ranges match one to

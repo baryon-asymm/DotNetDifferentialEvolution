@@ -35,7 +35,9 @@ public sealed class JdeVariant(
             MutationStrategy = new RandMutationStrategy(),
             ControlParameterProvider = jdeStrategy,
             GenerationStrategy = jdeStrategy,
-            SelectionStrategy = new SelectionStrategy(configuration.GenomeSize)
+            // Brest et al. 2006, §III-C: the trial replaces the parent "if, and only if" it is better,
+            // f(u) < f(x). A tie keeps the parent and, with it, the parent's F and CR.
+            SelectionStrategy = new SelectionStrategy(configuration.GenomeSize, acceptsTies: false)
         };
     }
 }

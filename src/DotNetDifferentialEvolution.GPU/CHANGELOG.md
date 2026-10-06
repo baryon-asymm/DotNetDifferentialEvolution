@@ -15,6 +15,8 @@ A new library under the old name: every public type of 0.x (0.1.0, 0.0.2 and 0.2
   semantics draw for draw: `WithDefaultMutationStrategy` (rand/1), `WithBestMutationStrategy`,
   `WithCurrentToBestMutationStrategy`, `WithRandTwoMutationStrategy`,
   `WithBestTwoMutationStrategy`, `WithJde`, `WithJade`, `WithShade`, `WithLShade`.
+- **Selection** keeps each variant's paper rule for a tie: jDE (Brest et al. 2006) and JADE
+  keep the parent, the other configurations take the trial.
 - **Stop rules:** `WithGenerationLimit`, `WithEvaluationLimit`, `WithStagnationLimit`.
 - **The objective** is a struct implementing `IGpuFitnessFunction`, compiled into the kernel; it
   returns its value instead of writing into the population.

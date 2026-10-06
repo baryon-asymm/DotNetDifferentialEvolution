@@ -115,7 +115,7 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
         RequireMutationForce(initialMutationForce, nameof(initialMutationForce));
         RequireCrossoverProbability(initialCrossoverProbability, nameof(initialCrossoverProbability));
         _strategy = new StrategySettings(
-            nameof(WithJde), SchemeKind.RandOne, ParameterRule.Jde, initialMutationForce, initialCrossoverProbability, true, 0.0, 0.0, 0, 0.0, null);
+            nameof(WithJde), SchemeKind.RandOne, ParameterRule.Jde, initialMutationForce, initialCrossoverProbability, false, 0.0, 0.0, 0, 0.0, null);
         return this;
     }
 

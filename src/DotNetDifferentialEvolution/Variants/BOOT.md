@@ -18,12 +18,14 @@ caller can implement.
   `JadeInstallsCurrentToPBestWithAnArchiveSizedFromThePopulation`,
   `ShadeInstallsCurrentToPBestBackedByTheSuccessHistoryMemory`,
   `LShadeInstallsCurrentToPBestWithTheLargerArchiveItsPaperSpecifies`.
-- **Each variant carries its own paper's tie rule.** JADE keeps the parent (Table I line
-  20); SHADE and L-SHADE let the trial survive; jDE takes the engine default (`a88001a`).
-  Held by `DeVariantTests.EachPresetInstallsItsOwnPapersRuleForATie` for all four; the
-  jDE row (added 2026-10-03) pins the current behaviour, ties accepted, and cites no paper.
+- **Each variant carries its own paper's tie rule.** jDE keeps the parent (Brest et al.
+  2006, §III-C: the trial survives "if, and only if" f(u) < f(x)); JADE keeps the parent
+  (Table I line 20); SHADE and L-SHADE let the trial survive. Held by
+  `DeVariantTests.EachPresetInstallsItsOwnPapersRuleForATie` for all four.
   ⚠ Corrected 2026-10-02, slice 7: this line first said the test held the rule for every
-  variant when it had no jDE case. ⚠ Open: no source for jDE's tie rule is cited.
+  variant when it had no jDE case. ⚠ 2026-10-06: jDE took the engine default, ties
+  accepted, with no source cited (`a88001a`); the algorithm audit of that day read the
+  paper, and jDE now refuses ties (owner's decision; `CHANGELOG.md`, 6.0.0).
 - **Every preset satisfies its own mutation strategy's requirements.** Held by
   `DeVariantTests.EveryPresetSatisfiesItsOwnMutationStrategysRequirements`.
 - **A third-party variant takes the built-ins' path**: configured with the problem

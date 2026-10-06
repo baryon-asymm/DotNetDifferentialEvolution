@@ -125,8 +125,8 @@ $i$ lost with is exactly slice $i$ of the other buffer (`GenerationContext.Disca
 
 Both thresholds of the papers are implemented, and they are not the same threshold. **Which one
 governs survival belongs to the variant**, not to the engine: SHADE and L-SHADE take a tied trial,
-JADE keeps the parent ([§5.5](#55-selection)). What follows is the SHADE/L-SHADE rule, which is
-also the library's default:
+jDE ([§4](#4-jde--brest-et-al-2006)) and JADE ([§5.5](#55-selection)) keep the parent. What follows
+is the SHADE/L-SHADE rule, which is also the library's default:
 
 ```math
 x_{i,G+1} = \begin{cases} u_{i,G} & \text{if } f(u_{i,G}) \le f(x_{i,G}) \\ x_{i,G} & \text{otherwise} \end{cases}
@@ -251,7 +251,11 @@ The self-adaptive variants of §§4–7 are themselves `IControlParameterProvide
 
 Reference `[2]`. Every individual carries its own $(F_i, CR_i)$. Before a trial is built, each is
 regenerated with a small probability; if the trial *survives*, its parameters replace the
-individual's, so parameter values that work propagate with the vectors that used them.
+individual's, so parameter values that work propagate with the vectors that used them. Survival
+is strict: the trial replaces the parent "if, and only if" it is better, $f(u) < f(x)$
+`[2, §III-C]`, so a tie keeps the parent and its parameters. `JdeVariant` installs
+`new SelectionStrategy(genomeSize, acceptsTies: false)`; before 6.0.0 jDE took the engine default
+and accepted ties.
 
 ```math
 F_{i,G+1} = \begin{cases} F_l + \text{rand}_1 \cdot F_u & \text{if } \text{rand}_2 < \tau_1 \\ F_{i,G} & \text{otherwise} \end{cases}
@@ -271,8 +275,9 @@ wired to DE/rand/1/bin by
 made before the value draw, which fixes the order in which a seeded stream is consumed.
 
 **jDE keys inheritance on survival, not improvement** — `Replaced`, not `Improved`. The parameters
-belong to the individual, and after a tie the individual *is* the trial; crediting improvement here
-would leave an individual holding the parameters of a vector no longer in the population.
+belong to the individual: whichever vector is in the population carries the parameters it was made
+with. Under jDE's strict selection the two events coincide; keying on survival keeps that true
+for a custom selection that accepts ties.
 
 *Pinned by* `JdeStrategyTests`.
 

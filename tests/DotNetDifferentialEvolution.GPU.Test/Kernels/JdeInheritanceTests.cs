@@ -8,11 +8,12 @@ namespace DotNetDifferentialEvolution.GPU.Test.Kernels;
 
 /// <summary>
 /// ACCEPTANCE.md, check S6: after one jDE generation on ILGPU's CPU accelerator (N = 64, D = 4, fixed seed), F_i and CR_i
-/// are the values trial i used exactly where the trial replaced its parent, ties included, and unchanged elsewhere. The
-/// expected values are recomputed on the host from <c>PhiloxDraws(seed, i, 1)</c>: <see cref="ControlParameters.Jde"/>,
-/// then the trial, then the objective and <see cref="Selection.Outcome"/>. The objective is stepped so that ties occur;
-/// improvements, ties and kept parents each occur, and a tie whose trial drew a new F or CR, asserted: jDE keeps the
-/// parent's F and CR nine times in ten, so without such a tie an inheritance on improvement only would pass.
+/// are the values trial i used exactly where the trial improved on its parent, and unchanged elsewhere: a tie keeps the
+/// parent and its F and CR (Brest et al. 2006, §III-C, strict selection). The expected values are recomputed on the
+/// host from <c>PhiloxDraws(seed, i, 1)</c>: <see cref="ControlParameters.Jde"/>, then the trial, then the objective and
+/// <see cref="Selection.Outcome"/> with ties refused. The objective is stepped so that ties occur; improvements, kept
+/// parents, ties, and a tie whose trial drew a new F or CR are asserted: jDE keeps the
+/// parent's F and CR nine times in ten, so without such a tie an inheritance on a tie would pass.
 /// </summary>
 [Trait("Category", "Integration")]
 public class JdeInheritanceTests
@@ -23,7 +24,7 @@ public class JdeInheritanceTests
     private const double InitialMutationForce = 0.5;
     private const double InitialCrossoverProbability = 0.9;
 
-    /// <summary>F_i and CR_i follow the trial exactly where it replaced the parent.</summary>
+    /// <summary>F_i and CR_i follow the trial exactly where it improved on the parent; a tie keeps the parent's.</summary>
     [Fact]
     public void TheTrialsParametersPassToTheIndividualExactlyWhereItReplacedTheParent()
     {
@@ -46,7 +47,7 @@ public class JdeInheritanceTests
             new BookkeepingPlan(
                 PopulationSize, GenomeSize, SchemeKind.RandOne, ParameterRule.Jde, 0, 0, 0.0, false, InitialMutationForce, InitialCrossoverProbability, null),
             Seed);
-        var parameters = new StepParameters(Seed, 0, PopulationSize, GenomeSize, double.NaN, 0UL, SchemeKind.RandOne, ParameterRule.Jde);
+        var parameters = new StepParameters(Seed, 0, PopulationSize, GenomeSize, double.NaN, 0UL, SchemeKind.RandOne, ParameterRule.Jde, TieRule.Refused);
 
         launcher.Initialize(parameters, views);
         accelerator.Synchronize();
@@ -62,6 +63,7 @@ public class JdeInheritanceTests
         bookkeeping.Views.CrossoverProbabilities.CopyToCPU(crossovers);
 
         var outcomes = new int[3];
+        var ties = 0;
         var tiesWithNewParameters = 0;
         for (var i = 0; i < PopulationSize; i++)
         {
@@ -71,11 +73,15 @@ public class JdeInheritanceTests
                 ref draws, i, parameters with { Generation = 1 }, usedF, usedCr, parents, lower, upper, SchemeState.WithBest(0));
             using var hostTrialBuffer = step.Upload(hostTrial);
             var trialFitness = default(SteppedSphere).Evaluate(new GeneView(hostTrialBuffer.View));
-            var outcome = Selection.Outcome(trialFitness, parentFitness[i], acceptsTies: true);
+            var outcome = Selection.Outcome(trialFitness, parentFitness[i], acceptsTies: false);
             outcomes[outcome]++;
-            if (outcome == Selection.Accepted && (usedF != InitialMutationForce || usedCr != InitialCrossoverProbability))
+            if (trialFitness == parentFitness[i])
             {
-                tiesWithNewParameters++;
+                ties++;
+                if (usedF != InitialMutationForce || usedCr != InitialCrossoverProbability)
+                {
+                    tiesWithNewParameters++;
+                }
             }
 
             var replaced = outcome != Selection.Kept;
@@ -83,8 +89,8 @@ public class JdeInheritanceTests
             ParityCases.AssertSameBits(replaced ? usedCr : InitialCrossoverProbability, crossovers[i], $"CR of individual {i} ({outcome})");
         }
 
-        Assert.True(outcomes.All(count => count > 0), $"kept {outcomes[0]}, tied {outcomes[1]}, improved {outcomes[2]}");
-        Assert.True(tiesWithNewParameters > 0, $"no tie drew a new F or CR (ties {outcomes[1]})");
+        Assert.True(outcomes[Selection.Kept] > 0 && outcomes[Selection.Improved] > 0, $"kept {outcomes[Selection.Kept]}, improved {outcomes[Selection.Improved]}");
+        Assert.True(tiesWithNewParameters > 0, $"no tie drew a new F or CR (ties {ties})");
     }
 
     /// <summary>⌊Σ x_j² / 4⌋: a sphere in steps of 4, so that a trial often ties its parent.</summary>
