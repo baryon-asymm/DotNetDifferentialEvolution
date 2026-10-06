@@ -137,5 +137,9 @@ internal static class Selection              // S5
 - jDE: F_i and CR_i become the trial's where it replaced the parent; jDE refuses ties, so
   that is where it improved on the parent (S6).
   JADE, SHADE, L-SHADE: thread i writes its F, CR and outcome for the bookkeeping.
-- `Gaussian` is the CPU package's Box–Muller with both uniforms complemented (`1 − u`);
+- `Gaussian` is the CPU package's Box–Muller with both uniforms complemented (`1 − u`), as
+  `RandomDistributionHelper.NextGaussian` computes it for a provider other than
+  `SeededRandomProvider` (S4's parity). The CPU engine's own `SeededRandomProvider` keeps the
+  second normal of each pair and spends no uniforms on it, so a CPU run consumes fewer draws;
+  the distribution is the same, and the two packages' generators differ anyway;
   `Cauchy` is `location + scale·tan(π(u − ½))`; F is redrawn while ≤ 0 and cut at 1.

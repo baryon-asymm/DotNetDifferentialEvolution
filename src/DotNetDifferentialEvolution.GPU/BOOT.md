@@ -40,7 +40,9 @@ Each is checked by the item of the same number in [ACCEPTANCE.md](ACCEPTANCE.md)
    - Out-of-box genes are repaired to the midpoint toward the parent.
    - Survival is `f(u) <= f(x)`; `NaN` is worse than every real value, and two `NaN`s
      are not a tie.
-   - The best individual: `NaN` is worst, and a tie goes to the lowest index.
+   - The best individual: `NaN` is worst, and a tie goes to the lowest index. (The CPU
+     package does the same with one worker or a generation strategy; with several workers
+     and a fixed scheme its tie can go to a higher index, `docs/ALGORITHMS.md` §9.10.)
    - The other schemes, jDE, JADE, SHADE and L-SHADE (§§3–7 and §9), selection with
      and without ties, the archive and the stagnation rule are the CPU package's:
      the same draws give the same trial, F and CR bit for bit (ACCEPTANCE.md, S2–S6;
