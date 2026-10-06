@@ -105,6 +105,13 @@ public sealed class GpuDifferentialEvolution : IDisposable
     internal long EvaluationCount => _state.Evaluations;
 
     /// <summary>
+    /// Gets or sets a hook called on the run's thread after each generation is enqueued, with its number, before the
+    /// stop word is read: the tests' way to act between a stop and its read (ACCEPTANCE.md, S18). <see langword="null"/>
+    /// outside the tests.
+    /// </summary>
+    internal Action<int>? GenerationEnqueued { get; set; }
+
+    /// <summary>
     /// Starts the run on a thread of its own and returns at once. The token is observed between
     /// generations and ends the task as canceled. After the run, a second call returns the same
     /// task.
@@ -186,16 +193,26 @@ public sealed class GpuDifferentialEvolution : IDisposable
         try
         {
             using var binding = _lease.Accelerator.BindScoped();
+            var stopped = false;
             do
             {
                 if (cancellationToken.IsCancellationRequested || _disposal.IsCancellationRequested)
                 {
+                    // As in the CPU package, the stop rule is tested before the cancellation: a rule that fired before
+                    // the request, between two reads of the stop word, ends the run with its result (ACCEPTANCE.md, S18).
+                    if (_settings.Stagnation is not null && Stopped())
+                    {
+                        stopped = true;
+                        break;
+                    }
+
                     _ = completion.TrySetCanceled(cancellationToken.IsCancellationRequested ? cancellationToken : _disposal.Token);
                     return;
                 }
 
                 RunGeneration();
                 var generation = _state.Generation;
+                GenerationEnqueued?.Invoke(generation);
                 var observerDue = _settings.Handler is not null && generation % _settings.EveryNGenerations == 0;
                 if (_settings.Stagnation is not null
                     && (observerDue || generation % _settings.StopReadInterval == 0)
@@ -208,6 +225,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
                         _settings.Handler!.Handle(Snapshot());
                     }
 
+                    stopped = true;
                     break;
                 }
 
@@ -217,6 +235,13 @@ public sealed class GpuDifferentialEvolution : IDisposable
                 }
             }
             while (!_settings.LimitReached(_state.Generation, _state.Evaluations));
+
+            // A limit beside the rule (RunSettings allows it; the public builder does not) can end the run between two reads
+            // of the stop word: a rule that fired before it ends the run at its own generation (ACCEPTANCE.md, S18).
+            if (!stopped && _settings.Stagnation is not null)
+            {
+                _ = Stopped();
+            }
 
             _ = completion.TrySetResult(Result());
         }

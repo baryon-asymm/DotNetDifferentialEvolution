@@ -111,7 +111,9 @@ public interface IGpuTerminationConditionRequired<TFunction> where TFunction : s
 - **The stagnation limit** is the CPU package's `StagnationStreakTerminationStrategy`:
   after each generation, if `|best − last| > threshold` then `last = best` and the streak
   is 0, else the streak grows; the run stops when the streak reaches `maxStagnationStreak`.
-  `last` starts at `double.MinValue`.
+  `last` starts at `double.MinValue`. A cancellation after the rule has fired, before the
+  run has read it, still completes with the result at the stopping generation, as the CPU
+  package, which tests its stop rule before its cancellation (S18).
 - **L-SHADE** with an evaluation limit other than `maxEvaluationNumber` makes `Build`
   throw, as the CPU package's `LShadeVariant.Validate` does; with a generation or a
   stagnation limit it runs, and its population reaches 4 at the budget.

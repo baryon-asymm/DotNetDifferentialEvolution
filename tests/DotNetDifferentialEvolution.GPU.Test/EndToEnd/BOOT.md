@@ -35,7 +35,8 @@ frozen; their numbers are copied, never chosen here.
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md)
   — the builder, `GpuDifferentialEvolution`, `GpuOptimizationResult`,
   `GpuPopulationSnapshot`, `IGpuPopulationUpdatedHandler`; internally
-  `PopulationDownloadCount` (its child documents do not exist yet).
+  `PopulationDownloadCount`, `StopReadCount`, `GenerationEnqueued` (S18's hook),
+  `GpuBuilder<T>.WithStopReadInterval` (its child documents do not exist yet).
 - [DotNetDifferentialEvolution](../../../src/DotNetDifferentialEvolution/API.md) — the CPU package: the builder and its run, held beside the GPU runs (S13, S14)
 - [Models](../../../src/DotNetDifferentialEvolution/Models/API.md) — the CPU package: `Population`, the CPU run's result
 - [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md) — the CPU package: `StagnationStreakTerminationStrategy`, the limits (S13, S17)
@@ -78,6 +79,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       pinned to 2 cores, every case took at most 4 s. Nothing asserts time.
 - [x] S13, S14 and S17 are green, on the CPU accelerator and (S13, S14) on CUDA, and each was
       red once on its named mutation: 2026-10-05, the evidence in the package's
+      [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md).
+- [x] S18 is green on the CPU accelerator and was red on the code before it and on each of
+      its two named mutations: 2026-10-06, the evidence in the package's
       [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md).
 
 ## Taboos

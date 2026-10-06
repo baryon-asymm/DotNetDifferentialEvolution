@@ -2,6 +2,23 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="stop-word-exits-2026-10-06"></a>
+## 2026-10-06 — the stop word is read at every exit of a run
+
+The algorithm audit of 2026-10-06 found two exits of `Run` that skip the stop word:
+- **A limit beside the stagnation rule.** The loop ended through `LimitReached` with no last
+  read, so a rule that fired between two reads left the host's counters, and the buffer the
+  result is taken from, at the limit instead of the stopping generation. The public builder
+  takes one stop condition, as the CPU builder does, so no caller reaches it; `RunSettings`
+  takes both.
+- **A cancellation after the rule fired.** The token was checked before the read, so a
+  cancellation in the window between the stopping generation and the next read (at most 15
+  generations, each one launch that does nothing) gave a canceled task. The CPU package tests
+  its termination before its cancellation at the same barrier and completes.
+
+The owner: "давай отдельный PR для GPU". Both exits now read the stop word first (check S18).
+The per-generation hook the test cancels from is internal; nothing public changes.
+
 <a id="jde-strict-selection-2026-10-06"></a>
 ## 2026-10-06 — jDE refuses ties, as its paper does, in both packages
 
