@@ -42,13 +42,18 @@ Inherited from the parent ([BOOT.md](../../BOOT.md)). In addition:
 - [x] jDE converges on Rosenbrock: 2026-10-02,
       `AdaptiveVariantsConvergenceTests.SelfAdaptiveVariantsConvergeOnRosenbrock`
       (integration, full local run).
-- [ ] ⚠ jDE stays on the engine's default tie rule (a tie survives) without a source:
-      Brest (2006) was paywalled with every mirror dead when `a88001a` checked the
-      variants against their papers, and moving semantics on a guess was refused.
+- [x] ⚠ jDE's tie rule has a source: 2026-10-06, Brest et al. 2006, §III-C (IEEE TEVC
+      10(6), p. 646 ff.), "if, and only if, the trial vector yields a better cost function
+      value"; `JdeVariant` installs strict selection, held by
+      `DeVariantTests.EachPresetInstallsItsOwnPapersRuleForATie`. Until then jDE stayed on
+      the engine's default (a tie survives): the paper was paywalled with every mirror dead
+      when `a88001a` checked the variants, and moving semantics on a guess was refused.
 - [ ] ⚠ No argument checks: probabilities outside `[0, 1]` or a negative range are
       accepted.
 
 ## Taboos
 
-- **No inheritance keyed on `Improved`.** After a tie the individual is the trial; its
-  parameters must be the trial's (`ae16907`).
+- **No inheritance keyed on `Improved`.** Inheritance follows survival (`Replaced`): the
+  parameters belong to whichever vector is in the population (`ae16907`). Under jDE's own
+  strict selection the two coincide; a custom selection that accepts ties must still pass
+  the trial's parameters on with the trial.

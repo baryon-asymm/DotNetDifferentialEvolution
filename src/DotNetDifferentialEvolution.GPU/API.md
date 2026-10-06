@@ -101,8 +101,9 @@ public interface IGpuTerminationConditionRequired<TFunction> where TFunction : s
 
 - **The CPU builder's names, parameters, order and defaults** (check S1), and its
   semantics (`docs/ALGORITHMS.md` §§3–7, §9): each fixed scheme with F and CR and
-  ties accepted; jDE on rand/1, F and CR per individual, inherited on survival; JADE on
-  current-to-pbest/1 with an archive, ties refused; SHADE with a success-history memory
+  ties accepted; jDE on rand/1, F and CR per individual, inherited on survival, ties
+  refused (Brest et al. 2006; since 2026-10-06); JADE on current-to-pbest/1 with an
+  archive, ties refused; SHADE with a success-history memory
   and p drawn from [min(2/N, p), p]; L-SHADE with the Lehmer CR mean, the terminal CR
   and linear population reduction to 4 at `maxEvaluationNumber`.
 - **The minimum population** is the scheme's, as in the CPU package: rand/1, jDE, JADE,

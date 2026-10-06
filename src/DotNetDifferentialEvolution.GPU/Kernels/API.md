@@ -134,7 +134,8 @@ internal static class Selection              // S5
   is the current population size (L-SHADE).
 - The rule is a type argument so that the fixed schemes' and jDE's kernels reach no
   `Log`, `Cos` or `Tan`: they compile on a CUDA context built without libdevice.
-- jDE: F_i and CR_i become the trial's where it replaced the parent, ties included (S6).
+- jDE: F_i and CR_i become the trial's where it replaced the parent; jDE refuses ties, so
+  that is where it improved on the parent (S6).
   JADE, SHADE, L-SHADE: thread i writes its F, CR and outcome for the bookkeeping.
 - `Gaussian` is the CPU package's Box–Muller with both uniforms complemented (`1 − u`);
   `Cauchy` is `location + scale·tan(π(u − ½))`; F is redrawn while ≤ 0 and cut at 1.

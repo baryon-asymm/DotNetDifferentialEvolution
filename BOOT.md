@@ -173,8 +173,6 @@ one cycle is inside the CPU package (`Models` and the hook contracts; see its
 
 The open findings with the most weight, each recorded in full in its node:
 
-- jDE's tie rule is pinned by a test but has no cited source
-  ([Variants](src/DotNetDifferentialEvolution/Variants/BOOT.md)).
 - Two documented divergences of L-SHADE from Tanabe's code
   ([Lshade](src/DotNetDifferentialEvolution/Algorithms/Lshade/BOOT.md),
   [Shade](src/DotNetDifferentialEvolution/Algorithms/Shade/BOOT.md)).

@@ -10,10 +10,12 @@ different matter — nothing can detect those automatically, so they are called 
 ## 6.0.0
 
 A small break, made for the repository's maximum compiler and analyzer settings (every diagnostic
-an error, nothing suppressed; owner's decision, 2026-10-03). No algorithm changed: a seeded run
-of 5.1.0 is reproduced exactly by 6.0.0. Measured 2026-10-03: Rastrigin 10-D, seed 7, 3 workers,
-60 000 evaluations, for DE/rand/1/bin, jDE, JADE, SHADE and L-SHADE, the 5.1.0 package from
-nuget.org and this version give bit-identical best genes and fitness.
+an error, nothing suppressed; owner's decision, 2026-10-03), and one algorithm brought to its
+paper: jDE now refuses ties (below). Every other seeded run of 5.1.0 is reproduced exactly by
+6.0.0. Measured 2026-10-03, and again 2026-10-06 after the jDE change: Rastrigin 10-D, seed 7,
+3 workers, 60 000 evaluations; for DE/rand/1/bin, JADE, SHADE and L-SHADE the 5.1.0 package
+from nuget.org and this version give bit-identical best genes and fitness. jDE reaches the same
+fitness, 0, at other genes: ties at 0 occur on the way.
 
 The GPU package, `DotNetDifferentialEvolution.GPU`, is versioned and released separately
 (`gpu-v*` tags); its notes are in `src/DotNetDifferentialEvolution.GPU/CHANGELOG.md`.
@@ -34,6 +36,12 @@ From `CompatibilitySuppressions.xml`, against 5.1.0:
 
 Nothing a signature shows; listed because no tool can warn about it.
 
+- **jDE refuses ties.** Brest et al. 2006, §III-C, replace the parent "if, and only if" the
+  trial is better, f(u) < f(x); 5.1.0 let a tied trial survive and pass on its F and CR. `WithJde`
+  (and `JdeVariant`) now installs `new SelectionStrategy(genomeSize, acceptsTies: false)`, as
+  `WithJade` does. A run of jDE on an objective with plateaus or discrete values differs from
+  5.1.0; on a continuous objective, where exact ties are rare, it seldom does. Found by an
+  algorithm audit of 2026-10-06.
 - **An `OutOfMemoryException` in a worker is no longer handed to the orchestrator.** Every other
   exception from the objective still surfaces from `RunAsync` as before. A process out of memory
   cannot be trusted to marshal the failure, so that one exception is left to the runtime's

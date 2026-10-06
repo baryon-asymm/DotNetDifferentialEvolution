@@ -17,7 +17,7 @@ Nothing outward. What this node proves about the DE step of the GPU package.
 | current-to-pbest/1 is `CurrentToPBestMutationStrategy`'s, with the archive drawn into and `topCount` clamped (S3) | `PBestParityTests` | ✅ |
 | jDE's, JADE's, SHADE's and L-SHADE's F and CR are the CPU strategies', 10⁴ draws each, redraws and clamps counted (S4) | `ControlParameterParityTests` | ✅ |
 | Selection outcomes are the CPU `SelectionStrategy`'s with ties accepted and refused; each configuration's tie rule is its CPU variant's (S5) | `SelectionOutcomeTests`, `TieRuleTests` | ✅ |
-| jDE's F and CR follow the trial exactly where it replaced the parent, ties included (S6) | `JdeInheritanceTests` | ✅ |
+| jDE's F and CR follow the trial exactly where it improved on the parent; a tie keeps the parent's (S6) | `JdeInheritanceTests` | ✅ |
 
 ## Tests ✅
 
