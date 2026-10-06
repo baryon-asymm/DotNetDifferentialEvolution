@@ -624,8 +624,10 @@ public interface IBoundsRequired
     /// <remarks>
     /// The box is the only constraint the library understands. A gene driven outside it by mutation
     /// is repaired to the midpoint between the violated bound and the parent's value before the
-    /// objective ever sees it, so the objective is never called with an out-of-box vector. Any other
-    /// kind of constraint has to be encoded in the objective itself.
+    /// objective ever sees it, so with finite bounds and an initial population inside them the
+    /// objective is never called with an out-of-box vector. Infinite bounds are accepted, but then a
+    /// gene can become infinite or NaN unrepaired. Any other kind of constraint has to be encoded in
+    /// the objective itself.
     /// </remarks>
     IPopulationSizeRequired WithBounds(
         ReadOnlyMemory<double> lowerBound,

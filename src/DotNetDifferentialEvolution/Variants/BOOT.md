@@ -63,7 +63,10 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 - `Configure` runs once per builder, before the population exists; `Validate` sees the
   completed configuration.
 - A variant's defaults are its paper's settings; changing one changes what the variant
-  is, not a tuning.
+  is, not a tuning. One exception, inside its paper's range: JADE's $p$ defaults to 0.1,
+  where Zhang and Sanderson's experiments fix 0.05 and recommend $p \in [5\%, 20\%]$
+  (`ALGORITHMS.md` §5.5). ⚠ Corrected 2026-10-06 (algorithm audit): this line claimed no
+  exception.
 
 ## Acceptance criteria
 

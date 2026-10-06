@@ -169,11 +169,21 @@ which orders NaN as worse than every real value — see [§9.2](#92-nan-is-worse
 |---|---|
 | `LimitGenerationNumberTerminationStrategy` | the generation count reaches its limit |
 | `LimitEvaluationNumberTerminationStrategy` | $\text{nfe}$ reaches its limit |
-| `StagnationStreakTerminationStrategy` | the best value fails to improve by more than a threshold for $k$ consecutive generations |
+| `StagnationStreakTerminationStrategy` | the best value stays within a threshold of the last value it was recorded at for $k$ consecutive generations; a change larger than the threshold, in either direction, records the new value and restarts the count |
 
 All in [TerminationStrategies/](../src/DotNetDifferentialEvolution/TerminationStrategies/). The
 condition is tested at the barrier, so a run stops within one generation of the condition becoming
 true, not instantly.
+
+The stagnation rule compares with the recorded value, not with the previous generation: small
+gains add up until they exceed the threshold, so a best value improving steadily by 0.6 of the
+threshold per generation restarts the count every second generation.
+
+An evaluation limit is likewise tested after a whole generation, so a run can evaluate up to
+$N - 1$ more trials than the limit, and the returned optimum may come from those last evaluations.
+A comparison under a fixed budget (the CEC protocol counts no improvement past MAX\_NFE, as
+`lshade.cc` does) should set the limit on a generation boundary, or record the best value at the
+budget itself.
 
 ---
 
@@ -229,7 +239,10 @@ u_{j,i} = \begin{cases} (\underline{x}_j + x_{j,i})/2 & \text{if } u_{j,i} < \un
 This is the JADE/SHADE/L-SHADE repair rule. It is applied by every strategy in this library, not
 only the adaptive ones — see [§9.1](#91-midpoint-bound-repair-applies-to-every-strategy) — and it
 keeps the population inside the box for the whole run: the parent is in the box by induction, the
-bound is in the box, so their midpoint is too.
+bound is in the box, so their midpoint is too. The induction needs finite bounds and an initial
+population inside them: the built-in sampler draws one, a custom sampler must
+(`WithPopulationSampling`). With an infinite bound a mutant gene can be infinite or NaN, which no
+comparison with the bound catches, and the CPU builder does not reject such bounds.
 
 The papers repair $v_i$ before crossover; this repairs $u_i$ after it. The results are identical,
 because a gene is repaired exactly when it came from $v_i$, and a gene that came from $x_i$ was
@@ -607,8 +620,9 @@ differences.
 ### 9.1 Midpoint bound repair applies to every strategy
 
 The $(\text{bound} + x_i)/2$ rule of §3.3 is specified by JADE/SHADE/L-SHADE; Storn and Price do not
-specify a repair rule at all, and implementations commonly re-sample the gene uniformly. This
-library applies the midpoint rule everywhere, including classic DE. It preserves the box invariant,
+specify a repair rule at all, and implementations commonly re-sample the gene uniformly. jDE's paper
+does specify one, and a different one: an out-of-box component "is set to bound value"
+`[2, §III-A]`. This library applies the midpoint rule everywhere, including classic DE and jDE. It preserves the box invariant,
 keeps the trial near its parent instead of injecting a fresh random gene, and makes the variants
 comparable to each other. Version 3.0.0 removed the alternative; there is no opt-out.
 
@@ -659,10 +673,15 @@ improvement cannot be weighted. Such a record is excluded from the weighted mean
 through would put NaN into the weight sum, which the "no successes" guard cannot catch — every
 comparison against NaN is false — permanently poisoning $M_F$ and $M_{CR}$ for the rest of the run.
 
+The exclusion reaches L-SHADE's terminal test too: $\max(S_{CR})$ is taken over the weighted
+successes only. A generation whose only success with $CR > 0$ had a non-finite weight therefore
+sets the slot to $\perp$, where the paper's maximum over every success would not.
+
 ### 9.8 Guards where a paper's formula is undefined
 
 - The memory update is skipped when the total weight is not strictly positive, matching
-  `[4, Alg. 1 line 27]` ("the memory is not updated") but also covering the degenerate case where
+  `[4, Alg. 1 line 27]` (the condition) and the text after `[4, Eq. (18)]` ("the memory is not
+  updated"), but also covering the degenerate case where
   every improvement is zero.
 - The Lehmer branch for $M_{CR}$ divides by $\sum w_k S_{CR,k}$, which is zero only when every
   successful $CR$ is zero. Under L-SHADE that case is §7.1's terminal rule, so the division is
@@ -683,6 +702,12 @@ grows a population.
 
 See [§8.5](#85-what-reproducibility-guarantees). The papers describe sequential algorithms and say
 nothing about this; it is a property of the parallel execution model, not of the algorithms.
+
+The worker layout also decides a tie for the best individual when no generation strategy runs
+(the fixed schemes, so best/1, best/2 and current-to-best/1 read it): each worker reports its own
+best, the master's is kept unless another is strictly better, and so a tie between two workers'
+individuals can go to the higher index. With a generation strategy, or one worker, the lowest index
+wins, as in the GPU package.
 
 ### 9.11 The terminal value is sticky here, and not in the reference code
 
@@ -715,11 +740,13 @@ This library overwrites a uniformly chosen slot as soon as the archive is full �
 applied to all three variants — so capacity is never exceeded. Both keep a random subset of recent
 displaced parents; the induced distributions are close but not identical.
 
-### 9.14 The crossover test uses `<=` where the papers use `<`
+### 9.14 The crossover test uses `<=`, as the papers' equations; their pseudocode uses `<`
 
-`[3, Table I line 14]` and Tanabe's reference both test `rand < CR`; this library tests
-`rand <= CR`, on integers ([§8.4](#84-the-per-gene-crossover-test)). The two disagree with
-probability $2^{-64}$ per gene.
+The equations print $\text{rand} \le CR$: `[3, Eq. (4)]`, `[4, Eq. (5)]` and `[5, Eq. (5)]`. The
+pseudocode of `[3, Table I line 14]` and Tanabe's reference test `rand < CR`. This library tests
+`rand <= CR`, on integers ([§8.4](#84-the-per-gene-crossover-test)), as the equations do. The two
+disagree with probability $2^{-64}$ per gene. (Corrected 2026-10-06: this section said "the papers
+use `<`".)
 
 ### 9.15 `WithShade` is SHADE 1.0, not the SHADE that is distributed as code
 
@@ -739,7 +766,7 @@ against the authors' own code, which is what produced the published results.
 
 | Source | Version | Used to verify |
 |---|---|---|
-| [`lshade.cc`](https://ryojitanabe.github.io/code/LSHADE1.0.1_CEC2014.zip) | L-SHADE 1.0.1 | §7 in full, §6.2's weights, §3.3, §5.1 |
+| [`lshade.cc`](https://ryojitanabe.github.io/code/LSHADE1.0.1_CEC2014.zip) | L-SHADE 1.0.1 | §7 in full but its defaults, §6.2's weights, §3.3, §5.1 |
 | [`shade.cc`](https://ryojitanabe.github.io/code/SHADE1.1.1_CEC2014_c++.zip) | SHADE 1.1.1 | that SHADE 1.1's memory update is L-SHADE's |
 | `[3, Table I]` | — | §5 in full |
 
@@ -750,6 +777,13 @@ $r_2 \ne i, r_1$ draws over $P \cup A$; the LPSR schedule with round-half-away-f
 only when the schedule calls for a smaller population; the p-best floor of 2; that $\text{nfe}$
 counts the initial population; the $F$ and $CR$ repair rules; memory initialised to 0.5 and its
 index advancing only after a generation with successes.
+
+The reference's `main.cc` sets $H = 5$ and $r_{arc} = 1.4$; this library keeps the paper's tuned
+$H = 6$ and $r_{arc} = 2.6$ (`[5, Table II]`, §7.3), so a run compared with the download needs those
+two set to match. When LPSR shrinks the archive, both keep its first slots and drop the rest
+(`lshade.cc` line 244, `arc_ind_count = arc_size`); the paper says only "resize" `[5, Alg. 2
+line 24]`. While the archive still fills in order, that drops the most recently archived parents
+first.
 
 Two divergences were found and are recorded above: [§9.11](#911-the-terminal-value-is-sticky-here-and-not-in-the-reference-code)
 and [§9.12](#912-archive-capacity-is-rounded-on-every-resize). In three places this library is
