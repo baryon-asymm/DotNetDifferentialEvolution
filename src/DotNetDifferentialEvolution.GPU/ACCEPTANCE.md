@@ -401,7 +401,7 @@ the node they are about, when this file reached its limit (AGENTS.md §15) →
       with one. Red: a read every generation.
       2026-10-05: `EndToEnd/SymmetryRunTests.TheStopWordIsReadOnlyEverySixteenGenerations…`
       (`PopulationTransfers.StopReadCount`); red with a read every generation (out of range).
-- [ ] **S18, the stop word at the run's other exits** (frozen 2026-10-06, before code;
+- [x] **S18, the stop word at the run's other exits** (frozen 2026-10-06, before code;
       HISTORY.md#stop-word-exits-2026-10-06). With a stagnation rule, a run that ends
       otherwise, at a generation limit (settable beside the rule only through `RunSettings`,
       not the public builder) or by a cancellation, reads the stop word first. If the rule
@@ -411,6 +411,10 @@ the node they are about, when this file reached its limit (AGENTS.md §15) →
       CPU accelerator, the stop word read every 1 000 generations, the limit and the
       cancellation placed after the stop and before any read (the cancellation through an
       internal per-generation hook). Red: no read before the result; no read on cancellation.
+      2026-10-06: `EndToEnd/StopWordExitTests`, jDE on ⌊4·Σx²⌋, seed 3, the rule stopping at
+      generation 11: a limit of 14 gives 11, bit for bit; a cancellation at 12 completes at
+      11; one at 9 cancels. Red on the code before (14 against 11; a canceled task), and on
+      each named mutation alone, each failing only its own case.
 - [x] **B2.** Every new row of `API.md`'s error table has a test that triggers it.
       2026-10-05: `Builder/SymmetryBuilderTests` (every new row, each with its edge passing;
       the archive at 2³¹ genes) and `BuilderErrorTests` (N < 1). Red: each of the 17 guards
