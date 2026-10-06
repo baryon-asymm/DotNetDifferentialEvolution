@@ -105,6 +105,13 @@ public sealed class GpuDifferentialEvolution : IDisposable
     internal long EvaluationCount => _state.Evaluations;
 
     /// <summary>
+    /// Gets or sets a hook called on the run's thread after each generation is enqueued, with its number, before the
+    /// stop word is read: the tests' way to act between a stop and its read (ACCEPTANCE.md, S18). <see langword="null"/>
+    /// outside the tests.
+    /// </summary>
+    internal Action<int>? GenerationEnqueued { get; set; }
+
+    /// <summary>
     /// Starts the run on a thread of its own and returns at once. The token is observed between
     /// generations and ends the task as canceled. After the run, a second call returns the same
     /// task.
@@ -196,6 +203,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
 
                 RunGeneration();
                 var generation = _state.Generation;
+                GenerationEnqueued?.Invoke(generation);
                 var observerDue = _settings.Handler is not null && generation % _settings.EveryNGenerations == 0;
                 if (_settings.Stagnation is not null
                     && (observerDue || generation % _settings.StopReadInterval == 0)
