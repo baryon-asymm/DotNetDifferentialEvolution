@@ -4,6 +4,19 @@ Notable changes to the GPU package, released from `gpu-v*` tags. Versions follow
 [semantic versioning](https://semver.org/). The release workflow takes the notes of a version
 from its `## <version>` section below.
 
+## 1.0.1
+
+A fix to SHADE and L-SHADE on the device; no API change.
+
+- **The memory no longer fills with NaN when the improvements overflow the sums.** An objective
+  that scores its infeasible points `double.MaxValue` gave improvements that are finite but sum to
+  `+∞`; `∞/∞` wrote NaN into the memory and the mutants, and the best individual, held NaN genes
+  (seen on a GPU: 26 NaN genes of 32). The CPU package had the same defect (its 6.0.1). A pass
+  finds each chunk's largest weight, and the weights are divided by the generation's largest when
+  it exceeds `double.MaxValue / (2·N)`, as the CPU package now does; below that bound the sums are
+  unchanged. SHADE and L-SHADE launch one more small kernel per generation. Found by
+  PastyPropellant, 2026-10-07.
+
 ## 1.0.0
 
 A new library under the old name: every public type of 0.x (0.1.0, 0.0.2 and 0.2.0) is gone.

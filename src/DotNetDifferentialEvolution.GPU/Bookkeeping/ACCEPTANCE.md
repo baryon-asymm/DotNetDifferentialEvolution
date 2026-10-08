@@ -63,3 +63,29 @@ file.
       streak reset on equality (sequence 0, step 0; and the run, which now ends at
       generation 10 000 by its observer: the first red run hung →
       [HISTORY.md](../HISTORY.md#symmetry-built-2026-10-05)).
+
+## Overflow of SHADE's weights — check S19, frozen 2026-10-08, before code
+
+Found 2026-10-07 in PastyPropellant: the CPU `ShadeStrategy` and these rules let two finite
+improvements near `double.MaxValue` sum to `+∞`, and `∞/∞` wrote `NaN` into the memory (CPU
+criteria O1–O3, [Shade/BOOT.md](../../DotNetDifferentialEvolution/Algorithms/Shade/BOOT.md)). The
+rule fixed there: when the generation's largest weight exceeds `double.MaxValue / (2·N)`, every
+weight is divided by it; otherwise the weights are used as they are.
+
+- [ ] **S19, overflow, parity.** From 200 random sets of trial records with parents scored
+      `double.MaxValue` (N in [4, 1 024]; improvements from tiny to `double.MaxValue`; `NaN` and
+      infinite parents; JADE unaffected), the SHADE and L-SHADE memories equal the CPU
+      strategies' after `AfterGeneration` with the same records, bit for bit, all finite;
+      the device kernels equal the host functions bit for bit for N up to 5 000, where the
+      largest weight is in another chunk than the trial it scales, over three generations of
+      which the first has no success. A run of the public builder on the ILGPU CPU
+      accelerator (SHADE and L-SHADE; an 8-D sphere feasible on `x₀ < −4` and
+      `double.MaxValue` elsewhere, the objective scoring a `NaN` gene as 0) ends with no `NaN` gene
+      in its best individual. Red: the scale never applied (the weights as they are).
+      Where: `GPU.Test/Bookkeeping/AdaptationParityTests` (the existing CPU-parity and
+      device cases, extended with parents at `double.MaxValue`: one in four for the CPU parity,
+      one in 700 for the device at N 1 025 to 5 000, so most chunks hold none; the host
+      composition there applies `ScaleOf` from the generation's largest weight) and
+      `GPU.Test/EndToEnd/SentinelFitnessTests` (population 100, 20 000 evaluations, seed
+      12345). A `Gpu`-category case of the same run on CUDA (L-SHADE, population 16 384, 32
+      genes, 5 000 000 evaluations, seed 20261007) is the orchestrator's to run.

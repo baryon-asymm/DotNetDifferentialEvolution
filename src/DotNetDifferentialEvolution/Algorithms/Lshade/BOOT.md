@@ -18,6 +18,11 @@ spent.
 - **`M_CR` takes the weighted Lehmer mean, and the terminal rule wins over it.** Held by
   `LShadeStrategyTests.AfterGenerationUpdatesMemoryCrWithTheWeightedLehmerMean` and
   `AfterGenerationTerminalCrRuleWinsOverTheLehmerMean` (`e489324`).
+- **The memory stays finite when the improvements overflow the sums** — the base class's
+  rule ([Shade](../Shade/BOOT.md), O1–O3), held for L-SHADE's Lehmer `M_CR` by
+  `LShadeStrategyTests.AfterGenerationKeepsTheMemoryFiniteWhenTheImprovementsOverflowTheSums`,
+  `AfterGenerationWeighsAnImprovementNearTheLargestDoubleAgainstOneOfOne` and
+  `AfterGenerationBelowTheOverflowBoundEqualsTheUnscaledArithmeticBitForBit`.
 - **Arguments that would fail silently are refused at construction** (`c54fa57`). Held
   by `ConstructorRejectsANonPositiveEvaluationBudget`,
   `ConstructorRejectsANegativeArchiveSizeRate`, `ConstructorValidatesMinimumPopulationSize`.

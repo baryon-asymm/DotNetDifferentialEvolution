@@ -682,6 +682,15 @@ The exclusion reaches L-SHADE's terminal test too: $\max(S_{CR})$ is taken over 
 successes only. A generation whose only success with $CR > 0$ had a non-finite weight therefore
 sets the slot to $\perp$, where the paper's maximum over every success would not.
 
+A weight can also be finite and still too large for the sums. Two improvements near the largest
+double (a parent the objective scored with `double.MaxValue`, the usual sentinel for an infeasible
+point) add up to $+\infty$; the "no successes" guard does not see an infinity, and $\infty/\infty$
+writes NaN into the memory. 5.1.0 and 6.0.0 had this (found 2026-10-07; fixed in 6.0.1). Every mean
+is a ratio, so a common factor of the weights cancels: when the generation's largest weight exceeds
+$\texttt{double.MaxValue}/(2N)$ all weights are divided by it, else they are used as they are, so a
+run below that bound is bit for bit what it was. With $F, CR \le 1$ no sum of the scaled weights
+exceeds $N$.
+
 ### 9.8 Guards where a paper's formula is undefined
 
 - The memory update is skipped when the total weight is not strictly positive, matching
