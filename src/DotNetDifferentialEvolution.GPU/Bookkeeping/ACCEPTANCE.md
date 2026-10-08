@@ -64,7 +64,7 @@ file.
       generation 10 000 by its observer: the first red run hung →
       [HISTORY.md](../HISTORY.md#symmetry-built-2026-10-05)).
 
-## Overflow of SHADE's weights — check S19, frozen 2026-10-08, before code
+## Overflow of SHADE's weights — check S19, frozen 2026-10-08, before code ✅
 
 Found 2026-10-07 in PastyPropellant: the CPU `ShadeStrategy` and these rules let two finite
 improvements near `double.MaxValue` sum to `+∞`, and `∞/∞` wrote `NaN` into the memory (CPU
@@ -72,7 +72,7 @@ criteria O1–O3, [Shade/BOOT.md](../../DotNetDifferentialEvolution/Algorithms/S
 rule fixed there: when the generation's largest weight exceeds `double.MaxValue / (2·N)`, every
 weight is divided by it; otherwise the weights are used as they are.
 
-- [ ] **S19, overflow, parity.** From 200 random sets of trial records with parents scored
+- [x] **S19, overflow, parity.** From 200 random sets of trial records with parents scored
       `double.MaxValue` (N in [4, 1 024]; improvements from tiny to `double.MaxValue`; `NaN` and
       infinite parents; JADE unaffected), the SHADE and L-SHADE memories equal the CPU
       strategies' after `AfterGeneration` with the same records, bit for bit, all finite;
@@ -89,3 +89,15 @@ weight is divided by it; otherwise the weights are used as they are.
       `GPU.Test/EndToEnd/SentinelFitnessTests` (population 100, 20 000 evaluations, seed
       12345). A `Gpu`-category case of the same run on CUDA (L-SHADE, population 16 384, 32
       genes, 5 000 000 evaluations, seed 20261007) is the orchestrator's to run.
+      2026-10-08: `AdaptationParityTests` (seed 20261008 + 19; the CPU parity 200 sets, one
+      parent in four at `double.MaxValue`, JADE sets included; the device theory JADE 5 000,
+      SHADE 1 025 and 3 000, L-SHADE 4 and 5 000, one parent in 700 above N 1 024 and one in
+      two below) and `SentinelFitnessTests` (CPU accelerator: SHADE 199 and L-SHADE 669
+      generations; CUDA, RTX 5070 Ti, `Category=Gpu` 44/44 with it); written by a coder,
+      rerun by the orchestrator. On the rule unfixed: the CPU parity red (set 1, SHADE N 872:
+      NaN against 0.5153738326306604), the device cases red, both CPU-accelerator runs ending
+      with a `NaN` gene and fitness 0. Red with the scale never applied (`ScaleOf` always 1):
+      7 tests, and the CUDA case; with each chunk's scale from its own largest weight: the
+      device cases at N 3 000 and 5 000; with the scale at every bound: both CPU-parity tests.
+      The non-GPU suite 319/319 →
+      [HISTORY.md](../HISTORY.md#shade-weight-overflow-2026-10-08).
