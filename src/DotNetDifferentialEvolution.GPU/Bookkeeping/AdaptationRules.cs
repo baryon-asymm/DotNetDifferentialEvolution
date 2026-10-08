@@ -41,6 +41,12 @@ internal static class AdaptationRules
         return double.IsFinite(weight) ? weight : double.NaN;
     }
 
+    /// <summary>The divisor of SHADE's weights (step 1 stub: never scales).</summary>
+    /// <param name="largestWeight">The generation's largest weight.</param>
+    /// <param name="count">N.</param>
+    /// <returns>The divisor.</returns>
+    public static double ScaleOf(double largestWeight, int count) => count < 0 ? largestWeight : 1.0;
+
     /// <summary>
     /// JADE's update (<c>JadeStrategy.AdaptParameterMeans</c>): with no improved trial nothing changes; else
     /// <c>μCR = (1 − c)·μCR + c·mean(S_CR)</c>, and when ΣF &gt; 0, <c>μF = (1 − c)·μF + c·ΣF²/ΣF</c>.
