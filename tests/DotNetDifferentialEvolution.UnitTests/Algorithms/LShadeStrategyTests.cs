@@ -214,6 +214,93 @@ public class LShadeStrategyTests
     }
 
     /// <summary>
+    /// Two successes over parents scored <see cref="double.MaxValue"/> overflow the sums, and the
+    /// Lehmer memory must still come out finite and hold the successes' own parameters (O1).
+    /// </summary>
+    [Fact]
+    public void AfterGenerationKeepsTheMemoryFiniteWhenTheImprovementsOverflowTheSums()
+    {
+        var lshade = CreateStrategy(memorySize: 1);
+        var context = CreateContext();
+
+        var records = new TrialRecord[InitialPopulationSize];
+        records[0] = new TrialRecord
+        {
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = double.MaxValue,
+            TrialFfValue = 1,
+            UsedCr = 0.9,
+            UsedF = 1.0
+        };
+        records[1] = records[0];
+
+        lshade.AfterGeneration(new GenerationContext(context), records);
+
+        lshade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
+
+        Assert.True(double.IsFinite(cr), $"CR is {cr}");
+        Assert.True(double.IsFinite(f), $"F is {f}");
+        Assert.Equal(1.0, f, 1e-12);
+        Assert.Equal(0.9, cr, 1e-12);
+    }
+
+    /// <summary>
+    /// A success whose improvement is the largest double, beside one of improvement 1, decides the
+    /// Lehmer memory as the sums would without the scale.
+    /// </summary>
+    [Fact]
+    public void AfterGenerationWeighsAnImprovementNearTheLargestDoubleAgainstOneOfOne()
+    {
+        var lshade = CreateStrategy(memorySize: 1);
+        var context = CreateContext();
+
+        var records = new TrialRecord[InitialPopulationSize];
+        records[0] = new TrialRecord
+        {
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = double.MaxValue,
+            TrialFfValue = 1,
+            UsedCr = 0.3,
+            UsedF = 0.8
+        };
+        records[1] = new TrialRecord
+        {
+            Outcome = SelectionOutcome.TrialImproved,
+            ParentFfValue = 2,
+            TrialFfValue = 1,
+            UsedCr = 0.9,
+            UsedF = 0.2
+        };
+
+        lshade.AfterGeneration(new GenerationContext(context), records);
+
+        lshade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
+
+        Assert.True(double.IsFinite(cr), $"CR is {cr}");
+        Assert.True(double.IsFinite(f), $"F is {f}");
+        Assert.Equal(0.8, f, 1e-12);
+        Assert.Equal(0.3, cr, 1e-12);
+    }
+
+    /// <summary>
+    /// Below the overflow bound the scale is not applied: over 200 random sets of two generations
+    /// the memory, terminal slots included, equals 6.0.0's unscaled arithmetic bit for bit (O2).
+    /// </summary>
+    [Fact]
+    public void AfterGenerationBelowTheOverflowBoundEqualsTheUnscaledArithmeticBitForBit() =>
+        UnscaledShadeMemory.AssertTheStrategyEqualsTheUnscaledArithmetic(
+            seed: 20261009,
+            useTerminalCr: true,
+            useLehmerCrMean: true,
+            allZeroCrInTheFirstSet: true,
+            createStrategy: (populationSize, memorySize) => new LShadeStrategy(
+                initialPopulationSize: populationSize,
+                maxEvaluationNumber: MaxEvaluations,
+                archiveSizeRate: 1.0,
+                memorySize: memorySize),
+            createContext: populationSize => CreateContext(populationSize));
+
+    /// <summary>
     /// A zero or negative evaluation budget is rejected at construction, since it would divide the
     /// reduction schedule by a non-positive number.
     /// </summary>
