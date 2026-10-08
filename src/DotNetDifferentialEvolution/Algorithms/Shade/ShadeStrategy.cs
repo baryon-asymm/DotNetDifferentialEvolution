@@ -142,10 +142,19 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
     /// arithmetic mean (SHADE) or the weighted Lehmer mean (L-SHADE, see
     /// <see cref="UseLehmerCrMean"/>).
     /// </summary>
+    /// <remarks>
+    /// Each mean is a ratio of two sums of weights, so it does not depend on the scale of the
+    /// weights. That is what lets the sums be kept finite: when the largest weight of the
+    /// generation is so large that <c>N</c> of them (times F or CR, at most 1) could overflow, every
+    /// weight is divided by it first. Below that bound the divisor is 1 and the weights enter the
+    /// sums exactly as they are.
+    /// </remarks>
     private void UpdateMemory(
         ReadOnlySpan<TrialRecord> trialRecords,
         int currentPopulationSize)
     {
+        var weightScale = WeightScale(trialRecords, currentPopulationSize);
+
         var weightSum = 0.0;
         var weightedCrSum = 0.0;
         var weightedCrSquaredSum = 0.0;
@@ -155,26 +164,12 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
 
         for (var i = 0; i < currentPopulationSize; i++)
         {
-            // S_CR and S_F take improving trials only (both papers, Algorithm 2 line 16). A trial
-            // accepted on a tie has an improvement of exactly zero, so it would enter the weighted
-            // means with weight zero and contribute nothing but the risk of an empty weight sum.
-            if (!trialRecords[i].Improved)
+            if (!TryGetWeight(trialRecords[i], out var unscaledWeight))
             {
                 continue;
             }
 
-            // Weight by the fitness improvement. A success does not always come with a finite,
-            // strictly positive one: replacing a parent the objective scored NaN — or an infinite
-            // one — is a genuine success with an unmeasurable improvement. Such a record cannot be
-            // weighted, and letting it through would put NaN into weightSum, which the
-            // weightSum <= 0.0 guard below does not catch (every comparison against NaN is false),
-            // permanently poisoning M_F and M_CR for the rest of the run.
-            var weight = trialRecords[i].ParentFfValue - trialRecords[i].TrialFfValue;
-            if (!double.IsFinite(weight))
-            {
-                continue;
-            }
-
+            var weight = unscaledWeight / weightScale;
             var cr = trialRecords[i].UsedCr;
             var f = trialRecords[i].UsedF;
 
@@ -214,5 +209,64 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
         }
 
         _memoryIndex = (_memoryIndex + 1) % _memorySize;
+    }
+
+    /// <summary>
+    /// Finds the divisor for this generation's weights: the largest weight when it exceeds
+    /// <c>double.MaxValue / (2 · N)</c>, else 1. A finite weight can still overflow the sums
+    /// (parents the objective scored <see cref="double.MaxValue"/> leave improvements near
+    /// <see cref="double.MaxValue"/>, and their sum is <c>+∞</c>, whose quotient <c>∞/∞</c> would
+    /// write NaN into <c>M_F</c> and <c>M_CR</c>). Divided by the largest weight, no weight exceeds
+    /// 1 and, with F and CR at most 1, no sum exceeds <c>N</c>.
+    /// </summary>
+    private static double WeightScale(
+        ReadOnlySpan<TrialRecord> trialRecords,
+        int currentPopulationSize)
+    {
+        var largestWeight = 0.0;
+        for (var i = 0; i < currentPopulationSize; i++)
+        {
+            if (TryGetWeight(trialRecords[i], out var weight) && weight > largestWeight)
+            {
+                largestWeight = weight;
+            }
+        }
+
+        return largestWeight > double.MaxValue / (2.0 * currentPopulationSize)
+            ? largestWeight
+            : 1.0;
+    }
+
+    /// <summary>
+    /// Takes the weight of a record: its fitness improvement, when it has a usable one.
+    /// </summary>
+    private static bool TryGetWeight(
+        in TrialRecord record,
+        out double weight)
+    {
+        weight = 0.0;
+
+        // S_CR and S_F take improving trials only (both papers, Algorithm 2 line 16). A trial
+        // accepted on a tie has an improvement of exactly zero, so it would enter the weighted
+        // means with weight zero and contribute nothing but the risk of an empty weight sum.
+        if (!record.Improved)
+        {
+            return false;
+        }
+
+        // Weight by the fitness improvement. A success does not always come with a finite,
+        // strictly positive one: replacing a parent the objective scored NaN — or an infinite
+        // one — is a genuine success with an unmeasurable improvement. Such a record cannot be
+        // weighted, and letting it through would put NaN into weightSum, which the
+        // weightSum <= 0.0 guard in UpdateMemory does not catch (every comparison against NaN is
+        // false), permanently poisoning M_F and M_CR for the rest of the run.
+        var improvement = record.ParentFfValue - record.TrialFfValue;
+        if (!double.IsFinite(improvement))
+        {
+            return false;
+        }
+
+        weight = improvement;
+        return true;
     }
 }
