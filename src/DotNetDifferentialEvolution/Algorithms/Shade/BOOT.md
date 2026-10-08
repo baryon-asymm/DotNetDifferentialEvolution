@@ -58,14 +58,17 @@ Inherited from the parent ([BOOT.md](../../BOOT.md)). In addition:
       tests, local run).
 - [x] SHADE converges on Rosenbrock: 2026-10-02,
       `AdaptiveVariantsConvergenceTests.SelfAdaptiveVariantsConvergeOnRosenbrock`.
-- [ ] **O1, overflow (frozen 2026-10-08, before code).** Two improved trials with
+- [x] **O1, overflow (frozen 2026-10-08, before code).** Two improved trials with
       `ParentFf = double.MaxValue`, `TrialFf = 1`, `F = 1`, `CR = 0.9`: the slot's F and CR
       are finite and equal 1.0 and 0.9 (to 1e-12), for SHADE and for L-SHADE. One such
       trial beside one of weight 1 (F 0.8 / CR 0.3 against 0.2 / 0.9): F and CR are the
       large one's. Red on the unfixed code: `CR is NaN` (both classes; the orchestrator's
       draft test, 2026-10-08, kept off the branch). Tests: `ShadeStrategyTests` and its
       `LShadeStrategyTests` twin, the names in the invariant above.
-- [ ] **O2, no change below the bound.** From 200 random sets of two generations of records
+      Done 2026-10-08: red on `a5e579e` with `CR is NaN` in both classes (4 tests run, 2
+      red; the mixed-weight pair green); green with the fix (`9d6c9ef`); with the scale never
+      applied (divisor always 1.0) the two overflow tests are red again.
+- [x] **O2, no change below the bound.** From 200 random sets of two generations of records
       (improvements from tiny to 10³⁰⁵, NaN and infinite parents, ties, kept trials, all-zero
       successful CR in one L-SHADE set of four), the memory of `ShadeStrategy` and of
       `LShadeStrategy` equals 6.0.0's arithmetic (`UnscaledShadeMemory` in the unit tests, a
@@ -74,7 +77,11 @@ Inherited from the parent ([BOOT.md](../../BOOT.md)). In addition:
       20261009 (L-SHADE); the strategy's memory read back exactly through
       `GetControlParameters` (slot drawn as the slot, the Gaussian's uniforms 0, the Cauchy's ½;
       a terminal slot draws no Gaussian).
-- [ ] **O3, the engine.** An 8-D sphere feasible on `x₀ < −4` and `double.MaxValue`
+      Done 2026-10-08: green on `a5e579e` (the arithmetic itself) and on the fix, 200 sets
+      each, comparing F and CR of every slot as bit patterns; with the scale applied at
+      every bound (divisor the largest weight whenever positive) both tests are red and
+      nothing else is.
+- [x] **O3, the engine.** An 8-D sphere feasible on `x₀ < −4` and `double.MaxValue`
       elsewhere, population 100, 20 000 evaluations, seed 12345, one worker, SHADE and
       L-SHADE: the objective is given no vector with a `NaN` gene, and the best individual has
       none. Red on the unfixed code: 19 355 (SHADE) and 19 667 (L-SHADE) evaluations with
@@ -82,6 +89,10 @@ Inherited from the parent ([BOOT.md](../../BOOT.md)). In addition:
       `IntegrationTests/EndToEnd/SentinelFitnessTests`, through `DifferentialEvolutionBuilder`
       (`WithShade(0.2, 1.0, 100)`, `WithLShade(20 000, 0.11, 2.6, 6)`); the objective counts
       the vectors with a `NaN` gene and scores a `NaN` gene as 0, so that one would win and show.
+      Done 2026-10-08: bounds ±5 in every dimension (the criterion leaves them open; these
+      reproduce the draft's figures). Red on `a5e579e`: 19 355 (SHADE) and 19 667 (L-SHADE)
+      of 20 000 evaluations with a `NaN` gene; green with the fix (none); red again with the
+      scale never applied.
 - [ ] ⚠ The terminal `M_CR` latches here and does not in Tanabe's `lshade.cc`, whose
       sentinel test is unreachable; measured over 25 runs at the paper's settings, no
       slot became terminal (`a88001a`).

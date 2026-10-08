@@ -18,6 +18,10 @@ cosine term is 0 (draws `0.5, 0.75`), the Cauchy to its location at the draw `0.
 - **Tie handling is pinned in both directions**: jDE inherits on a tie, JADE and SHADE
   learn nothing from one.
 - **`TrialRecord`s are built by hand**; no test runs selection to produce them.
+- **The unscaled memory update is a copy, frozen.** `UnscaledShadeMemory` holds 6.0.0's
+  arithmetic as at `a5e579e` and the exact read-back of a strategy's memory (the Gaussian's
+  uniforms 0 and the Cauchy's ½ make both samplers return their centre); the strategies
+  must equal it bit for bit below the overflow bound (O2).
 
 ## Dependencies
 
@@ -48,6 +52,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 ## Acceptance criteria
 
 - [x] Green: 2026-10-02, 32 cases in 4 classes (jDE 4, JADE 4, SHADE 8, L-SHADE 16).
+- [x] The overflow checks O1 and O2 of [Shade](../../../src/DotNetDifferentialEvolution/Algorithms/Shade/BOOT.md)
+      (2026-10-08): SHADE 11 and L-SHADE 19 cases; O1 red on `a5e579e` (`CR is NaN`), O2 green
+      there and red with the scale applied at every bound.
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. JADE keyed on `Replaced`
       instead of `Improved` turned `AfterGenerationIgnoresATrialAcceptedOnATie` red.
 - [ ] ⚠ The sampling bounds (F in `(0, 1]`, CR in `[0, 1]`) of JADE and SHADE are not
@@ -62,3 +69,5 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 - **No reading the private means by reflection.** Sampling with centre-revealing draws
   checks the same value through the public path the engine uses.
 - **No expectation taken from a run.** Each is a formula in the test.
+- **No "keeping `UnscaledShadeMemory` in step" with `ShadeStrategy`.** A copy that follows the
+  code proves nothing; it changes only if the 6.0.0 arithmetic it records was copied wrongly.
