@@ -30,6 +30,7 @@ internal static class AdaptationRules        // host and device (S7)
     public const double TerminalCr = -1.0;
     public const double InitialValue = 0.5;
     public static double WeightOf(ParameterRule rule, int outcome, double parentFitness, double trialFitness);
+    public static double ScaleOf(double largestWeight, int count);          // S19
     public static void UpdateJadeMeans(SuccessSums sums, double adaptationRate, ref double meanCr, ref double meanF);
     public static bool UpdateShadeSlot(SuccessSums sums, bool lShade, ref double slotCr, ref double slotF);
 }
@@ -65,7 +66,7 @@ internal static class BookkeepingKernels     // one entry point per pass, Index1
     public static int ChunkCount(int count);
     // FillInts, FillDoubles; BestOfChunks, BestOfPartials; RankByCounting, LoadSortKeys,
     // BitonicStep; CountImproved, ScanImproved, PlaceImproved, CopyToArchive;
-    // SumSuccesses, Adapt; Compact; Stagnate.
+    // LargestWeights, SumSuccesses, Adapt; Compact; Stagnate.
 }
 
 internal sealed record BookkeepingPlan(
@@ -93,6 +94,12 @@ internal sealed class GenerationBookkeeping : IDisposable
 ```
 
 - Every kernel reads the stop word first and returns when it is set.
+- SHADE's weights are scaled before they are summed (check S19, added 2026-10-08):
+  `ScaleOf(largestWeight, count)` is `largestWeight` when it exceeds
+  `double.MaxValue / (2·count)`, else 1.0. `LargestWeights` (one thread per chunk, SHADE
+  and L-SHADE only, one double per chunk in a buffer allocated under SHADE only) runs
+  before `SumSuccesses`, which takes the maximum over the chunks' largest weights and adds
+  `weight / scale`; JADE's scale is 1.
 - Chunks are 1 024 individuals; ranking by counting up to N = 8 192, the bitonic
   network above it, over N rounded up to a power of two with +∞ keys at the end.
 - The control block of the stop rule is the only buffer the host reads during a run:

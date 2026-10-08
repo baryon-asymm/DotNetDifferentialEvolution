@@ -21,6 +21,7 @@ accelerator, and the run errors of the v1 contract.
 | S14: each configuration and the stagnation rule, twice with one seed: bit-identical results and snapshots | `SymmetryRunTests.EachConfigurationIsReproducible…`, `TheStagnationLimitIsReproducible`; CUDA under `Gpu` | ✅ |
 | S17: with a stagnation limit the stop word is read at most ⌈G/16⌉ + observer calls + 1 times; without one, never | `TheStopWordIsReadOnlyEverySixteenGenerationsAndForTheObserver` | ✅ |
 | S18: a limit or a cancellation after the stop, before its read, ends the run at the stopping generation; a cancellation before it cancels | `StopWordExitTests` | ✅ |
+| S19: SHADE and L-SHADE on an objective scoring infeasible points `double.MaxValue` and a `NaN` gene 0 (8-D sphere feasible on `x₀ < −4`, N = 100, 20 000 evaluations, seed 12345) end with no `NaN` gene in the best individual and a finite fitness; the same for L-SHADE on CUDA (N = 16 384, 32 genes, 5·10⁶ evaluations, seed 20261007) | `SentinelFitnessTests`; CUDA under `Gpu` | ⏳ |
 | The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 | `DocumentedExampleTests` | ✅ |
 
 ## Tests ✅
@@ -86,6 +87,16 @@ public class StopWordExitTests
     public async Task ACancellationAfterTheStopCompletesTheRunAtTheStoppingGeneration();
     [Trait("Category", "Integration")]
     public async Task ACancellationBeforeTheStopStillCancels();
+}
+public class SentinelFitnessTests
+{
+    public SentinelFitnessTests(ITestOutputHelper output);
+    [Trait("Category", "Integration")]
+    public Task ShadeEndsWithNoNaNGeneWhenInfeasiblePointsScoreMaxValue();
+    [Trait("Category", "Integration")]
+    public Task LShadeEndsWithNoNaNGeneWhenInfeasiblePointsScoreMaxValue();
+    [Trait("Category", "Gpu")]
+    public Task LShadeEndsWithNoNaNGeneWhenInfeasiblePointsScoreMaxValueOnCuda();
 }
 public class SymmetryRunTests
 {
