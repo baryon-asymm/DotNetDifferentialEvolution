@@ -292,7 +292,7 @@ public class LShadeStrategyTests
             seed: 20261009,
             useTerminalCr: true,
             useLehmerCrMean: true,
-            allZeroCrInTheFirstSet: true,
+            allZeroCrInEveryFourthSet: true,
             createStrategy: (populationSize, memorySize) => new LShadeStrategy(
                 initialPopulationSize: populationSize,
                 maxEvaluationNumber: MaxEvaluations,

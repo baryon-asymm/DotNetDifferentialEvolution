@@ -291,7 +291,7 @@ public class ShadeStrategyTests
             seed: 20261008,
             useTerminalCr: false,
             useLehmerCrMean: false,
-            allZeroCrInTheFirstSet: false,
+            allZeroCrInEveryFourthSet: false,
             createStrategy: (populationSize, memorySize) => new ShadeStrategy(populationSize, memorySize, initialMemoryValue: 0.5),
             createContext: populationSize => ProblemContextHelper.CreateContext(
                 populationSize,

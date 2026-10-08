@@ -60,8 +60,8 @@ internal sealed class UnscaledShadeMemory
     /// <param name="seed">The seed of the record sets.</param>
     /// <param name="useTerminalCr">Whether the reference applies the terminal rule.</param>
     /// <param name="useLehmerCrMean">Whether the reference takes the Lehmer mean for <c>M_CR</c>.</param>
-    /// <param name="allZeroCrInTheFirstSet">
-    /// Whether the first set is four improving records whose CR are all zero.
+    /// <param name="allZeroCrInEveryFourthSet">
+    /// Whether every fourth set (0, 4, 8, ...) is four improving records whose CR are all zero.
     /// </param>
     /// <param name="createStrategy">Makes the strategy under test from a population size and a memory size.</param>
     /// <param name="createContext">Makes the context of a population size.</param>
@@ -69,7 +69,7 @@ internal sealed class UnscaledShadeMemory
         int seed,
         bool useTerminalCr,
         bool useLehmerCrMean,
-        bool allZeroCrInTheFirstSet,
+        bool allZeroCrInEveryFourthSet,
         Func<int, int, ShadeStrategy> createStrategy,
         Func<int, ProblemContext> createContext)
     {
@@ -80,7 +80,7 @@ internal sealed class UnscaledShadeMemory
 
         for (var set = 0; set < SetCount; set++)
         {
-            var allZeroCr = allZeroCrInTheFirstSet && set == 0;
+            var allZeroCr = allZeroCrInEveryFourthSet && set % 4 == 0;
             var populationSize = allZeroCr ? 4 : 4 + random.Next(5);
             var memorySize = allZeroCr ? 1 : 1 + set % 3;
 
