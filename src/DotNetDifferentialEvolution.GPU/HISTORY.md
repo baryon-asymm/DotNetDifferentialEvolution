@@ -2,6 +2,33 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="shade-weight-overflow-2026-10-08"></a>
+## 2026-10-08 — SHADE's weights are scaled before they can overflow a sum
+
+PastyPropellant found, on 2026-10-07, that an objective scoring its infeasible points
+`double.MaxValue` made SHADE and L-SHADE fill their memory with NaN: each weight
+`f(parent) − f(trial)` is finite, so the finiteness check passed, but two of them sum to `+∞`,
+`∞/∞` is NaN, and a NaN F or CR gives an all-NaN mutant. Measured by them on the card
+(L-SHADE, fp64, population 16 384, 5 000 000 evaluations: 26 NaN genes of 32 in the result) and
+here on the CPU package (19 355 and 19 667 evaluations with NaN genes in 20 000, SHADE and
+L-SHADE). The CPU package (5.1.0, 6.0.0) and this one (1.0.0) shared it.
+
+The owner: "Если дефект настоящий, то исправляй", "Делай одним PR". The rule, the same in both
+packages (CPU criteria O1–O3, this node's S19): when the generation's largest weight `w` exceeds
+`double.MaxValue / (2N)`, every weight is divided by `w`; else the weights are used as they are.
+The means are ratios, so the scale cancels; with F and CR at most 1, a sum of N scaled weights
+is at most N, and below the bound no sum of N terms can reach `double.MaxValue`.
+
+The first proposal, to redo the pass with scaled weights only when a sum came out non-finite,
+needs on the device either a second pass launched on a condition the host cannot see without
+a synchronisation, or one thread redoing N terms: a cliff when it recurs each generation,
+which an objective with a sentinel makes likely. A pass that finds each chunk's largest weight
+(`LargestWeights`, SHADE and L-SHADE only) before `SumSuccesses` costs one small launch per
+generation, always, and keeps the sums in index order. The price of the bound over
+"scale only on overflow": a run whose weights exceed `double.MaxValue / (2N)` but did not
+overflow now has its means computed from scaled weights, equal to the old ones to rounding;
+no weight below the bound changes a bit (CPU check O2, measured).
+
 <a id="stop-word-exits-2026-10-06"></a>
 ## 2026-10-06 — the stop word is read at every exit of a run
 

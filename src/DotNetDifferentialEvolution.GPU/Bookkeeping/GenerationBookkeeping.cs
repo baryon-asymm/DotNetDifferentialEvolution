@@ -27,6 +27,7 @@ internal sealed class GenerationBookkeeping : IDisposable
     private readonly ArrayView<int> _counts;
     private readonly ArrayView<int> _owners;
     private readonly ArrayView<double> _partials;
+    private readonly ArrayView<double> _largestWeights;
     private readonly ArrayView<double> _sortKeys;
     private readonly ArrayView<int> _memoryIndex;
     private readonly ArrayView<double> _lastBest;
@@ -41,7 +42,8 @@ internal sealed class GenerationBookkeeping : IDisposable
     private Action<AcceleratorStream, Index1D, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>>? _scanImproved;
     private Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>, int, int, ArrayView<int>>? _placeImproved;
     private Action<AcceleratorStream, Index1D, ArrayView<int>, ArrayView<double>, ArrayView<double>, int, ArrayView<int>>? _copyToArchive;
-    private Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>>? _sumSuccesses;
+    private Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>>? _largestWeightsPass;
+    private Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>, ArrayView<double>>? _sumSuccesses;
     private Action<AcceleratorStream, Index1D, ParameterRule, int, ArrayView<double>, double, int, MemoryRule, ArrayView<double>, ArrayView<int>, ArrayView<int>>? _adapt;
     private Action<AcceleratorStream, Index1D, PopulationViews, int, StrategyViews, int>? _compact;
     private Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, ArrayView<double>, double, int, int, ArrayView<int>>? _stagnate;
@@ -87,6 +89,7 @@ internal sealed class GenerationBookkeeping : IDisposable
             _counts = Ints(archiveCapacity > 0 ? chunks : 1);
             _owners = Ints(Math.Max(1, archiveCapacity));
             _partials = Doubles(plan.Adapts ? (long)chunks * SuccessSums.Width : 1);
+            _largestWeights = Doubles(plan.Rule == ParameterRule.Shade ? chunks : 1);
             _sortKeys = Doubles(plan.NeedsRanking && populationSize > CountingRankLimit ? rankingLength : 1);
             _memoryIndex = Ints(1);
             _lastBest = Doubles(1);
@@ -287,12 +290,19 @@ internal sealed class GenerationBookkeeping : IDisposable
 
     private void Adapt(PopulationViews views, int count)
     {
-        _sumSuccesses ??= Load<Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
+        _sumSuccesses ??= Load<Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
             nameof(BookkeepingKernels.SumSuccesses));
         _adapt ??= Load<Action<AcceleratorStream, Index1D, ParameterRule, int, ArrayView<double>, double, int, MemoryRule, ArrayView<double>, ArrayView<int>, ArrayView<int>>>(
             nameof(BookkeepingKernels.Adapt));
         var chunks = BookkeepingKernels.ChunkCount(count);
-        _sumSuccesses(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _partials);
+        if (_plan.Rule == ParameterRule.Shade)
+        {
+            _largestWeightsPass ??= Load<Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
+                nameof(BookkeepingKernels.LargestWeights));
+            _largestWeightsPass(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights);
+        }
+
+        _sumSuccesses(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights, _partials);
         _adapt(_stream, 1, _plan.Rule, chunks, _partials, _plan.AdaptationRate, _plan.MemorySize, _plan.LShade ? MemoryRule.LShade : MemoryRule.Shade, Views.Adaptation, _memoryIndex, Views.Stop);
     }
 

@@ -42,6 +42,17 @@ internal static class AdaptationRules
     }
 
     /// <summary>
+    /// The divisor of SHADE's weights, so that no sum of N of them overflows (<c>ShadeStrategy</c> applies the same rule):
+    /// the generation's largest weight when it exceeds <c>double.MaxValue / (2·N)</c>, else 1.0, which changes no bit.
+    /// With F, CR ≤ 1 no weighted sum then exceeds N, and the means do not depend on the scale.
+    /// </summary>
+    /// <param name="largestWeight">The generation's largest weight, 0 when there is none.</param>
+    /// <param name="count">N, the active population size.</param>
+    /// <returns>The divisor of every weight of the generation.</returns>
+    public static double ScaleOf(double largestWeight, int count) =>
+        largestWeight > double.MaxValue / (2.0 * count) ? largestWeight : 1.0;
+
+    /// <summary>
     /// JADE's update (<c>JadeStrategy.AdaptParameterMeans</c>): with no improved trial nothing changes; else
     /// <c>μCR = (1 − c)·μCR + c·mean(S_CR)</c>, and when ΣF &gt; 0, <c>μF = (1 − c)·μF + c·ΣF²/ΣF</c>.
     /// </summary>

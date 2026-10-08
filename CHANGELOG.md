@@ -7,6 +7,19 @@ against the previously released package on every build, and the differences it f
 in `src/DotNetDifferentialEvolution/CompatibilitySuppressions.xml`. Behavioural changes are a
 different matter — nothing can detect those automatically, so they are called out explicitly.
 
+## 6.0.1
+
+A fix to SHADE and L-SHADE; no API change.
+
+- **The memory no longer fills with NaN when the improvements overflow the sums.** An objective
+  that scores its infeasible points `double.MaxValue` gives parents whose improvements are finite
+  but sum to `+∞` over two successes; `∞/∞` wrote NaN into `M_F` and `M_CR`, F and CR came out NaN,
+  and the trial vectors, and the best individual, held NaN genes. 5.1.0 and 6.0.0 have it. Now the
+  weights are divided by the generation's largest when that exceeds `double.MaxValue / (2·N)`.
+  Below that bound, which is every run whose improvements stay under about `9·10³⁰⁷ / N`, a run is
+  bit for bit what 6.0.0 computed (200 random sets of two generations, SHADE and L-SHADE).
+  Found by PastyPropellant, 2026-10-07.
+
 ## 6.0.0
 
 A small break, made for the repository's maximum compiler and analyzer settings (every diagnostic

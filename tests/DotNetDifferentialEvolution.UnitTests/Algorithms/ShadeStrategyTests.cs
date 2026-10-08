@@ -226,6 +226,78 @@ public class ShadeStrategyTests
         Assert.Equal(0.5, f, 1e-9);
     }
 
+    /// <summary>
+    /// Two successes over parents scored <see cref="double.MaxValue"/> each have a finite improvement,
+    /// and the sums of those improvements overflow; the memory must still come out finite and hold
+    /// the successes' own parameters (O1).
+    /// </summary>
+    [Fact]
+    public void AfterGenerationKeepsTheMemoryFiniteWhenTheImprovementsOverflowTheSums()
+    {
+        var shade = new ShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
+        var context = CreateContext();
+
+        // Each weight is double.MaxValue - 1 = double.MaxValue, finite; their sum is +∞, and the
+        // unscaled means were ∞/∞ = NaN.
+        var records = new[]
+        {
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = double.MaxValue, TrialFfValue = 1, UsedCr = 0.9, UsedF = 1.0 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = double.MaxValue, TrialFfValue = 1, UsedCr = 0.9, UsedF = 1.0 },
+        };
+
+        shade.AfterGeneration(new GenerationContext(context), records);
+
+        shade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
+
+        Assert.True(double.IsFinite(cr), $"CR is {cr}");
+        Assert.True(double.IsFinite(f), $"F is {f}");
+        Assert.Equal(1.0, f, 1e-12);
+        Assert.Equal(0.9, cr, 1e-12);
+    }
+
+    /// <summary>
+    /// A success whose improvement is the largest double, beside one of improvement 1, is weighted as
+    /// the sums would weigh it without the scale: the large one's parameters are the memory's.
+    /// </summary>
+    [Fact]
+    public void AfterGenerationWeighsAnImprovementNearTheLargestDoubleAgainstOneOfOne()
+    {
+        var shade = new ShadeStrategy(PopulationSize, memorySize: 1, initialMemoryValue: 0.5);
+        var context = CreateContext();
+
+        var records = new[]
+        {
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = double.MaxValue, TrialFfValue = 1, UsedCr = 0.3, UsedF = 0.8 },
+            new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 2, TrialFfValue = 1, UsedCr = 0.9, UsedF = 0.2 },
+        };
+
+        shade.AfterGeneration(new GenerationContext(context), records);
+
+        shade.GetControlParameters(0, CellRevealingDraws(), out var f, out var cr);
+
+        Assert.True(double.IsFinite(cr), $"CR is {cr}");
+        Assert.True(double.IsFinite(f), $"F is {f}");
+        Assert.Equal(0.8, f, 1e-12);
+        Assert.Equal(0.3, cr, 1e-12);
+    }
+
+    /// <summary>
+    /// Below the overflow bound the scale is not applied: over 200 random sets of two generations
+    /// the memory equals 6.0.0's unscaled arithmetic bit for bit (O2).
+    /// </summary>
+    [Fact]
+    public void AfterGenerationBelowTheOverflowBoundEqualsTheUnscaledArithmeticBitForBit() =>
+        UnscaledShadeMemory.AssertTheStrategyEqualsTheUnscaledArithmetic(
+            seed: 20261008,
+            useTerminalCr: false,
+            useLehmerCrMean: false,
+            allZeroCrInEveryFourthSet: false,
+            createStrategy: (populationSize, memorySize) => new ShadeStrategy(populationSize, memorySize, initialMemoryValue: 0.5),
+            createContext: populationSize => ProblemContextHelper.CreateContext(
+                populationSize,
+                new SphereEvaluator(dimension: 2),
+                new LimitGenerationNumberTerminationStrategy(1)));
+
     private static ProblemContext CreateContext()
     {
         var evaluator = new SphereEvaluator(dimension: 2);

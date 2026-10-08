@@ -329,13 +329,59 @@ internal static class BookkeepingKernels
         owners[slot] = -1;
     }
 
-    /// <summary>The sums of one chunk's improved trials (<see cref="AdaptationRules.WeightOf"/>, <see cref="SuccessSums.Add"/>), in index order.</summary>
+    /// <summary>
+    /// The largest SHADE weight (<see cref="AdaptationRules.WeightOf"/>) of one chunk's improved trials, 0 when it has none:
+    /// the first pass of the scale that keeps the sums finite (<see cref="AdaptationRules.ScaleOf"/>). Runs under SHADE and
+    /// L-SHADE only.
+    /// </summary>
+    /// <param name="chunk">The chunk.</param>
+    /// <param name="rule">SHADE.</param>
+    /// <param name="count">N.</param>
+    /// <param name="strategy">The trials' outcomes.</param>
+    /// <param name="parentFitness">The fitness before the generation.</param>
+    /// <param name="trialFitness">The fitness after it, the trial's where it improved.</param>
+    /// <param name="largest">Receives the chunk's largest weight, one double per chunk.</param>
+    public static void LargestWeights(
+        Index1D chunk,
+        ParameterRule rule,
+        int count,
+        StrategyViews strategy,
+        ArrayView<double> parentFitness,
+        ArrayView<double> trialFitness,
+        ArrayView<double> largest)
+    {
+        if (strategy.Stop[StopSet] != 0)
+        {
+            return;
+        }
+
+        var first = chunk * ChunkSize;
+        var end = Math.Min(first + ChunkSize, count);
+        var maximum = 0.0;
+        for (var i = first; i < end; i++)
+        {
+            var weight = AdaptationRules.WeightOf(rule, strategy.Outcomes[i], parentFitness[i], trialFitness[i]);
+            if (weight > maximum)
+            {
+                maximum = weight;
+            }
+        }
+
+        largest[chunk] = maximum;
+    }
+
+    /// <summary>
+    /// The sums of one chunk's improved trials (<see cref="AdaptationRules.WeightOf"/> over the generation's scale,
+    /// <see cref="SuccessSums.Add"/>), in index order. Under SHADE the scale is <see cref="AdaptationRules.ScaleOf"/> of the
+    /// largest of the chunks' largest weights; under JADE it is 1.
+    /// </summary>
     /// <param name="chunk">The chunk.</param>
     /// <param name="rule">JADE or SHADE.</param>
     /// <param name="count">N.</param>
     /// <param name="strategy">The trials' F, CR and outcomes.</param>
     /// <param name="parentFitness">The fitness before the generation.</param>
     /// <param name="trialFitness">The fitness after it, the trial's where it improved.</param>
+    /// <param name="largest">The chunks' largest weights (<see cref="LargestWeights"/>); read under SHADE only.</param>
     /// <param name="partials">Receives the chunk's sums, <see cref="SuccessSums.Width"/> doubles per chunk.</param>
     public static void SumSuccesses(
         Index1D chunk,
@@ -344,11 +390,27 @@ internal static class BookkeepingKernels
         StrategyViews strategy,
         ArrayView<double> parentFitness,
         ArrayView<double> trialFitness,
+        ArrayView<double> largest,
         ArrayView<double> partials)
     {
         if (strategy.Stop[StopSet] != 0)
         {
             return;
+        }
+
+        var scale = 1.0;
+        if (rule == ParameterRule.Shade)
+        {
+            var maximum = 0.0;
+            for (var c = 0; c < ChunkCount(count); c++)
+            {
+                if (largest[c] > maximum)
+                {
+                    maximum = largest[c];
+                }
+            }
+
+            scale = AdaptationRules.ScaleOf(maximum, count);
         }
 
         var first = chunk * ChunkSize;
@@ -359,7 +421,7 @@ internal static class BookkeepingKernels
             var weight = AdaptationRules.WeightOf(rule, strategy.Outcomes[i], parentFitness[i], trialFitness[i]);
             if (!double.IsNaN(weight))
             {
-                sums = sums.Add(weight, strategy.CrossoverProbabilities[i], strategy.MutationForces[i]);
+                sums = sums.Add(weight / scale, strategy.CrossoverProbabilities[i], strategy.MutationForces[i]);
             }
         }
 

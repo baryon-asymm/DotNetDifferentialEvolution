@@ -13,6 +13,7 @@ Nothing outward. What this node proves about the package used through its builde
 | The guide's examples build and run: the shortest program, L-SHADE spending its budget down to 4 individuals, the cursor walk | `DocumentedExampleTests` | ✅ |
 | Local search fires on its cadence, its write-back survives, its evaluations are counted | `LocalSearchHookTests` | ✅ |
 | An L-SHADE observer sees the live size shrink monotonically to 4, only live individuals, a fixed capacity and genome size | `PopulationSizeReportingTests` | ✅ |
+| An 8-D sphere feasible on `x₀ < -4` and `double.MaxValue` elsewhere (bounds ±5), population 100, 20 000 evaluations, seed 12345, one worker: SHADE and L-SHADE hand the objective no vector with a `NaN` gene, and the best individual has none | `SentinelFitnessTests` | ✅ (one run each) |
 
 ## Tests ✅
 
@@ -55,5 +56,10 @@ public class PopulationSizeReportingTests
     public async Task TheReportedIndividualsAreAllLive();
     public async Task CapacityKeepsReportingTheAllocatedLength();
     public async Task TheGenomeSizeDoesNotDriftWithTheShrinkingPopulation();
+}
+[Trait("Category", "Integration")]
+public class SentinelFitnessTests
+{
+    public async Task TheObjectiveIsNeverGivenANaNGeneWhenMostParentsScoreTheSentinel(string variant);   // "SHADE", "L-SHADE"
 }
 ```

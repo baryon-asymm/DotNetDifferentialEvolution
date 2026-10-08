@@ -24,6 +24,17 @@ generation itself stays in [Kernels](../Kernels/API.md).
 - **Deterministic sums.** Every sum runs in index order within chunks of 1 024 and over
   the chunks in chunk order; no floating-point atomic anywhere. For N ≤ 1 024 that is
   the CPU package's order bit for bit (S7).
+- **SHADE's weights are scaled before they can overflow a sum** (S19). A pass finds each
+  chunk's largest weight; when the generation's largest exceeds `double.MaxValue / (2N)`
+  every weight is divided by it, else the weights are used as they are (division by 1.0
+  changes no bit). Two finite improvements near `double.MaxValue` otherwise sum to `+∞`,
+  and `∞/∞` writes `NaN` into the memory. The CPU package's `ShadeStrategy` applies the
+  same rule. The parts: `AdaptationRules.ScaleOf(double largestWeight, int count)` returns
+  the divisor (`largestWeight > double.MaxValue / (2.0 * count) ? largestWeight : 1.0`); the
+  kernel `LargestWeights` (one thread per chunk, the chunk's largest SHADE weight from
+  `WeightOf`, 0 when none) runs under SHADE and L-SHADE only, before `SumSuccesses`;
+  `SumSuccesses` takes the chunks' largest weights, takes their maximum, and adds
+  `weight / scale` (JADE: scale 1). The sums keep their index order.
 - **The archive is the CPU package's loop, parallel** (S8): an improved parent's fill
   position is the archive size before the generation plus the number of improved parents
   before it; below the capacity it is its slot, at or above it the parent draws a
