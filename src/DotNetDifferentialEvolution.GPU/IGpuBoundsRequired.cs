@@ -1,11 +1,9 @@
-using DotNetDifferentialEvolution.GPU.Objectives;
-
 namespace DotNetDifferentialEvolution.GPU;
 
 /// <summary>The first stage of the builder: the search box.</summary>
 /// <typeparam name="TFunction">The objective.</typeparam>
 public interface IGpuBoundsRequired<TFunction>
-    where TFunction : struct, IGpuFitnessFunction
+    where TFunction : struct
 {
     /// <summary>Sets the box: gene j is searched in <c>[lowerBound[j], upperBound[j]]</c>.</summary>
     /// <param name="lowerBound">The lower bound of each gene; its length is D.</param>

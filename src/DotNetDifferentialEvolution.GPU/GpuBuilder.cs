@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using DotNetDifferentialEvolution.GPU.Devices;
 using DotNetDifferentialEvolution.GPU.Kernels;
-using DotNetDifferentialEvolution.GPU.Objectives;
 using ILGPU.Runtime;
 
 namespace DotNetDifferentialEvolution.GPU;
@@ -11,16 +10,21 @@ namespace DotNetDifferentialEvolution.GPU;
 /// is reported where the wrong value is passed (API.md, errors); what depends on more than one stage
 /// is refused by <see cref="Build"/>, as the CPU builder refuses it.
 /// </summary>
-/// <typeparam name="TFunction">The objective.</typeparam>
+/// <typeparam name="TFunction">The objective, a single-kernel or a pointwise one.</typeparam>
 /// <param name="function">The objective.</param>
-internal sealed class GpuBuilder<TFunction>(TFunction function)
+/// <param name="pointCount"><c>P</c> of a pointwise objective, or <see langword="null"/> for a single-kernel one.</param>
+/// <param name="launcherFor">Compiles the kernels for the objective: its accelerator, the objective, the parameter rule and N.</param>
+internal sealed class GpuBuilder<TFunction>(
+    TFunction function,
+    int? pointCount,
+    Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> launcherFor)
     : IGpuBoundsRequired<TFunction>,
       IGpuPopulationSizeRequired<TFunction>,
       IGpuMutationStrategyRequired<TFunction>,
       IGpuTerminationConditionRequired<TFunction>,
       IGpuDeviceRequired<TFunction>,
       IGpuDifferentialEvolutionBuilder<TFunction>
-    where TFunction : struct, IGpuFitnessFunction
+    where TFunction : struct
 {
     private readonly TFunction _function = function;
     private double[] _lowerBound = [];
@@ -83,6 +87,14 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
                 nameof(populationSize),
                 populationSize,
                 $"N·D = {(long)populationSize * _lowerBound.Length} exceeds {int.MaxValue}, the largest population a kernel can index.");
+        }
+
+        if (pointCount is { } points && (long)populationSize * points > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(populationSize),
+                populationSize,
+                $"N·P = {(long)populationSize * points} exceeds {int.MaxValue}, the most point results a kernel can index.");
         }
 
         _populationSize = populationSize;
@@ -269,7 +281,8 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
             StopReadInterval = _stopReadInterval,
         };
         var function = _function;
-        KernelLauncher Compile(Accelerator accelerator) => new KernelLauncher<TFunction>(accelerator, function, strategy.Rule);
+        var populationSize = _populationSize;
+        KernelLauncher Compile(Accelerator accelerator) => launcherFor(accelerator, function, strategy.Rule, populationSize);
 
         // The lease goes straight into the constructor, which owns it from then on.
         return _accelerator is { } callersAccelerator

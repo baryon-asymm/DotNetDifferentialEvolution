@@ -1,11 +1,9 @@
-using DotNetDifferentialEvolution.GPU.Objectives;
-
 namespace DotNetDifferentialEvolution.GPU;
 
 /// <summary>The last stage of the builder: the optional settings, then <see cref="Build"/>.</summary>
 /// <typeparam name="TFunction">The objective.</typeparam>
 public interface IGpuDifferentialEvolutionBuilder<TFunction>
-    where TFunction : struct, IGpuFitnessFunction
+    where TFunction : struct
 {
     /// <summary>Makes the run reproducible: the same seed, device and package and ILGPU versions give a bit-identical result.</summary>
     /// <param name="seed">The seed, the Philox key.</param>

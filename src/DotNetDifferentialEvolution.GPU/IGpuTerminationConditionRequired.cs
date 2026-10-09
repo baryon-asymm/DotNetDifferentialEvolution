@@ -1,11 +1,9 @@
-using DotNetDifferentialEvolution.GPU.Objectives;
-
 namespace DotNetDifferentialEvolution.GPU;
 
 /// <summary>The fourth stage of the builder: when the run stops.</summary>
 /// <typeparam name="TFunction">The objective.</typeparam>
 public interface IGpuTerminationConditionRequired<TFunction>
-    where TFunction : struct, IGpuFitnessFunction
+    where TFunction : struct
 {
     /// <summary>Runs exactly <paramref name="maxGenerations"/> generations.</summary>
     /// <param name="maxGenerations">The number of generations; at least 1.</param>

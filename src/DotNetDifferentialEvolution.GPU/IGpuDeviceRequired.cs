@@ -1,4 +1,3 @@
-using DotNetDifferentialEvolution.GPU.Objectives;
 using ILGPU.Runtime;
 
 namespace DotNetDifferentialEvolution.GPU;
@@ -6,7 +5,7 @@ namespace DotNetDifferentialEvolution.GPU;
 /// <summary>The fifth stage of the builder: where the run executes.</summary>
 /// <typeparam name="TFunction">The objective.</typeparam>
 public interface IGpuDeviceRequired<TFunction>
-    where TFunction : struct, IGpuFitnessFunction
+    where TFunction : struct
 {
     /// <summary>
     /// Runs on <paramref name="device"/>, opened by <see cref="IGpuDifferentialEvolutionBuilder{TFunction}.Build"/>

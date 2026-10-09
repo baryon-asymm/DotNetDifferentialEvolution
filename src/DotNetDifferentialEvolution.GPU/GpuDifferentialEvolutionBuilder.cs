@@ -14,5 +14,8 @@ public static class GpuDifferentialEvolutionBuilder
     /// <returns>The first stage.</returns>
     public static IGpuBoundsRequired<TFunction> ForFunction<TFunction>(TFunction function)
         where TFunction : struct, IGpuFitnessFunction =>
-        new GpuBuilder<TFunction>(function);
+        new GpuBuilder<TFunction>(
+            function,
+            null,
+            (accelerator, objective, rule, _) => new KernelLauncher<TFunction>(accelerator, objective, rule));
 }

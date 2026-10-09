@@ -49,7 +49,7 @@ public readonly struct GeneView : IEquatable<GeneView>
 - Equality means the same window onto the same buffer (buffer, start and length); it is
   for host code and is not meaningful inside a kernel.
 
-## Pointwise objective ⏳
+## Pointwise objective ✅
 
 Designed 2026-10-09 ([HISTORY.md](../HISTORY.md#pointwise-decided-2026-10-09)), for 1.1.0.
 

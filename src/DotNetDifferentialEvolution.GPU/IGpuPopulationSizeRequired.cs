@@ -1,11 +1,9 @@
-using DotNetDifferentialEvolution.GPU.Objectives;
-
 namespace DotNetDifferentialEvolution.GPU;
 
 /// <summary>The second stage of the builder: N.</summary>
 /// <typeparam name="TFunction">The objective.</typeparam>
 public interface IGpuPopulationSizeRequired<TFunction>
-    where TFunction : struct, IGpuFitnessFunction
+    where TFunction : struct
 {
     /// <summary>Sets N, one GPU thread per individual.</summary>
     /// <param name="populationSize">N; at least 4, since DE/rand/1 needs four distinct individuals, and N·D at most <see cref="int.MaxValue"/>.</param>
