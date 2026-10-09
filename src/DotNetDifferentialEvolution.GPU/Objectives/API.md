@@ -60,8 +60,7 @@ public interface IGpuPointwiseFitnessFunction<TPoint> where TPoint : unmanaged
     double Combine(GeneView genes, PointView<TPoint> points);
 }
 
-public readonly struct PointView<TPoint> : IEquatable<PointView<TPoint>>
-    where TPoint : unmanaged
+public readonly struct PointView<TPoint> : IEquatable<PointView<TPoint>> where TPoint : unmanaged
 {
     public int Length { get; }
     public TPoint this[int index] { get; }
