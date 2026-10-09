@@ -51,7 +51,7 @@ current population, **combine** into its fitness.
   own `P`.
 - **Every pointwise kernel returns at once when the stop word is set**, as `Generation`
   does. Select alone ignoring it changes nothing (it re-selects against the same trial);
-  build and select together do, and P1 holds that.
+  P1 holds all three together, not build and select alone (ACCEPTANCE.md, P1's ⚠).
 
 ## Dependencies
 

@@ -87,6 +87,60 @@ assembly of that name. A private nested struct fails at `Build` with "Access is 
 
 ILGPU reports code it cannot compile when the optimizer is built, not when C# compiles.
 
+## A pointwise objective
+
+When the fitness is a sum, or any combination, of `P` independent parts (experimental
+points, load cases, scenarios), one thread per individual computes all `P` parts in a
+row, and a small population leaves most of the GPU idle. Implement
+`IGpuPointwiseFitnessFunction<TPoint>` instead: `EvaluatePoint(genes, point)` computes one
+part, each in its own thread (`N·P` threads per generation), and `Combine(genes, points)`
+turns an individual's `P` results into its fitness, in one thread, reading them in point
+order.
+
+```csharp
+public readonly record struct Residual(double Squared, int Outlier);
+
+public readonly struct FitObjective(ArrayView<double> xs, ArrayView<double> ys)
+    : IGpuPointwiseFitnessFunction<Residual>
+{
+    public Residual EvaluatePoint(GeneView genes, int point)
+    {
+        var d = genes[0] * Math.Exp(-genes[1] * xs[point]) - ys[point];
+        return new Residual(d * d, d * d > 1.0 ? 1 : 0);
+    }
+
+    public double Combine(GeneView genes, PointView<Residual> points)
+    {
+        var sum = 0.0;
+        for (var p = 0; p < points.Length; p++)
+        {
+            sum += points[p].Squared + points[p].Outlier;
+        }
+
+        return sum;
+    }
+}
+
+using var optimizer = GpuDifferentialEvolutionBuilder
+    .ForPointwiseFunction<FitObjective, Residual>(objective, pointCount: 50)
+    .WithBounds(lower, upper)
+    // ... every later stage is the same as after ForFunction
+```
+
+- `TPoint` is any unmanaged struct; C# cannot infer it, so name both type arguments.
+- The rules for the objective's body, data and visibility are those above; both methods
+  are kernel code.
+- The point results take `N·P·sizeof(TPoint)` bytes on the device; `N·P` must not
+  exceed `int.MaxValue`, and `pointCount` must be at least 1.
+- Draws and selection are the single-kernel path's: a pointwise objective that performs
+  the arithmetic of an `IGpuFitnessFunction` in the same order gives the same run, bit
+  for bit.
+- What it buys, measured 2026-10-09 on an RTX 5070 Ti (P = 50 parts of 40 `Exp`/`Pow`
+  rounds, DE/rand/1/bin, ms per generation, monolithic / pointwise): N = 1 024 —
+  28.5 / 0.75 (38×); N = 16 384 — 28.5 / 11.2 (2.6×). The gain shrinks as `N` alone fills
+  the device; with cheap parts the two extra launches may cost more than they save (an
+  expectation, not measured).
+
 ## Devices
 
 - `GpuDevice.Auto` tries CUDA, then OpenCL, then the CPU accelerator.
