@@ -22,6 +22,7 @@ accelerator, and the run errors of the v1 contract.
 | S17: with a stagnation limit the stop word is read at most ⌈G/16⌉ + observer calls + 1 times; without one, never | `TheStopWordIsReadOnlyEverySixteenGenerationsAndForTheObserver` | ✅ |
 | S18: a limit or a cancellation after the stop, before its read, ends the run at the stopping generation; a cancellation before it cancels | `StopWordExitTests` | ✅ |
 | S19: SHADE and L-SHADE on an objective scoring infeasible points `double.MaxValue` and a `NaN` gene 0 (8-D sphere feasible on `x₀ < −4`, N = 100, 20 000 evaluations, seed 12345) end with no `NaN` gene in the best individual and a finite fitness; the same for L-SHADE on CUDA (N = 16 384, 32 genes, 5·10⁶ evaluations, seed 20261007) | `SentinelFitnessTests`; CUDA under `Gpu` | ✅ |
+| P0: the nine configurations of S13 on the CPU accelerator, 2·10⁴ evaluations each, seed 1, hash (SHA-256) to the value measured before the selection and the sampling were extracted: best genes and fitness as IEEE-754 bits, generations, evaluations | `SingleKernelPathTests` | ✅ |
 | The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 | `DocumentedExampleTests` | ✅ |
 
 ## Tests ✅
@@ -114,6 +115,11 @@ public class SymmetryRunTests
     public async Task TheStagnationLimitIsReproducible();
     [Trait("Category", "Integration")]
     public async Task TheStopWordIsReadOnlyEverySixteenGenerationsAndForTheObserver();
+}
+public class SingleKernelPathTests
+{
+    [Trait("Category", "Integration")]
+    public async Task TheNineRunsHashToTheValueMeasuredBeforeTheRefactoring();
 }
 ```
 

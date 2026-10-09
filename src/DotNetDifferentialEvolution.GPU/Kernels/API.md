@@ -44,10 +44,15 @@ internal static class GpuKernels
     public static void Initialize<TFunction>(Index1D index, TFunction function,
         StepParameters parameters, PopulationViews views)
         where TFunction : struct, IGpuFitnessFunction;
+    public static void SampleIndividual(int individual, StepParameters parameters,
+        PopulationViews views);
     public static void Generation<TFunction, TRule>(Index1D index, TFunction function,
         StepParameters parameters, PopulationViews views, StrategyViews strategy)
         where TFunction : struct, IGpuFitnessFunction
         where TRule : struct, IControlParameterRule;
+    public static void SelectAndRecord(int individual, double trialFitness,
+        double mutationForce, double crossoverProbability, StepParameters parameters,
+        PopulationViews views, StrategyViews strategy);
     public static void DrawSequence(Index1D index, StepParameters parameters,
         int individual, ArrayView<uint> output);
     public static void PhiloxBlocks(Index1D index, ArrayView<uint> counters,
@@ -67,6 +72,11 @@ internal static class GpuKernels
 - `Initialize`: thread i samples `lower + u·(upper − lower)` per gene from its
   generation-0 draws, then evaluates. `Generation`: thread i builds its trial, evaluates
   it and writes the survivor and its fitness into slot i of `Next`.
+- `SampleIndividual` is `Initialize`'s sampling, one draw per gene in gene order, into
+  slot i of `Current`; `SelectAndRecord` is `Generation`'s selection and records (the
+  survivor and its fitness into slot i of `Next`; jDE's F and CR handed to the individual
+  where the trial replaced its parent; JADE's and SHADE's F, CR and outcome). Each is one
+  function that the single-kernel and the pointwise kernels both call (P0, P1).
 - `DrawSequence` and `PhiloxBlocks` exist for the cross-backend checks 3a and 4b.
 
 ## Pointwise ⏳
@@ -106,8 +116,9 @@ internal static class PointwiseKernels
 
 - `EvaluatePoints` runs `N·P` threads over `population` (the current population at
   initialisation, the trials in a generation); `stop` is the stop word.
-- `Select` combines, then calls the selection function `Generation` calls (one function,
-  in `GpuKernels` or `Selection`, named by the coder and declared here).
+- `Select` combines, then calls `GpuKernels.SelectAndRecord`, the selection function
+  `Generation` calls; `Sample` calls `GpuKernels.SampleIndividual`, which `Initialize`
+  calls.
 
 ## Symmetry ✅
 
