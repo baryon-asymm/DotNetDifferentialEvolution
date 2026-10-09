@@ -3,7 +3,10 @@
 ## Purpose
 
 The contract between the caller's objective and the kernel: the interface a struct
-implements, and the read-only view of one individual it is given. Its own node because
+implements, and the read-only view of one individual it is given. Since 1.1.0 (designed
+2026-10-09, [HISTORY.md](../HISTORY.md#pointwise-decided-2026-10-09)) a second form: an
+objective of `P` parts, evaluated part by part and combined per individual
+(`IGpuPointwiseFitnessFunction<TPoint>`, `PointView<TPoint>`). Its own node because
 it is the only public namespace of the package besides the root, and the one a caller
 writes code against.
 
@@ -13,10 +16,17 @@ writes code against.
   returning by reference and no public field; that is half of what keeps a generation
   race-free (root `BOOT.md`, invariant 2). Held by ACCEPTANCE.md, check 2a.
 - **The objective is a struct type argument**, never an interface reference: the kernel
-  is compiled for it and calls it without virtual dispatch. Held by the
-  `struct, IGpuFitnessFunction` constraints of the builder and the kernels.
+  is compiled for it and calls it without virtual dispatch. Held by the constraints of
+  `ForFunction` and `ForPointwiseFunction` (`struct` and the interface) and of the
+  kernels; the stage interfaces between them constrain to `struct` only (1.1.0).
 - **No bounds check in the view.** Kernels cannot throw; an index outside
   `0 ≤ j < Length` is undefined. Held by the code, stated in `API.md`.
+- **`PointView` is read-only like `GeneView`**: no setter, no member returning by
+  reference, no public field, so `Combine` cannot write another individual's results.
+  Held by check 2a, which reads every public type of this namespace.
+- **The point result is the caller's type, the combination the caller's code.** The
+  package moves `TPoint` values and never interprets them; whatever a caller combines
+  (sums, means, flags, penalties) it combines in `Combine`.
 
 ## Dependencies
 

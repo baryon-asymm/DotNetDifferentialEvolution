@@ -4,6 +4,20 @@ Notable changes to the GPU package, released from `gpu-v*` tags. Versions follow
 [semantic versioning](https://semver.org/). The release workflow takes the notes of a version
 from its `## <version>` section below.
 
+## 1.1.0
+
+A new form of objective; nothing existing changes.
+
+- **`IGpuPointwiseFitnessFunction<TPoint>`**, built with
+  `GpuDifferentialEvolutionBuilder.ForPointwiseFunction(function, pointCount)`: an
+  objective made of `P` independent parts. `EvaluatePoint(genes, point)` returns one part's
+  result (any unmanaged struct), each in its own GPU thread, and `Combine(genes, points)`
+  turns an individual's `P` results into its fitness. A generation is then three launches
+  instead of one, and lasts as long as one part instead of all of them. The rest of the
+  builder (schemes, variants, stop rules, devices, observer) is shared.
+- The builder's stage interfaces now constrain `TFunction` to `struct` only, so both
+  entry points use them; code written for 1.0 compiles and runs unchanged.
+
 ## 1.0.1
 
 A fix to SHADE and L-SHADE on the device; no API change.

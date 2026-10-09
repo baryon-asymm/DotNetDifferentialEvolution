@@ -2,6 +2,40 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="pointwise-decided-2026-10-09"></a>
+## 2026-10-09 — a pointwise objective, for objectives made of parts
+
+PastyPropellant's objective is 50 independent points (5 propellants × 10 pressures), each
+two bisections of 19 steps with `Exp` and `Pow`. Written as `IGpuFitnessFunction`, one
+thread computes all 50, and a generation lasts as long as that thread. Their figures
+(theirs, RTX 5070 Ti, fp64, 2026-10-07): about 52 ms per generation at any N up to
+16 384, against 3.05 ms (N 1 024), 6.94 ms (N 4 096) and 22.5 ms (N 16 384) for their own
+former thread-per-point path with a per-individual reduction; on the same bounds the CPU
+package at N 384 (47 generations/s) reached their f = 0.0493 in 32 min, this package at
+N 16 384 (17 generations/s) in 1 h 52 min. The owner keeps fp64 only (fp32 gave them poor
+solutions).
+
+Three ways were weighed with PastyPropellant's orchestrator: (1) a pointwise objective in
+this package; (2) a stream per optimizer, so that K optimizers on one accelerator overlap;
+(3) K populations in one launch. The owner, 2026-10-09: "давай приступим к 1 пункту,
+второй пока просто запомним на будущее". (3) touches every node and helps little without
+(1); it is not planned.
+
+The owner on its scope: "у нас библиотека публичная и она может работать в других
+проектах, не только в PastyPropellant". So the contract is general:
+- the point result is any unmanaged struct (PastyPropellant returns six values and a
+  flag; another caller one `double`);
+- `Combine` is the caller's code over all `P` results in point order, and it is given the
+  genes too (PastyPropellant does not need them; a penalty or a regularisation on the
+  genes does);
+- `P` is fixed per run; groups and layouts are the caller's business.
+
+The builder: the six stage interfaces drop `IGpuFitnessFunction` from their constraint
+instead of a second chain of six; relaxing a constraint breaks no caller, so the version
+is 1.1.0. The split launch keeps the single-kernel path as it is (check P0: a SHA-256 of
+the nine configurations' results taken before the refactoring) and shares its selection
+and sampling instead of copying them.
+
 <a id="shade-weight-overflow-2026-10-08"></a>
 ## 2026-10-08 — SHADE's weights are scaled before they can overflow a sum
 

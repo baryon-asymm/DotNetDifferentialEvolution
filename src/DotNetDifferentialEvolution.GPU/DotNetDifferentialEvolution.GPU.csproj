@@ -7,7 +7,7 @@
         <RootNamespace>DotNetDifferentialEvolution.GPU</RootNamespace>
         <AssemblyName>DotNetDifferentialEvolution.GPU</AssemblyName>
         <PackageId>DotNetDifferentialEvolution.GPU</PackageId>
-        <Version>1.0.1</Version>
+        <Version>1.1.0</Version>
         <Authors>Eduard Burachek</Authors>
         <Description>Differential Evolution (DE/rand/1/bin) with the whole population on a GPU through ILGPU: CUDA, OpenCL or the CPU accelerator, seeded and reproducible, with a staged builder and an ISolution result.</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

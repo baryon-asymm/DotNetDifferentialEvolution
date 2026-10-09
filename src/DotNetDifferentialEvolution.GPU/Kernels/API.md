@@ -69,6 +69,46 @@ internal static class GpuKernels
   it and writes the survivor and its fitness into slot i of `Next`.
 - `DrawSequence` and `PhiloxBlocks` exist for the cross-backend checks 3a and 4b.
 
+## Pointwise ⏳
+
+Designed 2026-10-09; the signatures are the design's, and the coder records any change
+here with the code.
+
+```csharp
+internal readonly record struct PointwiseViews<TPoint>(ArrayView<TPoint> Results,
+    int PointCount, ArrayView<double> TrialMutationForces,
+    ArrayView<double> TrialCrossoverProbabilities)
+    where TPoint : unmanaged;
+
+internal static class PointwiseKernels
+{
+    public static void Sample(Index1D index, StepParameters parameters, PopulationViews views);
+    public static void EvaluatePoints<TFunction, TPoint>(Index1D index, TFunction function,
+        StepParameters parameters, ArrayView<double> population, PointwiseViews<TPoint> points,
+        ArrayView<int> stop)
+        where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
+        where TPoint : unmanaged;
+    public static void CombineInitial<TFunction, TPoint>(Index1D index, TFunction function,
+        StepParameters parameters, PopulationViews views, PointwiseViews<TPoint> points)
+        where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
+        where TPoint : unmanaged;
+    public static void BuildTrials<TRule>(Index1D index, StepParameters parameters,
+        PopulationViews views, StrategyViews strategy, ArrayView<double> trialMutationForces,
+        ArrayView<double> trialCrossoverProbabilities)
+        where TRule : struct, IControlParameterRule;
+    public static void Select<TFunction, TPoint>(Index1D index, TFunction function,
+        StepParameters parameters, PopulationViews views, StrategyViews strategy,
+        PointwiseViews<TPoint> points)
+        where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
+        where TPoint : unmanaged;
+}
+```
+
+- `EvaluatePoints` runs `N·P` threads over `population` (the current population at
+  initialisation, the trials in a generation); `stop` is the stop word.
+- `Select` combines, then calls the selection function `Generation` calls (one function,
+  in `GpuKernels` or `Selection`, named by the coder and declared here).
+
 ## Symmetry ✅
 
 Built 2026-10-05 (checks S2–S6 and S13 of the package's [ACCEPTANCE.md](../ACCEPTANCE.md)).

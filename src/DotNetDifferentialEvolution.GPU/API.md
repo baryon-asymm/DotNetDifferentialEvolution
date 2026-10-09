@@ -72,6 +72,36 @@ public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
 - **The objective type** must be visible to ILGPU's runtime assembly
   ([Objectives](Objectives/API.md)).
 
+## Pointwise objective ⏳
+
+Designed 2026-10-09 ([HISTORY.md](HISTORY.md#pointwise-decided-2026-10-09)), for 1.1.0.
+
+```csharp
+public static class GpuDifferentialEvolutionBuilder
+{
+    public static IGpuBoundsRequired<TFunction> ForPointwiseFunction<TFunction, TPoint>(
+        TFunction function, int pointCount)
+        where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
+        where TPoint : unmanaged;
+}
+```
+
+- **The rest of the builder is shared.** Bounds, population size, every scheme and
+  variant, every stop rule, device, seed and observer are the same calls. The six stage
+  interfaces (`IGpuBoundsRequired<TFunction>` to `IGpuDifferentialEvolutionBuilder<TFunction>`)
+  relax their constraint from `struct, IGpuFitnessFunction` to `struct` so that both entry
+  points return them; code written against 1.0 compiles and runs unchanged.
+- **`pointCount`** is `P ≥ 1`, else `ForPointwiseFunction` throws
+  `ArgumentOutOfRangeException`. One thread per point: `WithPopulationSize` refuses
+  `N·P > int.MaxValue` as it refuses `N·D > int.MaxValue`, with the same exception.
+- **The run.** Initialisation and each generation are three launches instead of one
+  (Kernels `BOOT.md`); everything between generations (best index, ranking, archive,
+  adaptation, reduction, stop rule, observer) is the same. Results equal a monolithic
+  objective's with the same arithmetic, bit for bit (Kernels `ACCEPTANCE.md`, P1).
+- **Not in the CPU package.** On the host an objective computes its parts itself; the
+  split exists because on the device one thread per individual is one thread for all
+  its parts.
+
 ## Symmetry with the CPU package ✅
 
 Designed and built 2026-10-05 (HISTORY.md#symmetry-decided-2026-10-05), checks S1–S17.
