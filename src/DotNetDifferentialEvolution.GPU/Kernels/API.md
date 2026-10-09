@@ -79,10 +79,10 @@ internal static class GpuKernels
   function that the single-kernel and the pointwise kernels both call (P0, P1).
 - `DrawSequence` and `PhiloxBlocks` exist for the cross-backend checks 3a and 4b.
 
-## Pointwise ⏳
+## Pointwise ✅
 
-Designed 2026-10-09; the signatures are the design's, and the coder records any change
-here with the code.
+Designed and built 2026-10-09 (checks P0–P5 of this node's [ACCEPTANCE.md](ACCEPTANCE.md));
+the signatures are the design's, none changed in the build.
 
 ```csharp
 internal readonly record struct PointwiseViews<TPoint>(ArrayView<TPoint> Results,
@@ -115,7 +115,13 @@ internal static class PointwiseKernels
 ```
 
 - `EvaluatePoints` runs `N·P` threads over `population` (the current population at
-  initialisation, the trials in a generation); `stop` is the stop word.
+  initialisation, the trials in a generation): thread k writes result k, the point
+  `k mod P` of individual `k div P`; `stop` is the stop word. The initialisation has no
+  stop word of its own, so its launch passes a one-element word that is never set.
+- `BuildTrials` draws F and CR by `TRule`, builds the trial exactly as `Generation` does
+  (same draws, same order) and keeps F and CR in entry i of the two trial buffers, which
+  `Select` hands to `SelectAndRecord`. `BuildTrials`, `EvaluatePoints` and `Select` return
+  at once when the stop word is set; `Sample` and `CombineInitial` run before any stop.
 - `Select` combines, then calls `GpuKernels.SelectAndRecord`, the selection function
   `Generation` calls; `Sample` calls `GpuKernels.SampleIndividual`, which `Initialize`
   calls.

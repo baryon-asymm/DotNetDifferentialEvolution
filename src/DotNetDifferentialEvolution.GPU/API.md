@@ -14,28 +14,28 @@ public static class GpuDifferentialEvolutionBuilder
         where TFunction : struct, IGpuFitnessFunction;
 }
 
-public interface IGpuBoundsRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuBoundsRequired<TFunction> where TFunction : struct
 { IGpuPopulationSizeRequired<TFunction> WithBounds(ReadOnlyMemory<double> lowerBound, ReadOnlyMemory<double> upperBound); }
 
-public interface IGpuPopulationSizeRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuPopulationSizeRequired<TFunction> where TFunction : struct
 { IGpuMutationStrategyRequired<TFunction> WithPopulationSize(int populationSize); }
 
-public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct
 { IGpuTerminationConditionRequired<TFunction> WithDefaultMutationStrategy(double mutationForce, double crossoverProbability); }
 
-public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct
 {
     IGpuDeviceRequired<TFunction> WithGenerationLimit(int maxGenerations);
     IGpuDeviceRequired<TFunction> WithEvaluationLimit(long maxEvaluations);
 }
 
-public interface IGpuDeviceRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuDeviceRequired<TFunction> where TFunction : struct
 {
     IGpuDifferentialEvolutionBuilder<TFunction> OnDevice(GpuDevice device);
     IGpuDifferentialEvolutionBuilder<TFunction> OnAccelerator(Accelerator accelerator);
 }
 
-public interface IGpuDifferentialEvolutionBuilder<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuDifferentialEvolutionBuilder<TFunction> where TFunction : struct
 {
     IGpuDifferentialEvolutionBuilder<TFunction> WithSeed(int seed);
     IGpuDifferentialEvolutionBuilder<TFunction> WithPopulationUpdateHandler(
@@ -72,9 +72,10 @@ public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
 - **The objective type** must be visible to ILGPU's runtime assembly
   ([Objectives](Objectives/API.md)).
 
-## Pointwise objective ⏳
+## Pointwise objective ✅
 
-Designed 2026-10-09 ([HISTORY.md](HISTORY.md#pointwise-decided-2026-10-09)), for 1.1.0.
+Designed 2026-10-09 ([HISTORY.md](HISTORY.md#pointwise-decided-2026-10-09)), built for 1.1.0
+(checks P1–P5 of the Kernels [ACCEPTANCE.md](Kernels/ACCEPTANCE.md)).
 
 ```csharp
 public static class GpuDifferentialEvolutionBuilder
@@ -91,6 +92,8 @@ public static class GpuDifferentialEvolutionBuilder
   interfaces (`IGpuBoundsRequired<TFunction>` to `IGpuDifferentialEvolutionBuilder<TFunction>`)
   relax their constraint from `struct, IGpuFitnessFunction` to `struct` so that both entry
   points return them; code written against 1.0 compiles and runs unchanged.
+- **Both type arguments are written at the call**: C# infers `TFunction` from the argument but
+  not `TPoint` from the constraint, as in `ForPointwiseFunction<MyObjective, MyPoint>(f, 12)`.
 - **`pointCount`** is `P ≥ 1`, else `ForPointwiseFunction` throws
   `ArgumentOutOfRangeException`. One thread per point: `WithPopulationSize` refuses
   `N·P > int.MaxValue` as it refuses `N·D > int.MaxValue`, with the same exception.
@@ -107,7 +110,7 @@ public static class GpuDifferentialEvolutionBuilder
 Designed and built 2026-10-05 (HISTORY.md#symmetry-decided-2026-10-05), checks S1–S17.
 
 ```csharp
-public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct
 {
     IGpuTerminationConditionRequired<TFunction> WithDefaultMutationStrategy(double mutationForce, double crossoverProbability);
     IGpuTerminationConditionRequired<TFunction> WithBestMutationStrategy(double mutationForce, double crossoverProbability);
@@ -121,7 +124,7 @@ public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struc
         double archiveSizeRate = 2.6, int memorySize = 6);
 }
 
-public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct
 {
     IGpuDeviceRequired<TFunction> WithGenerationLimit(int maxGenerations);
     IGpuDeviceRequired<TFunction> WithEvaluationLimit(long maxEvaluations);
