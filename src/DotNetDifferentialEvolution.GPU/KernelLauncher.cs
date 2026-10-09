@@ -7,7 +7,7 @@ using ILGPU.Runtime;
 
 namespace DotNetDifferentialEvolution.GPU;
 
-/// <summary>The two kernels of a run, compiled for one objective type, behind a non-generic face.</summary>
+/// <summary>The kernels of a run, compiled for one objective type, behind a non-generic face.</summary>
 internal abstract class KernelLauncher : IDisposable
 {
     /// <summary>Samples and evaluates the initial population into <see cref="PopulationViews.Current"/>.</summary>
@@ -21,8 +21,21 @@ internal abstract class KernelLauncher : IDisposable
     /// <param name="strategy">The device state of the scheme and the parameter rule.</param>
     public abstract void Generation(StepParameters parameters, PopulationViews views, StrategyViews strategy);
 
-    /// <summary>Releases the two kernels.</summary>
+    /// <summary>Releases the kernels and any buffers the launcher owns.</summary>
     public abstract void Dispose();
+
+    /// <summary>The type of the parameter rule a generation or build kernel is compiled for.</summary>
+    /// <param name="rule">The rule.</param>
+    /// <returns>The rule's struct.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="rule"/> is not a defined rule.</exception>
+    protected static Type RuleType(ParameterRule rule) => rule switch
+    {
+        ParameterRule.Fixed => typeof(FixedRule),
+        ParameterRule.Jde => typeof(JdeRule),
+        ParameterRule.Jade => typeof(JadeRule),
+        ParameterRule.Shade => typeof(ShadeRule),
+        _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Not a defined parameter rule."),
+    };
 }
 
 /// <summary>
@@ -88,13 +101,4 @@ internal sealed class KernelLauncher<TFunction> : KernelLauncher
 
     private static MethodInfo Entry(string name, params Type[] typeArguments) =>
         typeof(GpuKernels).GetMethod(name, BindingFlags.Public | BindingFlags.Static)!.MakeGenericMethod(typeArguments);
-
-    private static Type RuleType(ParameterRule rule) => rule switch
-    {
-        ParameterRule.Fixed => typeof(FixedRule),
-        ParameterRule.Jde => typeof(JdeRule),
-        ParameterRule.Jade => typeof(JadeRule),
-        ParameterRule.Shade => typeof(ShadeRule),
-        _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Not a defined parameter rule."),
-    };
 }
