@@ -31,8 +31,13 @@ unless marked **Gpu**). P2 holds the package root's builder, whose file is full.
       shape, so that a run stops by the stop word. On the CPU accelerator (CI) and on CUDA
       (**Gpu**). Red, each once: the point kernel mapping thread k to point `k div N` of
       individual `k mod N`; `Combine` given the next individual's results; a surviving
-      trial not handing jDE its F and CR in the pointwise path; the select kernel
-      ignoring the stop word.
+      trial not handing jDE its F and CR in the pointwise path; the build and select
+      kernels ignoring the stop word, seen in a population snapshot taken after the
+      stopping generation and before the word is read. ⚠ Changed 2026-10-09 after code:
+      the frozen red was the select kernel alone, which cannot turn red — with no new
+      trial and no new results it re-selects a survivor against the same trial, a fixed
+      point (measured: 11 of 11 green); build and select together put new trials beside
+      stale results, which only a snapshot shows (without one, also 11 of 11 green).
 - [ ] **P2, the builder.** `ForPointwiseFunction(f, 0)` and `(f, −1)` throw
       `ArgumentOutOfRangeException`; `WithPopulationSize` refuses `N·P > int.MaxValue`
       (N = 2²⁰, P = 2¹²) with the exception it throws for `N·D`; the existing

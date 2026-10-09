@@ -50,7 +50,8 @@ current population, **combine** into its fitness.
   the point kernel writes only result k, and `Combine` of individual i reads only its
   own `P`.
 - **Every pointwise kernel returns at once when the stop word is set**, as `Generation`
-  does.
+  does. Select alone ignoring it changes nothing (it re-selects against the same trial);
+  build and select together do, and P1 holds that.
 
 ## Dependencies
 

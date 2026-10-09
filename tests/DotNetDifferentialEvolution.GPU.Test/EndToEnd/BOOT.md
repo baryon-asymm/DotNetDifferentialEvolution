@@ -5,8 +5,10 @@
 Whole runs of the GPU package through its public builder: checks 1h, 4a, 5b, 6a, 6b,
 6c and 7b of the package's
 [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md), and B1's
-rows "`RunAsync` while a run is in progress" and "the observer throws". The checks are
-frozen; their numbers are copied, never chosen here.
+rows "`RunAsync` while a run is in progress" and "the observer throws"; and checks P0–P4 of
+the pointwise objective, in the Kernels node's
+[ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Kernels/ACCEPTANCE.md). The
+checks are frozen; their numbers are copied, never chosen here.
 
 ## Invariants
 
@@ -20,7 +22,8 @@ frozen; their numbers are copied, never chosen here.
 - **4a compares bit patterns**: the final population from an observer due once at the
   last generation, and the result. Results are never compared across devices.
 - **5b reads the package's own counter** (`PopulationDownloadCount`, internal).
-- **Nothing is timed.** 6a and 6c hold the run on a gate the test opens
+- **Nothing is timed but P4**, whose subject is latency: it runs under `Category=Gpu`
+  only and records its four figures in the test output. 6a and 6c hold the run on a gate the test opens
   (`GateObserver`); the observer signals entry first, then waits. If it is called on the
   thread that called `RunAsync`, it does not wait, so a synchronous `RunAsync` turns the
   case red instead of deadlocking it. Every wait is bounded by `HangGuard` (2 minutes),
@@ -31,7 +34,11 @@ frozen; their numbers are copied, never chosen here.
 
 ## Dependencies
 
-- [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
+- [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`;
+  `IGpuPointwiseFitnessFunction<TPoint>`, `PointView<TPoint>` (P1–P4).
+- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector`, `Backend`,
+  `AcceleratorLease` (internal): P3's objective carries device data, so it needs the accelerator before `Build`,
+  and on CUDA one that carries libdevice.
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md)
   — the builder, `GpuDifferentialEvolution`, `GpuOptimizationResult`,
   `GpuPopulationSnapshot`, `IGpuPopulationUpdatedHandler`; internally
