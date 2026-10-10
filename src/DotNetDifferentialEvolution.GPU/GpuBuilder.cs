@@ -27,6 +27,12 @@ internal sealed class GpuBuilder<TFunction>(
       IGpuDifferentialEvolutionBuilder<TFunction>
     where TFunction : struct
 {
+    /// <summary>The largest N, or N·P, a kernel can index: a launch group is at most 1 024 threads, so the last group's thread index stays below <see cref="int.MaxValue"/>.</summary>
+    private const int MaxThreadIndex = int.MaxValue - 1023;
+
+    /// <summary>The largest N for which JADE, SHADE and L-SHADE rank the population: the ranking rounds N up to a power of two.</summary>
+    private const int MaxRankedPopulationSize = 1 << 30;
+
     private readonly TFunction _function = function;
     private double[] _lowerBound = [];
     private double[] _upperBound = [];
@@ -83,20 +89,9 @@ internal sealed class GpuBuilder<TFunction>(
         // The scheme's own minimum is known only at the next stage; Build refuses a population below it, as the CPU
         // builder does.
         ArgumentOutOfRangeException.ThrowIfLessThan(populationSize, 1);
-        if ((long)populationSize * _lowerBound.Length > int.MaxValue)
+        if (IndexRangeViolation(populationSize, _lowerBound.Length, pointCount) is { } violation)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(populationSize),
-                populationSize,
-                $"N·D = {(long)populationSize * _lowerBound.Length} exceeds {int.MaxValue}, the largest population a kernel can index.");
-        }
-
-        if (pointCount is { } points && (long)populationSize * points > int.MaxValue)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(populationSize),
-                populationSize,
-                $"N·P = {(long)populationSize * points} exceeds {int.MaxValue}, the most point results a kernel can index.");
+            throw new ArgumentOutOfRangeException(nameof(populationSize), populationSize, violation);
         }
 
         _populationSize = populationSize;
@@ -263,8 +258,8 @@ internal sealed class GpuBuilder<TFunction>(
     public GpuDifferentialEvolution Build()
     {
         // The staged interfaces reach Build only through a scheme stage.
+        ValidateConfiguration();
         var strategy = _strategy!;
-        Validate(strategy);
 
         // An unseeded run still has one seed, drawn here; the cryptographic generator only
         // because the analyzers refuse System.Random (CA5394), not because the seed is a secret.
@@ -291,6 +286,13 @@ internal sealed class GpuBuilder<TFunction>(
             ? new GpuDifferentialEvolution(AcceleratorLease.Borrowed(callersAccelerator), settings, Compile)
             : new GpuDifferentialEvolution(DeviceSelector.Open(BackendOf(_device), LibDeviceLocator.Locate, _isPresent), settings, Compile);
     }
+
+    /// <summary>
+    /// Runs every check <see cref="Build"/> makes before it opens a device, and nothing else: for the tests of check A9, whose
+    /// accepted edges are populations too large to allocate (ACCEPTANCE.md, A9).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The configuration is one <see cref="Build"/> refuses.</exception>
+    internal void ValidateConfiguration() => Validate(_strategy!);
 
     /// <summary>
     /// Reads the stop word every <paramref name="interval"/> generations instead of every
@@ -354,6 +356,25 @@ internal sealed class GpuBuilder<TFunction>(
         }
     }
 
+    /// <summary>
+    /// Why a population of <paramref name="populationSize"/> individuals of <paramref name="geneCount"/> genes and
+    /// <paramref name="points"/> points cannot be indexed by a kernel, or <see langword="null"/> when it can (ACCEPTANCE.md, A9).
+    /// N and N·P stay <see cref="MaxThreadIndex"/> or below, so that the last launch group's thread index cannot wrap; N·D stays
+    /// within <see cref="int.MaxValue"/>.
+    /// </summary>
+    private static string? IndexRangeViolation(int populationSize, int geneCount, int? points)
+    {
+        var genes = (long)populationSize * geneCount;
+        var results = (long)populationSize * (points ?? 0);
+        return populationSize > MaxThreadIndex
+            ? $"N = {populationSize} exceeds {MaxThreadIndex}, the largest population whose last launch group a kernel can index."
+            : genes > int.MaxValue
+                ? $"N·D = {genes} exceeds {int.MaxValue}, the largest population a kernel can index."
+                : results > MaxThreadIndex
+                    ? $"N·P = {results} exceeds {MaxThreadIndex}, the most point results a kernel can index."
+                    : null;
+    }
+
     private static Backend? BackendOf(GpuDevice device) => device switch
     {
         GpuDevice.Cuda => Backend.Cuda,
@@ -374,6 +395,19 @@ internal sealed class GpuBuilder<TFunction>(
     /// <summary>What the CPU builder refuses in its <c>Build</c>, refused here as there (API.md, errors).</summary>
     private void Validate(StrategySettings strategy)
     {
+        // The stages checked these as each was set; WithBounds may have been called again since (a retained stage).
+        if (IndexRangeViolation(_populationSize, _lowerBound.Length, pointCount) is { } violation)
+        {
+            throw new InvalidOperationException(violation);
+        }
+
+        if (strategy.Rule is ParameterRule.Jade or ParameterRule.Shade && _populationSize > MaxRankedPopulationSize)
+        {
+            throw new InvalidOperationException(
+                $"Population size {_populationSize} is too large for {strategy.Name}, which ranks the individuals by fitness " +
+                $"in a network over N rounded up to a power of two: at most {MaxRankedPopulationSize} (2^30) individuals.");
+        }
+
         if (_populationSize < strategy.MinimumPopulationSize)
         {
             throw new InvalidOperationException(
