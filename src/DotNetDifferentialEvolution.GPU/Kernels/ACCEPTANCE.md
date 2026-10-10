@@ -150,10 +150,13 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       `GpuBuilder<T>.ValidateConfiguration`, which `Build` calls first; N·P cannot reach
       `Build` above the limit, P being fixed first). Red (orchestrator's rerun): the
       re-check removed, 2 of 13 red.
-- [ ] **A10, kernels compiled in `Build`, once** (DOC-1, PERF-11). For JADE, SHADE and
+- [x] **A10, kernels compiled in `Build`, once** (DOC-1, PERF-11). For JADE, SHADE and
       L-SHADE with a stagnation limit, and a pointwise SHADE run, `KernelLoader.LoadCount`
       after `Build` has grown by the number of distinct kernels of the configuration, and
       `RunAsync` adds none. Red: the bookkeeping's lazy loads restored.
+      2026-10-10, local, Release: `EndToEnd/KernelLoadCountTests` — 14 (JADE), 15 (SHADE),
+      16 (L-SHADE) and 15 (pointwise SHADE) loads in `Build`, none in `RunAsync`, in a
+      collection that runs alone. Red (orchestrator's rerun): `Stagnate` lazy again, 3 of 5.
 - [ ] **A11, the thread's binding restored** (MEM-5). After `Build` and `Dispose` on one
       thread (`OnDevice(Cpu)`), that thread's `Accelerator.Current` is what it was before
       `Build` (none in the test). Red: the binding left in place.
