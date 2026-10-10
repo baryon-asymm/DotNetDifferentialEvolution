@@ -96,6 +96,7 @@ public class PointwiseLatencyTests(ITestOutputHelper output)
     private const int BatchGenerations = 50;
     private const int TimedBatches = 3;
     private const double RequiredSpeedup = 4.0;
+    private const double MonolithicCeilingSeconds = 0.008;
 
     private static readonly double[] Lower = [.. Enumerable.Repeat(-5.0, LatencyArithmetic.GenomeSize)];
     private static readonly double[] Upper = [.. Enumerable.Repeat(5.0, LatencyArithmetic.GenomeSize)];
@@ -116,6 +117,26 @@ public class PointwiseLatencyTests(ITestOutputHelper output)
             smallMonolithic >= RequiredSpeedup * smallPointwise,
             $"at N = 1024 the pointwise generation takes {smallPointwise * 1e3:F4} ms and the monolithic {smallMonolithic * 1e3:F4} ms: " +
             $"{smallMonolithic / smallPointwise:F2}x, below {RequiredSpeedup}x");
+    }
+
+    /// <summary>
+    /// Check A2 of the Devices node's ACCEPTANCE.md, the launch spread over the device: P4's monolithic objective at
+    /// N = 1 024 takes at most 8 ms per generation (the median of three batches of 50 after a warm-up batch; 29.4 ms with
+    /// ILGPU's own group size, 3.75 ms with groups of 32). The figure is printed.
+    /// </summary>
+    /// <returns>The case.</returns>
+    [Fact]
+    [Trait("Category", "Gpu")]
+    public async Task TheMonolithicGenerationTakesAtMostEightMillisecondsAtOneThousandAndTwentyFourIndividuals()
+    {
+        var perGeneration = await PerGeneration(
+            GpuDifferentialEvolutionBuilder.ForFunction(default(LatencyMonolithic)), 1024).ConfigureAwait(true);
+
+        output.WriteLine($"N = 1024: monolithic {perGeneration * 1e3:F4} ms per generation");
+
+        Assert.True(
+            perGeneration <= MonolithicCeilingSeconds,
+            $"at N = 1024 the monolithic generation takes {perGeneration * 1e3:F4} ms, above {MonolithicCeilingSeconds * 1e3:F0} ms");
     }
 
     private static async Task<(double Monolithic, double Pointwise)> Measure(int populationSize)

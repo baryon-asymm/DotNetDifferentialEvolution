@@ -94,6 +94,15 @@ internal sealed class GenerationBookkeeping : IDisposable
 ```
 
 - Every kernel reads the stop word first and returns when it is set.
+- Every kernel a plan uses is loaded in the constructor, once, through `KernelLoader` with the
+  largest extent it is launched with (checks A10, A2), and none afterwards: the two fills;
+  with `NeedsRanking`, `RankByCounting` (N up to the counting limit, or L-SHADE, whose
+  population shrinks) and `LoadSortKeys` with `BitonicStep` (above it); with `NeedsBestIndex`,
+  `BestOfChunks` and `BestOfPartials`; with an archive, the four archive passes; with
+  `Adapts`, `SumSuccesses` and `Adapt`, and `LargestWeights` under SHADE; `Compact` under
+  L-SHADE; `Stagnate` with a stagnation rule. The seams `Rank`, `RankByCounting`,
+  `RankByBitonicNetwork` and `FindBest` need their kernels in the plan and throw
+  `InvalidOperationException` otherwise.
 - SHADE's weights are scaled before they are summed (check S19, added 2026-10-08):
   `ScaleOf(largestWeight, count)` is `largestWeight` when it exceeds
   `double.MaxValue / (2·count)`, else 1.0. `LargestWeights` (one thread per chunk, SHADE
@@ -107,8 +116,8 @@ internal sealed class GenerationBookkeeping : IDisposable
 
 ## Audit fixes ⏳
 
-Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)), checks A3,
-A4 and A10.
+Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)), checks A3
+and A4; check A10 is built, above.
 
 ```csharp
 internal static class FitnessOrder
@@ -131,5 +140,3 @@ internal sealed class GenerationBookkeeping
 
 - `OrderKey` maps NaN to +∞'s key and −0 to +0's, a non-negative value to its bits and a
   negative one to its bits with the magnitude flipped, so that integer order is `KeyOf`'s.
-- Every kernel a plan uses is loaded in the constructor, through `KernelLoader` with its
-  extent (A10, A2).

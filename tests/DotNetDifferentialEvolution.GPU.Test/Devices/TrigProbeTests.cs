@@ -63,7 +63,7 @@ public class TrigProbeTests(ITestOutputHelper output)
         {
             var accelerator = lease.Accelerator;
             deviceName = accelerator.Name;
-            using var kernel = KernelLoader.Load(accelerator, typeof(MathProbe).GetMethod(nameof(MathProbe.TrigProbe))!);
+            using var kernel = KernelLoader.Load(accelerator, typeof(MathProbe).GetMethod(nameof(MathProbe.TrigProbe))!, ArgumentCount);
             var probe = kernel.CreateLauncherDelegate<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<double>, ArrayView<double>>>();
             using var cosineBuffer = accelerator.Allocate1D(cosines);
             using var tangentBuffer = accelerator.Allocate1D(tangents);

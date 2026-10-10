@@ -31,7 +31,9 @@ internal static class DeviceSelector
 
 internal static class KernelLoader
 {
-    public static Kernel Load(Accelerator accelerator, MethodInfo method);
+    public static Kernel Load(Accelerator accelerator, MethodInfo method, int extent);
+    public static int GroupSize(int extent, int warpSize, int multiprocessors, int occupancyLimit);
+    public static long LoadCount { get; }   // loads in this process, for A10
 }
 
 internal static class MathProbe
@@ -61,32 +63,27 @@ internal static class MathProbe
 - `Borrowed` throws `ArgumentException` for an accelerator other than CUDA, OpenCL or
   CPU; its lease never disposes the accelerator.
 - `Load` returns the kernel, implicitly grouped, for a closed kernel method; the caller
-  disposes it. On a `CudaAccelerator` it throws what the compile or the post-link throws
-  ([LibDevice](LibDevice/API.md)).
+  disposes it. It compiles the method explicitly on every backend (`CompileKernel` of the
+  implicitly grouped entry point), never through ILGPU's kernel cache: two loads return two
+  `Kernel` objects, and disposing one leaves the other alone (check A1). On CUDA the
+  post-link follows. On CUDA and OpenCL it loads with
+  `GroupSize(extent, WarpSize, NumMultiprocessors, ILGPU's occupancy estimate)`; on the CPU
+  accelerator with ILGPU's own grouping. `extent` is the largest launch extent of the kernel
+  in the run (N_init, N_init·P, a chunk count, a sort length; for `MathProbe` the probe's;
+  for the bind-time probe, which is never launched, 1); below 1 it throws
+  `ArgumentOutOfRangeException`. On a `CudaAccelerator` it throws what the compile or the
+  post-link throws ([LibDevice](LibDevice/API.md)).
+- `GroupSize` is `clamp(w·⌈⌈extent / m⌉ / w⌉, w, occupancyLimit)` with `w = warpSize`,
+  `m = multiprocessors`; an argument below 1 throws `ArgumentOutOfRangeException` (check A2).
+- `LoadCount` counts the loads that succeeded, the bind-time probe's included; it is
+  process-wide, so a test that reads it runs in the `KernelLoadCount` collection (check A10).
 - `Probe`: thread i writes `Exp(x)`, `Log(x)`, `Pow(x, 1.37)`, `Sqrt(x)` of input i to
   outputs `4i … 4i+3` (after APT's `src/Execution/MathProbe.cs`).
 
 ## Audit fixes ⏳
 
-Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)), checks A1,
-A2, A6 and A10.
+Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)), check A6;
+checks A1, A2 and A10 are built, above.
 
-```csharp
-internal static class KernelLoader
-{
-    public static Kernel Load(Accelerator accelerator, MethodInfo method, int extent);
-    public static int GroupSize(int extent, int warpSize, int multiprocessors, int occupancyLimit);
-    public static long LoadCount { get; }   // loads in this process, for A10
-}
-```
-
-- `Load` compiles the method explicitly on every backend (`Backend.Compile` of the implicitly
-  grouped entry point), never through ILGPU's kernel cache: two loads return two `Kernel`
-  objects. On CUDA the post-link follows, as today. On CUDA and OpenCL it loads with
-  `GroupSize(extent, WarpSize, NumMultiprocessors, ILGPU's occupancy estimate)`; on the CPU
-  accelerator with ILGPU's grouping. `extent` is the largest launch extent of the kernel in
-  the run (N_init, N_init·P, a chunk count, a sort length); at least 1.
-- `GroupSize` is `clamp(w·⌈⌈extent / m⌉ / w⌉, w, occupancyLimit)` with `w = warpSize`,
-  `m = multiprocessors`.
 - `AcceleratorLease.Dispose` disposes the owned context in a `finally`; when the accelerator's
   `Dispose` throws, that exception propagates after the context is released.

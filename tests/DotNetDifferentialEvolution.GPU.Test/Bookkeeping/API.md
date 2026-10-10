@@ -22,5 +22,8 @@ Nothing outward. What this node proves about the GPU package's work between gene
 [Trait("Category", "Integration")] public class StagnationTests;
 ```
 
+`RankingTests` builds its bookkeeping with an L-SHADE-shaped plan, which loads both rankings, since
+the plan decides which kernels are loaded (A10).
+
 Helpers, internal to the node: `CpuGeneration` (the CPU contexts, records and a scripted
 provider), `HostArchive` (the archive's rule on the host).
