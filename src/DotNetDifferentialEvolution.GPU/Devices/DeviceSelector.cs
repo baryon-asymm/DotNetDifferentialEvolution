@@ -54,11 +54,26 @@ internal static class DeviceSelector
     /// </param>
     /// <returns>A lease that owns the context and the accelerator.</returns>
     /// <exception cref="InvalidOperationException">The requested backend, or under Auto every backend, failed to open.</exception>
-    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate, Func<Backend, bool>? isPresent)
+    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate, Func<Backend, bool>? isPresent) =>
+        Open(requested, locate, isPresent, profiling: false);
+
+    /// <summary>
+    /// Opens <paramref name="backend"/> as <see cref="Open(Backend?)"/> opens it, with ILGPU's profiling enabled on the
+    /// context, so that profiling markers on the accelerator's streams measure device time (check A14). For the
+    /// <b>Gpu</b> timing checks only: the package never calls it, and a lease from <see cref="Open(Backend?)"/> keeps
+    /// profiling off.
+    /// </summary>
+    /// <param name="backend">The backend.</param>
+    /// <returns>A lease that owns the context and the accelerator.</returns>
+    /// <exception cref="InvalidOperationException">The backend failed to open.</exception>
+    internal static AcceleratorLease OpenForTiming(Backend backend) =>
+        Open(backend, LibDeviceLocator.Locate, null, profiling: true);
+
+    private static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate, Func<Backend, bool>? isPresent, bool profiling)
     {
         if (requested is { } backend)
         {
-            return TryOpen(backend, null, locate, isPresent, out var lease, out var reason)
+            return TryOpen(backend, null, locate, isPresent, profiling, out var lease, out var reason)
                 ? lease
                 : throw new InvalidOperationException($"The {NameOf(backend)} device was requested and cannot be used: {reason}");
         }
@@ -67,7 +82,7 @@ internal static class DeviceSelector
         foreach (var candidate in AutoOrder)
         {
             var fallbackReason = skipped.Count == 0 ? null : string.Join("; ", skipped);
-            if (TryOpen(candidate, fallbackReason, locate, isPresent, out var lease, out var reason))
+            if (TryOpen(candidate, fallbackReason, locate, isPresent, profiling, out var lease, out var reason))
             {
                 return lease;
             }
@@ -94,6 +109,7 @@ internal static class DeviceSelector
         string? fallbackReason,
         Func<LibDeviceLocation> locate,
         Func<Backend, bool>? isPresent,
+        bool profiling,
         [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out AcceleratorLease? lease,
         out string reason)
     {
@@ -116,7 +132,7 @@ internal static class DeviceSelector
                 return false;
             }
 
-            context = Context.Create(builder => Configure(builder, backend, location));
+            context = Context.Create(builder => Configure(builder, backend, location, profiling));
             if (Refusal(DeviceCount(context, backend) > 0, location) is { } refusal)
             {
                 lease = null;
@@ -191,10 +207,15 @@ internal static class DeviceSelector
     /// <summary>
     /// One backend per context. CUDA registers its devices through <see cref="CudaWslDevices"/> and, when libdevice was
     /// found, gets <c>Math(MathMode.Default)</c> and <c>LibDevice</c>, so ILGPU emits the wrapper calls the post-link
-    /// completes. OpenCL and the CPU accelerator use their own math.
+    /// completes. OpenCL and the CPU accelerator use their own math. Profiling is enabled only when asked for (check A14).
     /// </summary>
-    private static void Configure(Context.Builder builder, Backend backend, LibDeviceLocation? location)
+    private static void Configure(Context.Builder builder, Backend backend, LibDeviceLocation? location, bool profiling)
     {
+        if (profiling)
+        {
+            _ = builder.Profiling();
+        }
+
         switch (backend)
         {
             case Backend.Cuda:
