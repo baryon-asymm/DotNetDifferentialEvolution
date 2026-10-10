@@ -1,7 +1,8 @@
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using DotNetDifferentialEvolution.GPU.Devices;
+using DotNetDifferentialEvolution.GPU.Devices.LibDevice;
 using DotNetDifferentialEvolution.GPU.Kernels;
-using DotNetDifferentialEvolution.GPU.Objectives;
 using ILGPU.Runtime;
 
 namespace DotNetDifferentialEvolution.GPU;
@@ -11,18 +12,32 @@ namespace DotNetDifferentialEvolution.GPU;
 /// is reported where the wrong value is passed (API.md, errors); what depends on more than one stage
 /// is refused by <see cref="Build"/>, as the CPU builder refuses it.
 /// </summary>
-/// <typeparam name="TFunction">The objective.</typeparam>
+/// <typeparam name="TFunction">The objective, a single-kernel or a pointwise one.</typeparam>
 /// <param name="function">The objective.</param>
-internal sealed class GpuBuilder<TFunction>(TFunction function)
+/// <param name="pointCount"><c>P</c> of a pointwise objective, or <see langword="null"/> for a single-kernel one.</param>
+/// <param name="launcherFor">Compiles the kernels for the objective: its accelerator, the objective, the parameter rule and N.</param>
+/// <param name="pointType"><c>TPoint</c> of a pointwise objective, or <see langword="null"/> for a single-kernel one: the second type ILGPU must see.</param>
+internal sealed class GpuBuilder<TFunction>(
+    TFunction function,
+    int? pointCount,
+    Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> launcherFor,
+    Type? pointType = null)
     : IGpuBoundsRequired<TFunction>,
       IGpuPopulationSizeRequired<TFunction>,
       IGpuMutationStrategyRequired<TFunction>,
       IGpuTerminationConditionRequired<TFunction>,
       IGpuDeviceRequired<TFunction>,
       IGpuDifferentialEvolutionBuilder<TFunction>
-    where TFunction : struct, IGpuFitnessFunction
+    where TFunction : struct
 {
+    /// <summary>The largest N, or N·P, a kernel can index: a launch group is at most 1 024 threads, so the last group's thread index stays below <see cref="int.MaxValue"/>.</summary>
+    private const int MaxThreadIndex = int.MaxValue - 1023;
+
+    /// <summary>The largest N for which JADE, SHADE and L-SHADE rank the population: the ranking rounds N up to a power of two.</summary>
+    private const int MaxRankedPopulationSize = 1 << 30;
+
     private readonly TFunction _function = function;
+    private Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> _launcherFor = launcherFor;
     private double[] _lowerBound = [];
     private double[] _upperBound = [];
     private int _populationSize;
@@ -36,6 +51,8 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
     private IGpuPopulationUpdatedHandler? _handler;
     private int _everyNGenerations = 1;
     private int _stopReadInterval = RunSettings.DefaultStopReadInterval;
+    private Func<Backend, bool>? _isPresent;
+    private Func<Accelerator, IDisposable>? _plantedRelease;
 
     /// <inheritdoc />
     public IGpuPopulationSizeRequired<TFunction> WithBounds(ReadOnlyMemory<double> lowerBound, ReadOnlyMemory<double> upperBound)
@@ -77,12 +94,9 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
         // The scheme's own minimum is known only at the next stage; Build refuses a population below it, as the CPU
         // builder does.
         ArgumentOutOfRangeException.ThrowIfLessThan(populationSize, 1);
-        if ((long)populationSize * _lowerBound.Length > int.MaxValue)
+        if (IndexRangeViolation(populationSize, _lowerBound.Length, pointCount) is { } violation)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(populationSize),
-                populationSize,
-                $"N·D = {(long)populationSize * _lowerBound.Length} exceeds {int.MaxValue}, the largest population a kernel can index.");
+            throw new ArgumentOutOfRangeException(nameof(populationSize), populationSize, violation);
         }
 
         _populationSize = populationSize;
@@ -249,8 +263,8 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
     public GpuDifferentialEvolution Build()
     {
         // The staged interfaces reach Build only through a scheme stage.
+        ValidateConfiguration();
         var strategy = _strategy!;
-        Validate(strategy);
 
         // An unseeded run still has one seed, drawn here; the cryptographic generator only
         // because the analyzers refuse System.Random (CA5394), not because the seed is a secret.
@@ -269,13 +283,40 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
             StopReadInterval = _stopReadInterval,
         };
         var function = _function;
-        KernelLauncher Compile(Accelerator accelerator) => new KernelLauncher<TFunction>(accelerator, function, strategy.Rule);
+        var populationSize = _populationSize;
+        var launcherFactory = _launcherFor;
+        KernelLauncher Compile(Accelerator accelerator)
+        {
+            try
+            {
+                return launcherFactory(accelerator, function, strategy.Rule, populationSize);
+            }
+            catch (Exception failure) when (IsATypeLoadFailureOnAnInvisibleType(failure, out var invisible))
+            {
+                // The release failures that follow ride on this exception, as they would on ILGPU's (ACCEPTANCE.md, A6, A15).
+                throw new InvalidOperationException(InvisibleObjectiveMessage(invisible), failure);
+            }
+        }
 
-        // The lease goes straight into the constructor, which owns it from then on.
-        return _accelerator is { } callersAccelerator
-            ? new GpuDifferentialEvolution(AcceleratorLease.Borrowed(callersAccelerator), settings, Compile)
-            : new GpuDifferentialEvolution(DeviceSelector.Open(BackendOf(_device)), settings, Compile);
+        // The lease goes straight into the constructor, which owns it from then on. ILGPU binds every accelerator it creates, and
+        // the binding of a thread can be given back only by disposing the accelerator, so the device is opened on a thread of
+        // its own: the caller's thread keeps the binding it had (ACCEPTANCE.md, A11).
+        var callersAccelerator = _accelerator;
+        var backend = BackendOf(_device);
+        var isPresent = _isPresent;
+        var plantedRelease = _plantedRelease;
+        return OnAThreadOfItsOwn(
+            () => callersAccelerator is not null
+                ? new GpuDifferentialEvolution(AcceleratorLease.Borrowed(callersAccelerator), settings, Compile, plantedRelease)
+                : new GpuDifferentialEvolution(DeviceSelector.Open(backend, LibDeviceLocator.Locate, isPresent), settings, Compile, plantedRelease));
     }
+
+    /// <summary>
+    /// Runs every check <see cref="Build"/> makes before it opens a device, and nothing else: for the tests of check A9, whose
+    /// accepted edges are populations too large to allocate (ACCEPTANCE.md, A9).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The configuration is one <see cref="Build"/> refuses.</exception>
+    internal void ValidateConfiguration() => Validate(_strategy!);
 
     /// <summary>
     /// Reads the stop word every <paramref name="interval"/> generations instead of every
@@ -290,6 +331,126 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
         _stopReadInterval = interval;
         return this;
     }
+
+    /// <summary>
+    /// Decides by <paramref name="isPresent"/> whether a backend has a device, instead of asking ILGPU: for the tests of
+    /// check D1 that must run on a machine with CUDA and OpenCL without opening either (ACCEPTANCE.md, A12). A backend it
+    /// denies is skipped, or refused when explicit, before any context for it exists. Ignored when the caller's accelerator
+    /// is used.
+    /// </summary>
+    /// <param name="isPresent">Whether the backend has a device.</param>
+    /// <returns>This builder.</returns>
+    internal GpuBuilder<TFunction> WithDevicePresence(Func<Backend, bool> isPresent)
+    {
+        ArgumentNullException.ThrowIfNull(isPresent);
+        _isPresent = isPresent;
+        return this;
+    }
+
+    /// <summary>
+    /// Makes the optimizer, as <see cref="Build"/> does, add to its own releases the one <paramref name="plant"/> creates on its
+    /// accelerator, first of them all: for the tests of check A6, whose subject is a release that throws (ACCEPTANCE.md, A6).
+    /// </summary>
+    /// <param name="plant">Creates the release on the accelerator; its disposal is what throws.</param>
+    /// <returns>This builder.</returns>
+    internal GpuBuilder<TFunction> WithPlantedRelease(Func<Accelerator, IDisposable> plant)
+    {
+        ArgumentNullException.ThrowIfNull(plant);
+        _plantedRelease = plant;
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces what <see cref="Build"/> calls to compile the kernels for the objective: for the tests of check A15, whose
+    /// subject is a load that throws <see cref="TypeLoadException"/> for a type that ILGPU's runtime assembly can see
+    /// (ACCEPTANCE.md, A15).
+    /// </summary>
+    /// <param name="launcherFor">Compiles the kernels: the accelerator, the objective, the parameter rule and N.</param>
+    /// <returns>This builder.</returns>
+    internal GpuBuilder<TFunction> WithLauncherFactory(Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> launcherFor)
+    {
+        ArgumentNullException.ThrowIfNull(launcherFor);
+        _launcherFor = launcherFor;
+        return this;
+    }
+
+    /// <summary>Runs <paramref name="build"/> on a new thread and waits for it; its exception is rethrown unchanged, with its stack.</summary>
+    private static GpuDifferentialEvolution OnAThreadOfItsOwn(Func<GpuDifferentialEvolution> build)
+    {
+        GpuDifferentialEvolution? built = null;
+        ExceptionDispatchInfo? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                built = build();
+            }
+            catch (Exception exception) when (Capture(exception, out failure))
+            {
+                // Captured by the filter, to be rethrown on the caller's thread.
+            }
+        })
+        {
+            Name = nameof(GpuDifferentialEvolution) + " build",
+            IsBackground = true,
+        };
+        thread.Start();
+        thread.Join();
+        failure?.Throw();
+        return built!;
+    }
+
+    private static bool Capture(Exception exception, out ExceptionDispatchInfo captured)
+    {
+        captured = ExceptionDispatchInfo.Capture(exception);
+        return true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="failure"/> is a <see cref="TypeLoadException"/>, or has one among its inner exceptions (ILGPU
+    /// wraps the load failure of a type it cannot see in its <see cref="ILGPU.InternalCompilerException"/>), while a type the
+    /// kernels name, the objective's or the point's, is not visible to ILGPU's runtime assembly (ACCEPTANCE.md, A15).
+    /// </summary>
+    private bool IsATypeLoadFailureOnAnInvisibleType(Exception failure, out Type invisible)
+    {
+        invisible = typeof(TFunction);
+        var typeLoad = false;
+        for (var cause = failure; cause is not null; cause = cause.InnerException)
+        {
+            typeLoad |= cause is TypeLoadException;
+        }
+
+        if (!typeLoad)
+        {
+            return false;
+        }
+
+        Type[] namedByTheKernels = pointType is null ? [typeof(TFunction)] : [typeof(TFunction), pointType];
+        foreach (var named in namedByTheKernels)
+        {
+            if (!ObjectiveVisibility.IsVisible(named))
+            {
+                invisible = named;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>The message of the exception <see cref="Build"/> throws for an objective type ILGPU cannot see (ACCEPTANCE.md, A15).</summary>
+    private static string InvisibleObjectiveMessage(Type type)
+    {
+        var part = ObjectiveVisibility.FirstInvisiblePart(type)!;
+        var which = part == type ? string.Empty : $" ('{NameOf(part)}' is the part it cannot see)";
+        return $"ILGPU could not load the kernels because its runtime assembly '{ObjectiveVisibility.RuntimeAssemblyName}' cannot see the " +
+            $"type '{NameOf(type)}'{which}: a type must be public, or internal in an assembly that declares " +
+            $"[assembly: InternalsVisibleTo(\"{ObjectiveVisibility.RuntimeAssemblyName}\")], and so must every type it is nested in and " +
+            "every generic argument. Make the type public; or declare the attribute in its assembly (a private or protected nested type " +
+            "can never be used: make it public or internal).";
+    }
+
+    private static string NameOf(Type type) => type.FullName ?? type.Name;
 
     private static void RequireMutationForce(double mutationForce, string name)
     {
@@ -324,6 +485,25 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
         }
     }
 
+    /// <summary>
+    /// Why a population of <paramref name="populationSize"/> individuals of <paramref name="geneCount"/> genes and
+    /// <paramref name="points"/> points cannot be indexed by a kernel, or <see langword="null"/> when it can (ACCEPTANCE.md, A9).
+    /// N and N·P stay <see cref="MaxThreadIndex"/> or below, so that the last launch group's thread index cannot wrap; N·D stays
+    /// within <see cref="int.MaxValue"/>.
+    /// </summary>
+    private static string? IndexRangeViolation(int populationSize, int geneCount, int? points)
+    {
+        var genes = (long)populationSize * geneCount;
+        var results = (long)populationSize * (points ?? 0);
+        return populationSize > MaxThreadIndex
+            ? $"N = {populationSize} exceeds {MaxThreadIndex}, the largest population whose last launch group a kernel can index."
+            : genes > int.MaxValue
+                ? $"N·D = {genes} exceeds {int.MaxValue}, the largest population a kernel can index."
+                : results > MaxThreadIndex
+                    ? $"N·P = {results} exceeds {MaxThreadIndex}, the most point results a kernel can index."
+                    : null;
+    }
+
     private static Backend? BackendOf(GpuDevice device) => device switch
     {
         GpuDevice.Cuda => Backend.Cuda,
@@ -344,6 +524,19 @@ internal sealed class GpuBuilder<TFunction>(TFunction function)
     /// <summary>What the CPU builder refuses in its <c>Build</c>, refused here as there (API.md, errors).</summary>
     private void Validate(StrategySettings strategy)
     {
+        // The stages checked these as each was set; WithBounds may have been called again since (a retained stage).
+        if (IndexRangeViolation(_populationSize, _lowerBound.Length, pointCount) is { } violation)
+        {
+            throw new InvalidOperationException(violation);
+        }
+
+        if (strategy.Rule is ParameterRule.Jade or ParameterRule.Shade && _populationSize > MaxRankedPopulationSize)
+        {
+            throw new InvalidOperationException(
+                $"Population size {_populationSize} is too large for {strategy.Name}, which ranks the individuals by fitness " +
+                $"in a network over N rounded up to a power of two: at most {MaxRankedPopulationSize} (2^30) individuals.");
+        }
+
         if (_populationSize < strategy.MinimumPopulationSize)
         {
             throw new InvalidOperationException(

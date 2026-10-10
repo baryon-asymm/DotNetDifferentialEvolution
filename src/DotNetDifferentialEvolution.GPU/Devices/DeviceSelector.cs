@@ -19,6 +19,9 @@ namespace DotNetDifferentialEvolution.GPU.Devices;
 /// </summary>
 internal static class DeviceSelector
 {
+    /// <summary>The extent the bind-time probe is loaded for: it is only loaded, never launched.</summary>
+    private const int ProbeExtent = 1;
+
     private static readonly Backend[] AutoOrder = [Backend.Cuda, Backend.OpenCL, Backend.Cpu];
 
     private static readonly MethodInfo ProbeKernel =
@@ -35,11 +38,42 @@ internal static class DeviceSelector
     /// <param name="locate">Finds libnvvm and libdevice; asked only when CUDA is tried.</param>
     /// <returns>A lease that owns the context and the accelerator.</returns>
     /// <exception cref="InvalidOperationException">The requested backend, or under Auto every backend, failed to open.</exception>
-    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate)
+    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate) =>
+        Open(requested, locate, null);
+
+    /// <summary>
+    /// The same, with the presence of a backend's devices decided by <paramref name="isPresent"/> instead of asked of ILGPU:
+    /// the seam of check D1 on a machine that has the devices, and of check A12 (no test outside <c>Gpu</c> opens a device).
+    /// </summary>
+    /// <param name="requested">The backend, or <see langword="null"/> for Auto.</param>
+    /// <param name="locate">Finds libnvvm and libdevice; asked only when CUDA is tried.</param>
+    /// <param name="isPresent">
+    /// Whether a backend has a device, or <see langword="null"/> to ask ILGPU. A backend it denies is skipped with "no such
+    /// device is present." before any context for it exists, so no driver is loaded; a backend it affirms is opened as
+    /// usual.
+    /// </param>
+    /// <returns>A lease that owns the context and the accelerator.</returns>
+    /// <exception cref="InvalidOperationException">The requested backend, or under Auto every backend, failed to open.</exception>
+    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate, Func<Backend, bool>? isPresent) =>
+        Open(requested, locate, isPresent, profiling: false);
+
+    /// <summary>
+    /// Opens <paramref name="backend"/> as <see cref="Open(Backend?)"/> opens it, with ILGPU's profiling enabled on the
+    /// context, so that profiling markers on the accelerator's streams measure device time (check A14). For the
+    /// <b>Gpu</b> timing checks only: the package never calls it, and a lease from <see cref="Open(Backend?)"/> keeps
+    /// profiling off.
+    /// </summary>
+    /// <param name="backend">The backend.</param>
+    /// <returns>A lease that owns the context and the accelerator.</returns>
+    /// <exception cref="InvalidOperationException">The backend failed to open.</exception>
+    internal static AcceleratorLease OpenForTiming(Backend backend) =>
+        Open(backend, LibDeviceLocator.Locate, null, profiling: true);
+
+    private static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate, Func<Backend, bool>? isPresent, bool profiling)
     {
         if (requested is { } backend)
         {
-            return TryOpen(backend, null, locate, out var lease, out var reason)
+            return TryOpen(backend, null, locate, isPresent, profiling, out var lease, out var reason)
                 ? lease
                 : throw new InvalidOperationException($"The {NameOf(backend)} device was requested and cannot be used: {reason}");
         }
@@ -48,7 +82,7 @@ internal static class DeviceSelector
         foreach (var candidate in AutoOrder)
         {
             var fallbackReason = skipped.Count == 0 ? null : string.Join("; ", skipped);
-            if (TryOpen(candidate, fallbackReason, locate, out var lease, out var reason))
+            if (TryOpen(candidate, fallbackReason, locate, isPresent, profiling, out var lease, out var reason))
             {
                 return lease;
             }
@@ -74,6 +108,8 @@ internal static class DeviceSelector
         Backend backend,
         string? fallbackReason,
         Func<LibDeviceLocation> locate,
+        Func<Backend, bool>? isPresent,
+        bool profiling,
         [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out AcceleratorLease? lease,
         out string reason)
     {
@@ -88,18 +124,19 @@ internal static class DeviceSelector
                 location = locate();
             }
 
-            context = Context.Create(builder => Configure(builder, backend, location));
-            if (DeviceCount(context, backend) == 0)
+            if (isPresent is not null && Refusal(isPresent(backend), location) is { } injected)
             {
+                // Decided before a context exists: an absent backend's driver is never loaded.
                 lease = null;
-                reason = "no such device is present.";
+                reason = injected;
                 return false;
             }
 
-            if (location is { Found: false })
+            context = Context.Create(builder => Configure(builder, backend, location, profiling));
+            if (Refusal(DeviceCount(context, backend) > 0, location) is { } refusal)
             {
                 lease = null;
-                reason = NotFound(location);
+                reason = refusal;
                 return false;
             }
 
@@ -170,10 +207,15 @@ internal static class DeviceSelector
     /// <summary>
     /// One backend per context. CUDA registers its devices through <see cref="CudaWslDevices"/> and, when libdevice was
     /// found, gets <c>Math(MathMode.Default)</c> and <c>LibDevice</c>, so ILGPU emits the wrapper calls the post-link
-    /// completes. OpenCL and the CPU accelerator use their own math.
+    /// completes. OpenCL and the CPU accelerator use their own math. Profiling is enabled only when asked for (check A14).
     /// </summary>
-    private static void Configure(Context.Builder builder, Backend backend, LibDeviceLocation? location)
+    private static void Configure(Context.Builder builder, Backend backend, LibDeviceLocation? location, bool profiling)
     {
+        if (profiling)
+        {
+            _ = builder.Profiling();
+        }
+
         switch (backend)
         {
             case Backend.Cuda:
@@ -194,6 +236,10 @@ internal static class DeviceSelector
                 throw Undefined(backend);
         }
     }
+
+    /// <summary>Why a backend cannot be used before any library is loaded: no device first, then no toolkit; or <see langword="null"/>.</summary>
+    private static string? Refusal(bool present, LibDeviceLocation? location) =>
+        !present ? "no such device is present." : location is { Found: false } ? NotFound(location) : null;
 
     private static string NotFound(LibDeviceLocation location) =>
         $"libnvvm ({LibDeviceLocator.LibraryFileName}) and libdevice ({LibDeviceLocator.BitcodeName}) of a CUDA Toolkit were not found"
@@ -227,7 +273,7 @@ internal static class DeviceSelector
         try
         {
             using var binding = accelerator.BindScoped();
-            using var probe = KernelLoader.Load(accelerator, ProbeKernel);
+            using var probe = KernelLoader.Load(accelerator, ProbeKernel, ProbeExtent);
         }
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {

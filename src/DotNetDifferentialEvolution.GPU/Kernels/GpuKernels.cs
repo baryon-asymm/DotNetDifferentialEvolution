@@ -25,6 +25,22 @@ internal static class GpuKernels
         where TFunction : struct, IGpuFitnessFunction
     {
         int individual = index;
+        SampleIndividual(individual, parameters, views);
+        var genomeSize = parameters.GenomeSize;
+        var offset = individual * genomeSize;
+        views.CurrentFitness[individual] = function.Evaluate(new GeneView(views.Current.SubView(offset, genomeSize)));
+    }
+
+    /// <summary>
+    /// Samples individual <paramref name="individual"/> uniformly in the box from its generation-0 draws, one per gene in
+    /// gene order, <c>lower + u·(upper − lower)</c> with <c>u</c> in <c>[0, 1)</c>, into the current population. The one
+    /// sampling every initialisation kernel calls.
+    /// </summary>
+    /// <param name="individual">The individual.</param>
+    /// <param name="parameters">The seed and D.</param>
+    /// <param name="views">The device memory; writes the individual's genes in <c>Current</c>.</param>
+    public static void SampleIndividual(int individual, StepParameters parameters, PopulationViews views)
+    {
         var draws = new PhiloxDraws(parameters.Seed, individual, 0);
         var genomeSize = parameters.GenomeSize;
         var offset = individual * genomeSize;
@@ -33,8 +49,6 @@ internal static class GpuKernels
             var lower = views.LowerBound[j];
             views.Current[offset + j] = lower + draws.NextUnitDouble() * (views.UpperBound[j] - lower);
         }
-
-        views.CurrentFitness[individual] = function.Evaluate(new GeneView(views.Current.SubView(offset, genomeSize)));
     }
 
     /// <summary>
@@ -72,6 +86,33 @@ internal static class GpuKernels
         var genomeSize = parameters.GenomeSize;
         var offset = individual * genomeSize;
         var trialFitness = function.Evaluate(new GeneView(views.Trial.SubView(offset, genomeSize)));
+        SelectAndRecord(individual, trialFitness, mutationForce, crossoverProbability, parameters, views, strategy);
+    }
+
+    /// <summary>
+    /// Selects between trial <paramref name="individual"/> (in <c>Trial</c>) and its parent (in <c>Current</c>), writes the
+    /// survivor and its fitness into slot i of the next population, and records what the work between generations needs:
+    /// under jDE a trial that replaces its parent hands its F and CR to it; under JADE and SHADE the trial's F, CR and
+    /// outcome are recorded. The one selection every generation kernel calls. Writes only entry i of everything.
+    /// </summary>
+    /// <param name="individual">The individual.</param>
+    /// <param name="trialFitness">f(u), the trial's fitness.</param>
+    /// <param name="mutationForce">The F the trial was built with.</param>
+    /// <param name="crossoverProbability">The CR the trial was built with.</param>
+    /// <param name="parameters">The parameter rule, the tie rule and D.</param>
+    /// <param name="views">The device memory; writes <c>Next</c> and <c>NextFitness</c>.</param>
+    /// <param name="strategy">The device state; writes jDE's hand-over or the trial records.</param>
+    public static void SelectAndRecord(
+        int individual,
+        double trialFitness,
+        double mutationForce,
+        double crossoverProbability,
+        StepParameters parameters,
+        PopulationViews views,
+        StrategyViews strategy)
+    {
+        var genomeSize = parameters.GenomeSize;
+        var offset = individual * genomeSize;
         var parentFitness = views.CurrentFitness[individual];
         var outcome = Selection.Outcome(trialFitness, parentFitness, parameters.Ties == TieRule.Accepted);
         var survivors = outcome != Selection.Kept ? views.Trial : views.Current;

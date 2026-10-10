@@ -20,16 +20,30 @@ internal sealed class AcceleratorLease : IDisposable
     public void Dispose();
 }
 
+internal static class ReleaseFailures   // in AcceleratorLease.cs: shared by every owner of device objects
+{
+    public const string DataKey = "DotNetDifferentialEvolution.GPU.ReleaseFailures";
+    public static void Attempt(Action release, List<Exception> failures);
+    public static void Run(IEnumerable<IDisposable> items, List<Exception> failures);
+    public static void ThrowIfAny(IReadOnlyCollection<Exception> failures);
+    public static void Attach(Exception original, IReadOnlyCollection<Exception> failures);
+    public static bool Collect(Exception failure, List<Exception> failures);
+}
+
 internal static class DeviceSelector
 {
     public static AcceleratorLease Open(Backend? requested);
     internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate);
+    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate,
+        Func<Backend, bool>? isPresent);
     public static string NameOf(Backend backend);
 }
 
 internal static class KernelLoader
 {
-    public static Kernel Load(Accelerator accelerator, MethodInfo method);
+    public static Kernel Load(Accelerator accelerator, MethodInfo method, int extent);
+    public static int GroupSize(int extent, int warpSize, int multiprocessors, int occupancyLimit);
+    public static long LoadCount { get; }   // loads in this process, for A10
 }
 
 internal static class MathProbe
@@ -48,11 +62,56 @@ internal static class MathProbe
   used: …"). CUDA opens only with libnvvm and libdevice found and the probe kernel loaded
   (`BOOT.md`, Constraints); without a toolkit the reason is "libnvvm (nvvm64_40_0.dll) and
   libdevice (libdevice.10.bc) of a CUDA Toolkit were not found; …". The overload with
-  `locate` is the seam of checks L6 and L7.
+  `locate` is the seam of checks L6 and L7. The overload with `isPresent` (check A12) decides
+  whether a backend has a device instead of asking ILGPU, and `null` asks ILGPU, as the
+  shorter overloads do: a backend it denies is skipped, or refused when explicit, with "no
+  such device is present." before any context for it exists, so no driver is loaded; for CUDA
+  the toolkit is checked next, still before a context, with the reason above; a backend it
+  affirms opens as usual. The package root's `GpuBuilder` passes it from its internal
+  `WithDevicePresence(Func<Backend, bool>)`, beside `WithStopReadInterval`, which tests reach by
+  casting the builder; no public member changes.
 - `Borrowed` throws `ArgumentException` for an accelerator other than CUDA, OpenCL or
   CPU; its lease never disposes the accelerator.
 - `Load` returns the kernel, implicitly grouped, for a closed kernel method; the caller
-  disposes it. On a `CudaAccelerator` it throws what the compile or the post-link throws
-  ([LibDevice](LibDevice/API.md)).
+  disposes it. It compiles the method explicitly on every backend (`CompileKernel` of the
+  implicitly grouped entry point), never through ILGPU's kernel cache: two loads return two
+  `Kernel` objects, and disposing one leaves the other alone (check A1). On CUDA the
+  post-link follows. On CUDA and OpenCL it loads with
+  `GroupSize(extent, WarpSize, NumMultiprocessors, ILGPU's occupancy estimate)`; on the CPU
+  accelerator with ILGPU's own grouping. `extent` is the largest launch extent of the kernel
+  in the run (N_init, N_init·P, a chunk count, a sort length; for `MathProbe` the probe's;
+  for the bind-time probe, which is never launched, 1); below 1 it throws
+  `ArgumentOutOfRangeException`. On a `CudaAccelerator` it throws what the compile or the
+  post-link throws ([LibDevice](LibDevice/API.md)).
+- `GroupSize` is `clamp(w·⌈⌈extent / m⌉ / w⌉, w, occupancyLimit)` with `w = warpSize`,
+  `m = multiprocessors`; an argument below 1 throws `ArgumentOutOfRangeException` (check A2).
+- `LoadCount` counts the loads that succeeded, the bind-time probe's included; it is
+  process-wide, so a test that reads it runs in the `KernelLoadCount` collection (check A10).
 - `Probe`: thread i writes `Exp(x)`, `Log(x)`, `Pow(x, 1.37)`, `Sqrt(x)` of input i to
   outputs `4i … 4i+3` (after APT's `src/Execution/MathProbe.cs`).
+
+- `AcceleratorLease.Dispose` disposes the owned context in a `finally`: when the accelerator's
+  `Dispose` throws, that exception propagates after the context is released (check A6, built).
+- `ReleaseFailures` is how the package releases device objects (check A6): `Attempt` runs a
+  release and keeps its failure instead of propagating it; `Run` does so for every item in turn;
+  `ThrowIfAny` throws the collected failures as one flattened `AggregateException`; `Attach`
+  records them on an exception that is already propagating, under `DataKey`, merging with what
+  an inner owner attached; `Collect` is the exception filter that does the keeping (the catch
+  has to take every exception type, so it is a filter, which the analyzers accept). The
+  optimizer, both launchers and the bookkeeping release through it.
+
+## Timing seam ✅
+
+Designed and built 2026-10-10 ([HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10), decision 3),
+check A14. For the **Gpu** timing checks only; the package never calls it.
+
+```csharp
+internal static class DeviceSelector
+{
+    internal static AcceleratorLease OpenForTiming(Backend backend); // as Open(backend), profiling on
+}
+```
+
+- The context is configured as `Open(backend)` configures it, plus ILGPU's profiling, so
+  that profiling markers on the accelerator's streams measure device time. A lease from
+  `Open` keeps profiling off.

@@ -22,12 +22,32 @@ accelerator, and the run errors of the v1 contract.
 | S17: with a stagnation limit the stop word is read at most ⌈G/16⌉ + observer calls + 1 times; without one, never | `TheStopWordIsReadOnlyEverySixteenGenerationsAndForTheObserver` | ✅ |
 | S18: a limit or a cancellation after the stop, before its read, ends the run at the stopping generation; a cancellation before it cancels | `StopWordExitTests` | ✅ |
 | S19: SHADE and L-SHADE on an objective scoring infeasible points `double.MaxValue` and a `NaN` gene 0 (8-D sphere feasible on `x₀ < −4`, N = 100, 20 000 evaluations, seed 12345) end with no `NaN` gene in the best individual and a finite fitness; the same for L-SHADE on CUDA (N = 16 384, 32 genes, 5·10⁶ evaluations, seed 20261007) | `SentinelFitnessTests`; CUDA under `Gpu` | ✅ |
-| The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 | `DocumentedExampleTests` | ✅ |
+| P0: the nine configurations of S13 on the CPU accelerator, 2·10⁴ evaluations each, seed 1, hash (SHA-256) to the value measured before the selection and the sampling were extracted: best genes and fitness as IEEE-754 bits, generations, evaluations | `SingleKernelPathTests` | ✅ |
+| P1: a pointwise objective (D = 10, P = 12 in 3 groups of 4, N = 64, seed 1, 2·10⁴ evaluations) and its monolithic twin, one arithmetic called by both, give the same run for each of the nine configurations, with every snapshot of an observer every 25 generations hashed; SHADE with the stagnation rule (streak 5, threshold 0) on a stepped twin pair ends by the stop word at the same generation, also when the word is read only after 200 generations | `PointwiseEquivalenceTests`, CPU accelerator; CUDA under `Gpu` | ✅ |
+| P2: `ForPointwiseFunction` refuses `P` of 0 and −1; `WithPopulationSize` refuses N = 2²⁰, P = 2¹² (N·P > `int.MaxValue`) with the exception it throws for N·D | `PointwiseBuilderTests` | ✅ |
+| P3: a pointwise objective with an `ArrayView<double>` field and `Exp`, `Pow` in `EvaluatePoint`, a result of two `double`s and an `int`, equals its twin on CUDA (L-SHADE, N_init 1 024, P = 50, seed 1, 50 generations); the CPU accelerator runs the same pair as a control | `PointwiseCudaMathTests`; CUDA under `Gpu` | ✅ |
+| P4: P = 50 points of 40 rounds of `Exp` and `Pow`, DE/rand/1/bin on CUDA: the median of three batches of 50 generations after a warm-up batch, at N = 1 024 and 16 384, pointwise against monolithic; at N = 1 024 at least 4× faster; the four figures printed | `PointwiseLatencyTests`, `Gpu` | ✅ |
+| A1: two JADE optimizers built with `OnAccelerator` on one CPU accelerator (Sphere D = 3, N = 32, 20 generations, seeds 1 and 2): after the first's `Dispose` the second runs and equals its run alone bit for bit, and a third built afterwards (seed 3) does too; on OpenCL (`Gpu`) the same, and four optimizers running at once (D = 10, N = 64, 200 generations, observer every 10, seeds 1 to 4), ten repeats, each equal to its run alone, result and every snapshot | `SharedKernelTests`; OpenCL under `Gpu` | ✅ CPU; `Gpu` by the orchestrator |
+| A2 (`Gpu`): P4's monolithic objective at N = 1 024 on CUDA takes at most 8 ms per generation (median of three batches of 50 after a warm-up batch); the figure is printed | `PointwiseLatencyTests.TheMonolithicGenerationTakesAtMostEightMillisecondsAtOneThousandAndTwentyFourIndividuals` | `Gpu`, by the orchestrator |
+| A10: for JADE, SHADE and L-SHADE with a stagnation limit and for a pointwise SHADE run on the CPU accelerator, `KernelLoader.LoadCount` after `Build` has grown by the number of distinct kernels of the configuration (14, 15, 16 and 15) and `RunAsync` adds none; the tests run alone in the `KernelLoadCount` collection, the count being a number of the process | `KernelLoadCountTests` | ✅ |
+| A6: with a release that throws planted first in the optimizer's own list and a second registered with the accelerator, on the CPU accelerator: `Dispose` releases every other buffer and kernel and the owned context, throws an `AggregateException` of both failures, and a second `Dispose` does nothing; a `Build` that fails on an objective ILGPU cannot compile throws `InternalCompilerException` itself, the release failure in `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]`; `Dispose` from the observer returns, and the task faults with the `AggregateException` | `ReleaseFailureTests` | ✅ |
+| A7: every buffer and kernel the optimizer allocated is `IsDisposed` after `Dispose` while an observer holds the run at generation 3 (the task ends canceled), after `Dispose` from the observer once the task has ended, and after a normal run; the caller's accelerator still allocates and runs a kernel in each | `DisposeTests` | ✅ |
+| A8: an exception of any type thrown by the observer (`OutOfMemoryException`, `AccessViolationException`, `InsufficientMemoryException`, `NotSupportedException`, `AggregateException`) faults the task with that same instance; a second `Dispose` from another thread, while the first waits for a held run or while the observer's own `Dispose` waits for the run's thread, returns only when the run has stopped and everything is disposed | `RunThreadTests` | ✅ |
+| A11: on a thread of its own, `Accelerator.Current` after `Build` and after `Dispose` is what it was before: none; the caller's accelerator; another accelerator while `OnAccelerator` uses the caller's; none after a `Build` that fails | `ThreadBindingTests` | ✅ |
+| A13: with a stagnation limit (SHADE, N = 50, streak 40) and no observer one synchronising stop-word read (the end) and a copy every 16 generations; with an observer every 10 generations the reads are its calls plus at most one; the result is bit for bit the same for read intervals 1, 2, 7, 16 and 1 000 | `StopWordCopyTests` | ✅ |
+| A16: `LastResult` is `null` before `RunAsync` and while an observer holds the run; a token cancelled by an observer due every 10 generations at generation 100 ends the task canceled with `LastResult` of 100 generations, that snapshot's evaluations, and its best individual's genes and fitness bit for bit (the pick written in the test from the rule: lowest fitness, `NaN` worst, ties to the lowest index); a `Dispose` while an observer holds the run at generation 3 does the same for generation 3 and A7's buffers are disposed after; a completed run's `LastResult` is the awaited result, the same object; an observer that throws leaves the task faulted and `LastResult` `null`; (b) also on CUDA under `Gpu` | `LastResultTests`; (b) on CUDA under `Gpu` | ✅ CPU; `Gpu` by the orchestrator |
+| The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 (`Gpu`); the same code with `GpuDevice.Cpu` in place of `Auto` does on the CPU accelerator in CI, so that no test outside `Gpu` opens a device (A12) | `DocumentedExampleTests`, `Gpu`; `DocumentedExampleOnTheCpuTests` | ✅ |
 
 ## Tests ✅
 
 ```csharp
 public class DocumentedExampleTests
+{
+    [Trait("Category", "Gpu")]
+    public Task TheQuickStartBuildsRunsAndReachesTheMinimum();
+}
+[Trait("Category", "Integration")]
+public class DocumentedExampleOnTheCpuTests
 {
     public Task TheQuickStartBuildsRunsAndReachesTheMinimum();
 }
@@ -115,8 +135,148 @@ public class SymmetryRunTests
     [Trait("Category", "Integration")]
     public async Task TheStopWordIsReadOnlyEverySixteenGenerationsAndForTheObserver();
 }
+public class SharedKernelTests
+{
+    [Trait("Category", "Integration")]
+    public async Task ASecondOptimizerSurvivesTheFirstsDisposalOnTheCpuAccelerator();
+    [Trait("Category", "Gpu")]
+    public async Task ASecondOptimizerSurvivesTheFirstsDisposalOnOpenCl();
+    [Trait("Category", "Gpu")]
+    public async Task FourOptimizersRunningAtOnceOnOpenClEachEqualItsRunAlone();
+}
+[CollectionDefinition("KernelLoadCount", DisableParallelization = true), Collection("KernelLoadCount")]
+public sealed class KernelLoadCounting
+{
+    [Trait("Category", "Integration")]
+    public void EveryLoadCountsOnce();
+}
+[Collection("KernelLoadCount")]
+public class KernelLoadCountTests
+{
+    public KernelLoadCountTests(ITestOutputHelper output);
+    [Trait("Category", "Integration")]
+    public Task JadeWithAStagnationLimitLoadsItsKernelsInBuild();
+    [Trait("Category", "Integration")]
+    public Task ShadeWithAStagnationLimitLoadsItsKernelsInBuild();
+    [Trait("Category", "Integration")]
+    public Task LShadeWithAStagnationLimitLoadsItsKernelsInBuild();
+    [Trait("Category", "Integration")]
+    public Task APointwiseShadeRunLoadsItsKernelsInBuild();
+}
+public class ReleaseFailureTests
+{
+    public void DisposeReleasesEverythingElseThenThrowsTheFailuresTogether();
+    public void AFailingBuildThrowsItsOwnExceptionWithTheReleaseFailureInItsData();
+    public async Task ADisposeFromTheObserverFaultsTheTaskWithTheReleaseFailure();
+}
+public class DisposeTests
+{
+    public async Task DisposeWhileTheObserverHoldsTheRunCancelsItAndFreesEverything();
+    public async Task DisposeFromTheObserverFreesEverythingByTheTimeTheTaskEnds();
+    public async Task DisposeAfterANormalRunFreesEverything();
+}
+public class RunThreadTests
+{
+    public async Task AnyExceptionOnTheRunThreadFaultsTheTaskWithIt(Type type);
+    public async Task ASecondDisposeWaitsUntilTheFirstHasStoppedTheRunAndFreedEverything();
+    public async Task ASecondDisposeWaitsForTheRunThreadsReleaseAfterAnObserversDispose();
+}
+public class ThreadBindingTests
+{
+    public Task AThreadBoundToNothingIsBoundToNothingAfterwards();
+    public Task AThreadBoundToTheCallersAcceleratorIsBoundToItAfterwards();
+    public Task AThreadBoundToAnotherAcceleratorStaysBoundToItWhenTheCallersIsUsed();
+    public Task AFailingBuildLeavesTheThreadBoundToNothing();
+}
+public class LastResultTests
+{
+    public async Task LastResultIsNullBeforeTheRunAndWhileTheObserverHoldsIt();
+    public Task ACancelledTokenLeavesTheBestIndividualOfTheSnapshotOnTheCpuAccelerator();
+    [Trait("Category", "Gpu")]
+    public Task ACancelledTokenLeavesTheBestIndividualOfTheSnapshotOnCuda();
+    public async Task DisposeWhileTheObserverHoldsTheRunLeavesTheBestIndividualOfThatGeneration();
+    public async Task ACompletedRunLeavesTheResultTheTaskReturned();
+    public async Task AFaultedRunLeavesNothing();
+}
+public class StopWordCopyTests
+{
+    public async Task ARunWithoutAnObserverReadsTheStopWordOnceAndCopiesItEverySixteenGenerations();
+    public async Task ARunWithAnObserverReadsTheStopWordOncePerObserverCallAndAtMostOnceMore();
+    public async Task TheRunEndsAtTheGenerationTheRuleFiredWhateverTheInterval();
+}
+public class SingleKernelPathTests
+{
+    [Trait("Category", "Integration")]
+    public async Task TheNineRunsHashToTheValueMeasuredBeforeTheRefactoring();
+}
+public class PointwiseEquivalenceTests
+{
+    public PointwiseEquivalenceTests(ITestOutputHelper output);
+    [Trait("Category", "Integration")]
+    public Task EachConfigurationEqualsItsMonolithicTwinOnTheCpuAccelerator(string configuration);
+    [Trait("Category", "Gpu")]
+    public Task EachConfigurationEqualsItsMonolithicTwinOnCuda(string configuration);
+    [Trait("Category", "Integration")]
+    public Task TheStagnationRunEqualsItsMonolithicTwinOnTheCpuAccelerator();
+    [Trait("Category", "Gpu")]
+    public Task TheStagnationRunEqualsItsMonolithicTwinOnCuda();
+    [Trait("Category", "Integration")]
+    public Task TheKernelsDoNothingOnceTheStopWordIsSetOnTheCpuAccelerator();
+    [Trait("Category", "Gpu")]
+    public Task TheKernelsDoNothingOnceTheStopWordIsSetOnCuda();
+}
+[Trait("Category", "Unit")]
+public class PointwiseBuilderTests
+{
+    public void APointCountBelowOneIsRejected(int pointCount);
+    public void APointCountOfOneIsAccepted();
+    public void APopulationWhosePointsExceedTheKernelsIndexRangeIsRejected();
+    public void APopulationBeyondTheGenesIndexRangeIsRejectedForAPointwiseObjectiveToo();
+}
+public class PointwiseCudaMathTests
+{
+    public PointwiseCudaMathTests(ITestOutputHelper output);
+    [Trait("Category", "Gpu")]
+    public Task DataAndMathEqualTheMonolithicTwinOnCuda();
+    [Trait("Category", "Integration")]
+    public Task DataAndMathEqualTheMonolithicTwinOnTheCpuAccelerator();
+}
+public class PointwiseLatencyTests
+{
+    public PointwiseLatencyTests(ITestOutputHelper output);
+    [Trait("Category", "Gpu")]
+    public Task ThePointwiseGenerationIsAtLeastFourTimesFasterAtOneThousandAndTwentyFourIndividuals();
+    [Trait("Category", "Gpu")]
+    public Task TheMonolithicGenerationTakesAtMostEightMillisecondsAtOneThousandAndTwentyFourIndividuals();
+}
 ```
 
 Internal helpers: the objectives `Sphere`, `Rosenbrock`, `Rastrigin`; the observers
-`RecordingObserver`, `GateObserver`, `CancellingObserver`, `ThrowingObserver`; and
-`HangGuard`, the bound on every wait.
+`RecordingObserver`, `GateObserver`, `CancellingObserver`, `ThrowingObserver`, `KeepingObserver` (keeps the
+best individual of the snapshot at one generation as a `KeptBest`, A16, and passes every call on to an observer it
+wraps); and
+`HangGuard`, the bound on every wait. For the pointwise checks: the pairs `PairPointwise` /
+`PairMonolithic` and `SteppedPairPointwise` / `SteppedPairMonolithic` over the one arithmetic
+`PairArithmetic` (P1), `MathPointwise` / `MathMonolithic` over `MathArithmetic` (P3),
+`LatencyPointwise` / `LatencyMonolithic` over `LatencyArithmetic` (P4); the observers
+`SnapshotHasher` (one SHA-256 per snapshot) and `StopwatchObserver` (a timestamp per call); and `RunRecord`, a run reduced to the bits it is compared by.
+Check P5 is in the Protocol tests (`GpuGuardTests`, check 8a), which find the pointwise kernels
+by their `Index1D` first parameter.
+
+## Seams internal to the assembly
+
+The A-checks read the package through seams that are internal and not public API:
+
+- `GpuDifferentialEvolution.Allocated` (every buffer, kernel and page-locked array the optimizer
+  allocated, as `ILGPU.Util.DisposeBase`, for `IsDisposed`; taken before `Dispose`, which empties
+  it), `Lease` (the accelerator and, through `Accelerator.Context`, the owned context),
+  `DisposeRequested`, `SecondDisposeWaiting` (an `Action` called on a second `Dispose`'s thread just
+  before it waits), `StopCopyCount` (beside `StopReadCount`, which now counts synchronising reads
+  only).
+- `GpuBuilder<T>.WithPlantedRelease(Func<Accelerator, IDisposable>)`: the optimizer adds what it
+  returns to its own releases, first of all; the tests plant `ReleaseThatThrows`, an
+  `AcceleratorObject` whose disposal throws, and register a second one with the accelerator itself.
+- Test helpers in `Observers.cs`: `DisposingObserver` (disposes the optimizer from the run's thread,
+  optionally holding afterwards) and `BoundedDisposal` (disposes an optimizer a case has held in a
+  run within `HangGuard.Limit`, so a `Dispose` that waits for a release that never comes fails the
+  case with a `TimeoutException`).

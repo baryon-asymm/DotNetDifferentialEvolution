@@ -111,3 +111,117 @@ internal sealed class ThrowingObserver(Exception failure, int throwAtGeneration)
         }
     }
 }
+
+/// <summary>
+/// Disposes the optimizer it is given at one generation, from the run's thread, and keeps what the call threw. When
+/// <paramref name="holdUntil"/> is given, it then waits for it, so that the run stays inside the observer after the call.
+/// </summary>
+/// <param name="disposeAtGeneration">The generation to dispose at.</param>
+/// <param name="holdUntil">Opened by the test to let the observer return, or <see langword="null"/> to return at once.</param>
+internal sealed class DisposingObserver(int disposeAtGeneration, ManualResetEventSlim? holdUntil = null) : IGpuPopulationUpdatedHandler
+{
+    /// <summary>Gets or sets the optimizer to dispose.</summary>
+    public GpuDifferentialEvolution? Optimizer { get; set; }
+
+    /// <summary>Gets what <c>Dispose</c> threw on the run's thread, or <see langword="null"/>.</summary>
+    public Exception? DisposeFailure { get; private set; }
+
+    /// <summary>Gets a value indicating whether the hold's hang guard expired before the test opened it.</summary>
+    public bool HoldTimedOut { get; private set; }
+
+    /// <inheritdoc />
+    public void Handle(GpuPopulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Generation != disposeAtGeneration)
+        {
+            return;
+        }
+
+        DisposeFailure = Record.Exception(Optimizer!.Dispose);
+        if (holdUntil is not null)
+        {
+            HoldTimedOut = !holdUntil.Wait(HangGuard.Limit);
+        }
+    }
+}
+
+/// <summary>
+/// Owns an optimizer a case holds in a run, and disposes it at the end of the case within <see cref="HangGuard.Limit"/>: a
+/// <c>Dispose</c> that waits for a release which never comes then fails the case instead of hanging the test host.
+/// </summary>
+/// <param name="optimizer">The optimizer.</param>
+internal sealed class BoundedDisposal(GpuDifferentialEvolution optimizer) : IDisposable
+{
+    /// <summary>Gets the optimizer.</summary>
+    public GpuDifferentialEvolution Optimizer { get; } = optimizer;
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        var disposing = Task.Run(Optimizer.Dispose);
+        if (!disposing.Wait(HangGuard.Limit))
+        {
+            throw new TimeoutException("Dispose did not return within the hang guard: it waits for a release that never comes.");
+        }
+    }
+}
+
+/// <summary>The best individual of one snapshot, by the result's rule, kept by <see cref="KeepingObserver"/>.</summary>
+/// <param name="Generation">The snapshot's generation.</param>
+/// <param name="EvaluationCount">The snapshot's evaluations.</param>
+/// <param name="Genes">The genes of the best individual.</param>
+/// <param name="Fitness">The fitness of the best individual.</param>
+internal sealed record KeptBest(int Generation, long EvaluationCount, double[] Genes, double Fitness)
+{
+    /// <summary>
+    /// Picks the best individual of a snapshot as the package's result does: the lowest fitness, a <c>NaN</c> the worst, a
+    /// tie to the lowest index. Written here from that rule, not taken from the package.
+    /// </summary>
+    /// <param name="snapshot">The snapshot.</param>
+    /// <returns>The best individual with the snapshot's counts.</returns>
+    public static KeptBest Of(GpuPopulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var fitness = snapshot.FitnessFunctionValues.Span;
+        var best = 0;
+        for (var i = 1; i < fitness.Length; i++)
+        {
+            if ((double.IsNaN(fitness[best]) && !double.IsNaN(fitness[i])) || fitness[i] < fitness[best])
+            {
+                best = i;
+            }
+        }
+
+        var genomeSize = snapshot.GenomeSize;
+        return new KeptBest(
+            snapshot.Generation,
+            snapshot.EvaluationCount,
+            snapshot.Genes.Span.Slice(best * genomeSize, genomeSize).ToArray(),
+            fitness[best]);
+    }
+}
+
+/// <summary>
+/// Keeps the best individual of the snapshot at one generation (<see cref="KeptBest"/>), then hands every call, that one
+/// included, to the observer it wraps, if any.
+/// </summary>
+/// <param name="keepAtGeneration">The generation to keep.</param>
+/// <param name="inner">The observer to call after, or <see langword="null"/>.</param>
+internal sealed class KeepingObserver(int keepAtGeneration, IGpuPopulationUpdatedHandler? inner = null) : IGpuPopulationUpdatedHandler
+{
+    /// <summary>Gets what was kept, or <see langword="null"/> before the generation was reached.</summary>
+    public KeptBest? Kept { get; private set; }
+
+    /// <inheritdoc />
+    public void Handle(GpuPopulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Generation == keepAtGeneration)
+        {
+            Kept = KeptBest.Of(snapshot);
+        }
+
+        inner?.Handle(snapshot);
+    }
+}

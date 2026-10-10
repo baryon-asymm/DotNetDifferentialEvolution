@@ -164,6 +164,7 @@ nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 | [GPU.Test](tests/DotNetDifferentialEvolution.GPU.Test/API.md) | the GPU package's frozen checks, CPU accelerator in CI, CUDA and OpenCL locally | 8 | — |
 | [Benchmark](benchmarks/DotNetDifferentialEvolution.Benchmark/API.md) | throughput and convergence measurement, no assertions; with its executable, [Benchmark.Runner](benchmarks/DotNetDifferentialEvolution.Benchmark.Runner/API.md) | 3 | — |
 | [protocol-lint](tools/protocol-lint/API.md) | the tree's file-level checks | 1 | its own tests |
+| [coder-scope](tools/coder-scope/API.md) | the `PreToolUse` hook that holds a coder subagent to its task (2026-10-10) | 1 | its own tests; a live probe |
 | [Protocol.Tests](tests/DotNetDifferentialEvolution.Protocol.Tests/API.md) | the reflection checks (§13): documents against compiled code; the GPU kernel guards; no suppression anywhere | 1 | mutations, once |
 
 Dependencies run one way: test projects and benchmarks depend on a package and on

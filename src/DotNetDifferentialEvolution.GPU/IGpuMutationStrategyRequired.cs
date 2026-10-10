@@ -1,5 +1,3 @@
-using DotNetDifferentialEvolution.GPU.Objectives;
-
 namespace DotNetDifferentialEvolution.GPU;
 
 /// <summary>
@@ -9,7 +7,7 @@ namespace DotNetDifferentialEvolution.GPU;
 /// </summary>
 /// <typeparam name="TFunction">The objective.</typeparam>
 public interface IGpuMutationStrategyRequired<TFunction>
-    where TFunction : struct, IGpuFitnessFunction
+    where TFunction : struct
 {
     /// <summary>Uses DE/rand/1/bin, named as in the CPU builder. Needs N ≥ 4.</summary>
     /// <param name="mutationForce">F; finite and greater than 0.</param>

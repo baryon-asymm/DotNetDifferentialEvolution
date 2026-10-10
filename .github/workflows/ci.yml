@@ -39,6 +39,11 @@ jobs:
           python -X utf8 tools/protocol-lint/test_protocol_lint.py
           python -X utf8 tools/protocol-lint/test_history_guard.py
 
+      # The hook that holds a coder subagent to its task (tools/coder-scope): its decisions, on
+      # temporary directories. The hook itself is registered by the owner, never by CI.
+      - name: Coder-scope hook self-tests
+        run: python -X utf8 tools/coder-scope/test_coder_scope.py
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:

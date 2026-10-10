@@ -2,6 +2,232 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="consumer-confirmation-2026-10-11"></a>
+## 2026-10-11 — a consumer ran 1.1.0-rc.1
+
+PastyPropellant ran `1.1.0-rc.1` (`7270aa0`, a local package, not published) in a scratch
+worktree of its own code, changing only the package reference, on the RTX 5070 Ti, as it
+reported:
+
+- **Its tests:** 53/53 card tests, among them a bit-for-bit check of the package-compiled
+  objective against its own fused kernel in fp64 and fp32; 75/75 device tests, among them
+  "every strategy repeats a seeded search bit for bit"; its full fast suite green.
+- **Its monolithic objective** (50 points, Classic, 90 s): N = 1 024 19 → 55 generations per
+  second (2.9×, from the group sizes alone); N = 16 384 18 → 19 (the device already full).
+  At N = 16 384 every snapshot's best from generation 200 to 1 600 equal to 1.0.1's.
+
+It has not tried the pointwise form; adopting 1.1.0 is its owner's decision. A15 and A16 came
+after `rc.1`.
+
+<a id="last-result-decided-2026-10-11"></a>
+## 2026-10-11 — the best individual of a cancelled run, in 1.1.0
+
+The consumer's wish of [the review](#consumer-review-2026-10-10): every long run of theirs ends
+by cancelling the token, and the package then gives nothing, so they keep the best individual
+of their last snapshot themselves. The owner, 2026-10-11, asked why not in 1.1.0 and chose a
+property ("Свойство") over an exception carrying the result (it would fault the task, which
+the review asked to keep canceled) and over deferring.
+
+**Decision** (check A16, Kernels `ACCEPTANCE.md`): `GpuDifferentialEvolution.LastResult`,
+`GpuOptimizationResult?`. `null` until a run ends. A run that completes sets it to the task's
+result (the same object). A run that ends canceled, by the token or by `Dispose`, sets it to
+the best individual of the population at the generation it stopped at (the result's rule:
+`NaN` worst, ties to the lowest index; one synchronised download), before the task completes
+and before anything is released. A run that faults leaves it `null`. A sealed class gains a
+member: additive, a minor version's change.
+
+<a id="consumer-review-2026-10-10"></a>
+## 2026-10-10 — a consumer's review of 1.1.0
+
+PastyPropellant, which uses the package (`ForFunction`, `OnAccelerator` with its own
+accelerator, N = 16 384, an observer every 100 generations, a stop by cancelling the token
+from the observer, no stagnation limit), reviewed the 1.1.0 changes at the owner's request,
+from its own code and without running 1.1.0. Its points, and the orchestrator's answers from
+the code:
+
+- **Cancellation must stay a canceled task** (its every long run ends so). It does: the run
+  thread completes the task with `TrySetCanceled` as 1.0.1 did; A8's catch-all sees no
+  exception on a cancel. `Dispose` after a cancel throws only when a release fails, as
+  1.0.1's did with the first failure.
+- **Snapshots** are unchanged: a synchronised download of `snapshot.Generation`'s population
+  on the run thread; A13's copy exists only with a stagnation limit.
+- **`OnAccelerator`**: the caller's accelerator is used as it is (a borrowed lease, no
+  second context); A11's test covers that case.
+- **Seeded runs against 1.0.1 and the monolithic objective's compilation**: to be measured.
+- **Wishes**: behaviour changes stated in the CHANGELOG; the pointwise `Combine` documented
+  (one thread per individual, the order of `points`, the buffer); a hint in the package's
+  own error for ILGPU's "Access is denied"; a local package to run its card tests before
+  the tag; the best individual so far on cancel (later, not 1.1.0).
+
+The owner, 2026-10-10, chose all four for 1.1.0: the comparison with 1.0.1, the behaviour
+section, the hint (check A15, Kernels `ACCEPTANCE.md`), and a local release candidate.
+
+<a id="ranking-calibrated-2026-10-10"></a>
+## 2026-10-10 — wave B measured: the ranking limit calibrated, the wide chunk √N
+
+Wave B (A3, A4; `2aa421c`..`aa122ed`) was accepted in CI and measured on both of this
+machine's devices by the orchestrator, `BookkeepingTimingTests`: median of 20 host-timed calls,
+each with a synchronisation, after 2 warm-ups, µs; one run per size unless a range is given.
+
+| | RTX 5070 Ti, CUDA | gfx1036, OpenCL |
+|---|---|---|
+| ranking at 2 048, counting / bitonic | 218 / 455–466 (2 runs) | 468 / 228 |
+| ranking at 4 096, counting / bitonic | 405 / 514 | 1 527 / 377 |
+| ranking at 8 192, counting / bitonic | 805 / 551 | — |
+| ranking at 1 024 / 512, counting / bitonic | — | 171 / 185; 131 / 165 |
+| counting at 2 048 on doubles (A3's red) | 253–255, bitonic 418–438 (3 runs) | — |
+| `FindBest`, chunks of 32: N 1 024; 16 384; 46 080 | 21.5–42.0 (8 runs); 116; 299–313 | 63–92; 140–145; 359–370 |
+| `FindBest`, chunks of 1 024 (A4's red) | 109.5–109.6; 125–126; 144 (4 runs) | 144–329; 170–187; 226–250 (2 runs) |
+
+What it showed:
+
+- **A3's Gpu red no longer reddens.** Its basis (686 against 522 µs) was measured before wave
+  A's group sizes; with them, doubles at 2 048 still beat the network. Integer keys stay (the
+  CI known answers; 218 against 254 µs on the RTX).
+- **The crossover of counting and the network is the device's**: between 4 096 and 8 192 on
+  the RTX, between 1 024 and 2 048 on the gfx1036. No fixed limit suits both: 4 096 makes the
+  gfx1036 4× slower there, 1 024 makes the RTX up to 2× slower between 1 024 and 5 000.
+- **Chunks of 32 regress at large N**: the closing pass is one thread over N/32 partials
+  (at 46 080 the RTX takes 299–313 µs against 144 with chunks of 1 024; the gfx1036 the
+  same). A pass of c serial steps and one of N/c are shortest together at c ≈ √N, on any
+  device.
+- **A4's 25 µs is at the floor of a host-timed call** (two launches and a synchronisation):
+  4 of 8 runs above it on the RTX, while the red is a steady 109.5.
+
+The owner, 2026-10-10, choosing among the options put to them: the chunk ≈ √N ("Кусок ≈ √N");
+device-side time for the timing checks ("Время на GPU"); the ranking limit calibrated per
+device ("Калибровка"), after asking whether the answers were the card's or universal.
+
+**Decisions** (A3 and A4 reworded ⚠ in `Bookkeeping/ACCEPTANCE.md`; A14 added to
+`Devices/ACCEPTANCE.md`):
+
+1. The wide chunk is `c(N_init) = max(32, 32·⌈⌈√N_init⌉ / 32⌉)`, ⌈√·⌉ the integer ceiling
+   square root, fixed for the run (L-SHADE's N only falls, so ⌈N / c⌉ never outgrows the
+   partial buffers). The kernels take it as an argument. Results cannot depend on it (A4).
+2. The ranking limit L is the instance's. With ranking, on CUDA and OpenCL, for
+   1 024 < N_init: both rankings are loaded and timed in the constructor at
+   n = 2 048, 4 096, 8 192, each capped at N_init, ascending (host clock, median of 3 after 1
+   warm-up, each with a synchronisation, over a scratch buffer of zeros); L is the largest n
+   at which counting is not slower, before the first n at which it is, and 1 024 when it is
+   slower at the first. N_init ≤ 1 024: L = 1 024, nothing timed. The CPU accelerator is not
+   timed (the CI's; its time is the host's thread pool): L = 2 048, as CI has run since wave B.
+   The order is the same whichever ranks (S9), so the timing changes speed, never a result.
+3. Timing checks read device time (ILGPU profiling markers) from a context opened with
+   profiling, through an internal `DeviceSelector.OpenForTiming`; the package never profiles.
+
+<a id="audit-fixes-decided-2026-10-10"></a>
+## 2026-10-10 — the two audits of 1.1.0, and every fix in 1.1.0
+
+Two read-only audits of `c40868e` (1.1.0 before release) ran on 2026-10-09: performance, and
+leaks and defects (Opus, each in its own worktree; reports in the orchestrator's scratchpad,
+`audit-perf-report.md`, `audit-mem-report.md`). The orchestrator re-ran every finding it
+lists below as measured; the rest are by code (PTX, ILGPU's IL) as the auditors gave them.
+The owner, 2026-10-10: "Давай, мы все исправления засунем в 1.1.0" — every fix in 1.1.0, no
+1.0.2.
+
+**Measured by the orchestrator, 2026-10-09, RTX 5070 Ti (CUDA 13.4) and `gfx1036` (OpenCL),
+Release, scratch probes and patches on a detached worktree, reverted:**
+
+- *Launch groups (PERF-1).* ILGPU's auto-grouping takes the occupancy-maximising group
+  (640–768 threads on sm_120), so N threads use ⌈N/640⌉ of 70 SMs. P4's monolithic objective,
+  ms per generation (median of 3 batches of 50): N = 320 14.9, 640–44 800 about 29.5,
+  46 080 59.0 — a step at every 640·70. Forced groups of 32: N = 1 024 3.75, 16 384 11.5,
+  46 080 31.5; pointwise N = 1 024 0.69. The `Gpu` suite 57/57 at groups 32 and 256. So P4's
+  38× at N = 1 024 was mostly idle SMs; with the fix about 5.4×.
+- *Bookkeeping (PERF-7, PERF-3, PERF-8).* Sphere D = 10, N = 1 024, ms per generation: rand/1
+  0.023, best/1 0.128, JADE 0.738, SHADE 0.930. `RankByCounting` (µs per call) 1 024: 341,
+  2 048: 686, 8 192: 2 722; the bitonic network 402, 522, 635 — counting is slower from
+  2 048, so the limit of 8 192 was on the wrong side (JADE 3.46 ms at N = 8 192, 1.50 at
+  8 193). `FindBest` about 105 µs. With integer order keys: counting 127 µs at 1 024,
+  263 at 2 048 (bitonic 421), 541 at 4 096 (bitonic 512). Groups of 32 change ranking
+  little: its passes are serial per thread.
+- *Shared kernels (MEM-1, SUS-1, SUS-2).* On a caller's OpenCL accelerator two optimizers get
+  the same five `Kernel` objects from ILGPU's kernel cache; the first's `Dispose` disposes
+  the second's: its run throws `CLException`, and a third's `Build` too. Four optimizers
+  running at once end the process (`AccessViolationException` in `clSetKernelArg`). With
+  `CachingMode.NoKernelCaching`: 12 of 12 runs equal their runs alone. CUDA is not affected
+  (its loads are compiled explicitly). Present since 1.0.0.
+- *Packed `TPoint` (MEM-3).* `[StructLayout(Pack = 1)] {byte; double}`: a 9-byte host
+  element, a 16-byte device stride. The run looks clean; `compute-sanitizer memcheck` shows
+  1 667 out-of-bounds writes in `EvaluatePoints`. A `bool` field fails `Build` (MEM-4).
+- *Contraction (SUS-3).* On CUDA ptxas fuses a monolithic `sum += r·r` into one DFMA, which the
+  pointwise form, storing `r·r`, cannot: a least-squares and a Sphere pair end equal but
+  differ in 19 and 21 of 64 snapshot fitness values by 1–2 ulp. The CPU accelerator: bit
+  for bit. P1's pair is not contracted, which is why it passed on CUDA.
+- *Test tagging (TEST-1).* `Category!=Gpu` still opens CUDA and OpenCL: `DocumentedExampleTests`
+  (an N = 10 000 run on `Auto`), `DeviceSelectionTests`, `CudaLibDeviceTests`. Every
+  "CPU-only" suite run of 2026-10-09 touched the shared GPU unannounced.
+
+**Decisions** (the checks are A1–A13, frozen 2026-10-10 before code: A1–A2 in
+`Devices/ACCEPTANCE.md`, A3–A4 in `Bookkeeping/ACCEPTANCE.md`, A5–A13 in
+`Kernels/ACCEPTANCE.md`, which holds the root's as it holds P2):
+
+1. Every kernel is compiled explicitly on every backend, never through ILGPU's kernel cache
+   (A1).
+2. The group size comes from the launch: `clamp(w·⌈⌈n/m⌉/w⌉, w, occupancy limit)` for warp
+   size w, m multiprocessors and the kernel's largest extent n; the CPU accelerator keeps
+   ILGPU's grouping (forced large groups made the CPU suite 13× slower) (A2).
+3. Ranking compares integer order keys; counting up to N = 2 048, the bitonic network above,
+   from the measurement (A3). Passes whose result cannot depend on order run in chunks of
+   32; `SumSuccesses` keeps 1 024, S7's order (A4).
+4. `TPoint` is checked when the run is started: sequential layout, fields of primitive
+   numeric types (not `bool`, not `char`), their enums, or such structs, and no packing
+   below the natural size; otherwise `ArgumentException` naming the field (A5).
+5. Releases are exception-safe: every release runs; `Dispose` then throws an
+   `AggregateException` of the failures; a failing `Build` throws its own exception, the
+   release failures in its `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]`;
+   after an observer's `Dispose` they fault the task, never the process (A6). `Dispose` is
+   tested (A7); any exception on the run thread faults the task, and a concurrent second
+   `Dispose` waits (A8).
+6. N and N·P stay `int.MaxValue − 1 023` or below (the last group's thread index cannot
+   wrap); `Build` re-checks N·D and N·P; JADE, SHADE and L-SHADE refuse N > 2³⁰ (A9).
+   Every kernel is compiled in `Build`, once (A10). `Build` leaves its thread's accelerator
+   binding as it found it (A11).
+7. The CI filter opens no device (A12). The stop word is copied without synchronising the
+   accelerator and read one interval later (A13).
+8. The bit-identity of a pointwise objective and its monolithic twin is promised on the CPU
+   accelerator; on a GPU, within the device compiler's contraction of multiply-adds (P1 ⚠).
+   ILGPU 1.5.3 offers no switch for it.
+
+**Not in this wave**, being directions rather than fixes: fusing select into the point
+kernel, the trial built in registers, struct-of-arrays populations, a stream per optimizer
+(deferred, `gpu-future-streams`), a shared-memory sort above the counting limit (forbidden by
+`Bookkeeping/BOOT.md`; the owner's decision), and the auditors' notes PERF-6, PERF-9, PERF-10.
+
+<a id="pointwise-decided-2026-10-09"></a>
+## 2026-10-09 — a pointwise objective, for objectives made of parts
+
+PastyPropellant's objective is 50 independent points (5 propellants × 10 pressures), each
+two bisections of 19 steps with `Exp` and `Pow`. Written as `IGpuFitnessFunction`, one
+thread computes all 50, and a generation lasts as long as that thread. Their figures
+(theirs, RTX 5070 Ti, fp64, 2026-10-07): about 52 ms per generation at any N up to
+16 384, against 3.05 ms (N 1 024), 6.94 ms (N 4 096) and 22.5 ms (N 16 384) for their own
+former thread-per-point path with a per-individual reduction; on the same bounds the CPU
+package at N 384 (47 generations/s) reached their f = 0.0493 in 32 min, this package at
+N 16 384 (17 generations/s) in 1 h 52 min. The owner keeps fp64 only (fp32 gave them poor
+solutions).
+
+Three ways were weighed with PastyPropellant's orchestrator: (1) a pointwise objective in
+this package; (2) a stream per optimizer, so that K optimizers on one accelerator overlap;
+(3) K populations in one launch. The owner, 2026-10-09: "давай приступим к 1 пункту,
+второй пока просто запомним на будущее". (3) touches every node and helps little without
+(1); it is not planned.
+
+The owner on its scope: "у нас библиотека публичная и она может работать в других
+проектах, не только в PastyPropellant". So the contract is general:
+- the point result is any unmanaged struct (PastyPropellant returns six values and a
+  flag; another caller one `double`);
+- `Combine` is the caller's code over all `P` results in point order, and it is given the
+  genes too (PastyPropellant does not need them; a penalty or a regularisation on the
+  genes does);
+- `P` is fixed per run; groups and layouts are the caller's business.
+
+The builder: the six stage interfaces drop `IGpuFitnessFunction` from their constraint
+instead of a second chain of six; relaxing a constraint breaks no caller, so the version
+is 1.1.0. The split launch keeps the single-kernel path as it is (check P0: a SHA-256 of
+the nine configurations' results taken before the refactoring) and shares its selection
+and sampling instead of copying them.
+
 <a id="shade-weight-overflow-2026-10-08"></a>
 ## 2026-10-08 — SHADE's weights are scaled before they can overflow a sum
 

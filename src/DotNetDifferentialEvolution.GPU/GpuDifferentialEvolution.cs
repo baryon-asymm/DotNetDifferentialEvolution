@@ -3,6 +3,7 @@ using DotNetDifferentialEvolution.GPU.Devices;
 using DotNetDifferentialEvolution.GPU.Kernels;
 using ILGPU;
 using ILGPU.Runtime;
+using ILGPU.Util;
 
 namespace DotNetDifferentialEvolution.GPU;
 
@@ -13,22 +14,27 @@ namespace DotNetDifferentialEvolution.GPU;
 /// </summary>
 public sealed class GpuDifferentialEvolution : IDisposable
 {
-    private readonly AcceleratorLease _lease;
     private readonly RunSettings _settings;
     private readonly ulong _crossoverThreshold;
     private readonly double _pBestRateMin;
-    private readonly List<MemoryBuffer> _allocated = [];
+    private readonly List<IDisposable> _owned = [];
     private readonly PopulationTransfers _transfers = new();
     private readonly CancellationTokenSource _disposal = new();
     private readonly object _gate = new();
     private readonly KernelLauncher _launcher;
     private readonly GenerationBookkeeping _bookkeeping;
+    private readonly PageLockedArray1D<int>? _stopCopy;
     private readonly List<RunState> _sinceStopRead = [];
     private RunState _state;
     private Task<GpuOptimizationResult>? _run;
     private Thread? _runThread;
-    private bool _disposed;
+    private Thread? _disposingThread;
+    private bool _disposeRequested;
+    private bool _released;
     private bool _releaseWhenTheRunEnds;
+    private bool _stopCopyPending;
+    private int _stopCopyGeneration;
+    private GpuOptimizationResult? _lastResult;
 
     /// <summary>
     /// Builds the optimizer on an open lease, which it owns from this call on: it is disposed with
@@ -37,9 +43,17 @@ public sealed class GpuDifferentialEvolution : IDisposable
     /// <param name="lease">The device.</param>
     /// <param name="settings">The validated settings.</param>
     /// <param name="compile">Compiles the kernels for the objective on the accelerator.</param>
-    internal GpuDifferentialEvolution(AcceleratorLease lease, RunSettings settings, Func<Accelerator, KernelLauncher> compile)
+    /// <param name="plantedRelease">
+    /// Creates, first of all the optimizer allocates, a release of the tests' choosing on the accelerator (ACCEPTANCE.md, A6);
+    /// <see langword="null"/> outside the tests.
+    /// </param>
+    internal GpuDifferentialEvolution(
+        AcceleratorLease lease,
+        RunSettings settings,
+        Func<Accelerator, KernelLauncher> compile,
+        Func<Accelerator, IDisposable>? plantedRelease = null)
     {
-        _lease = lease;
+        Lease = lease;
         _settings = settings;
         var strategy = settings.Strategy;
         _crossoverThreshold = strategy.Rule == ParameterRule.Fixed ? DeStep.CrossoverThreshold(strategy.CrossoverProbability) : 0UL;
@@ -50,6 +64,11 @@ public sealed class GpuDifferentialEvolution : IDisposable
         try
         {
             using var binding = accelerator.BindScoped();
+            if (plantedRelease is not null)
+            {
+                _owned.Add(plantedRelease(accelerator));
+            }
+
             var geneCount = (long)settings.PopulationSize * settings.GenomeSize;
             var currentGenes = Allocate(accelerator, geneCount);
             var currentFitness = Allocate(accelerator, settings.PopulationSize);
@@ -60,6 +79,10 @@ public sealed class GpuDifferentialEvolution : IDisposable
             var upperBound = Allocate(accelerator, settings.GenomeSize);
             PopulationTransfers.Upload(lowerBound, settings.LowerBound);
             PopulationTransfers.Upload(upperBound, settings.UpperBound);
+            if (settings.Stagnation is not null)
+            {
+                _stopCopy = accelerator.AllocatePageLocked1D<int>(BookkeepingKernels.StopLength);
+            }
 
             var archiveCapacity = ArchiveRules.Capacity(strategy.ArchiveSizeRate, settings.PopulationSize);
             _bookkeeping = new GenerationBookkeeping(
@@ -85,9 +108,11 @@ public sealed class GpuDifferentialEvolution : IDisposable
             accelerator.Synchronize();
             _state = new RunState(0, settings.PopulationSize, settings.PopulationSize, archiveCapacity, views);
         }
-        catch
+        catch (Exception original)
         {
-            ReleaseAll();
+            // Every release runs; the failures ride on the exception that made them necessary, which is thrown as it was
+            // (ACCEPTANCE.md, A6).
+            ReleaseFailures.Attach(original, ReleaseAll());
             throw;
         }
     }
@@ -95,14 +120,70 @@ public sealed class GpuDifferentialEvolution : IDisposable
     /// <summary>Gets the device the run is on, and why Auto skipped the devices before it.</summary>
     public GpuDeviceInfo Device { get; }
 
+    /// <summary>
+    /// Gets what the run left: <see langword="null"/> until a run ends. A run that completes leaves its result, the same object
+    /// the task returns. A run that ends canceled, by the token or by <see cref="Dispose"/>, leaves the best individual of the
+    /// population at the generation it stopped at, with that generation's counts: the lowest fitness, a <c>NaN</c> worst, a tie
+    /// to the lowest index, as the result's rule; one synchronised download on the run's thread. A failure on the run's thread leaves
+    /// <see langword="null"/>, including a failed download of a canceled run's best individual. When the run ended canceled and
+    /// a release then fails, the task faults with the release failures and <see cref="LastResult"/> keeps the canceled run's
+    /// best individual. It is set before the task completes and before anything is released, so that any thread that observes
+    /// the task's completion, or the end of <see cref="Dispose"/>, sees it.
+    /// </summary>
+    /// <value>The result of the run that ended, or <see langword="null"/>.</value>
+    public GpuOptimizationResult? LastResult => Volatile.Read(ref _lastResult);
+
     /// <summary>Gets the number of population downloads so far (ACCEPTANCE.md, check 5b).</summary>
     internal int PopulationDownloadCount => _transfers.DownloadCount;
 
-    /// <summary>Gets the number of stop-word reads so far (ACCEPTANCE.md, S17).</summary>
+    /// <summary>Gets the number of synchronising stop-word reads so far (ACCEPTANCE.md, S17, A13).</summary>
     internal int StopReadCount => _transfers.StopReadCount;
+
+    /// <summary>Gets the number of stop-word copies enqueued without a synchronisation so far (ACCEPTANCE.md, A13).</summary>
+    internal int StopCopyCount => _transfers.StopCopyCount;
 
     /// <summary>Gets the number of evaluations so far: N after <c>Build</c> (ACCEPTANCE.md, check 1a).</summary>
     internal long EvaluationCount => _state.Evaluations;
+
+    /// <summary>Gets the lease: for the tests of check A6, which look at the context it owns.</summary>
+    internal AcceleratorLease Lease { get; }
+
+    /// <summary>
+    /// Gets every buffer and kernel the optimizer allocated and has not yet released: for the tests of check A7, which read
+    /// their <c>IsDisposed</c> after <see cref="Dispose"/>, from a list taken before it.
+    /// </summary>
+    internal IReadOnlyList<DisposeBase> Allocated
+    {
+        get
+        {
+            List<DisposeBase> all = [.. _owned.OfType<DisposeBase>(), .. _bookkeeping.Allocated, .. _launcher.Allocated];
+            if (_stopCopy is not null)
+            {
+                all.Add(_stopCopy);
+            }
+
+            return all;
+        }
+    }
+
+    /// <summary>Gets a value indicating whether <see cref="Dispose"/> has been called: for the tests of checks A7 and A8.</summary>
+    internal bool DisposeRequested
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _disposeRequested;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets a hook called on the thread of a second <see cref="Dispose"/> just before it waits for the first to finish,
+    /// outside the lock: the tests' way to know a second caller is waiting (ACCEPTANCE.md, A8). <see langword="null"/> outside
+    /// the tests.
+    /// </summary>
+    internal Action? SecondDisposeWaiting { get; set; }
 
     /// <summary>
     /// Gets or sets a hook called on the run's thread after each generation is enqueued, with its number, before the
@@ -124,7 +205,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
     {
         lock (_gate)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            ObjectDisposedException.ThrowIf(_disposeRequested, this);
             if (_run is { } started)
             {
                 return started.IsCompleted
@@ -147,25 +228,41 @@ public sealed class GpuDifferentialEvolution : IDisposable
 
     /// <summary>
     /// Stops a run in progress between generations, waits for it, and frees what the optimizer
-    /// allocated: its device buffers, and the device itself unless it was the caller's.
+    /// allocated: its device buffers, and the device itself unless it was the caller's. Every release runs even when one
+    /// throws; the failures are then thrown together. A second call, also a concurrent one, returns once the first has
+    /// stopped the run and released everything, and throws nothing.
     /// </summary>
+    /// <exception cref="AggregateException">A release failed; everything else was released.</exception>
     public void Dispose()
     {
         Thread? runThread;
+        bool first;
         lock (_gate)
         {
-            if (_disposed)
+            var current = Thread.CurrentThread;
+            runThread = _runThread;
+            first = !_disposeRequested;
+            if (first)
             {
+                _disposeRequested = true;
+                _disposingThread = current;
+                if (runThread == current)
+                {
+                    // Called from the observer: the run thread frees everything once the loop has stopped.
+                    _releaseWhenTheRunEnds = true;
+                }
+            }
+            else if (_released || current == runThread || current == _disposingThread)
+            {
+                // Done already, or the caller is the thread doing, or holding up, the first call's work: waiting would be a deadlock.
                 return;
             }
+        }
 
-            _disposed = true;
-            runThread = _runThread;
-            if (runThread == Thread.CurrentThread)
-            {
-                // Called from the observer: the run thread frees everything once the loop has stopped.
-                _releaseWhenTheRunEnds = true;
-            }
+        if (!first)
+        {
+            WaitUntilReleased();
+            return;
         }
 
         _disposal.Cancel();
@@ -175,7 +272,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
         }
 
         runThread?.Join();
-        ReleaseAll();
+        ReleaseFailures.ThrowIfAny(ReleaseAndSignal());
     }
 
     private static GpuDevice KindOf(Backend backend) => backend switch
@@ -186,47 +283,97 @@ public sealed class GpuDifferentialEvolution : IDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(backend), backend, "Not a defined backend."),
     };
 
-    private static bool IsReportedToTheTask(Exception failure) => failure is not OutOfMemoryException;
+    /// <summary>Every exception, of whatever type, is a failure of the run and faults its task (ACCEPTANCE.md, A8).</summary>
+    private static bool IsAFailureOfTheRun(Exception failure)
+    {
+        ArgumentNullException.ThrowIfNull(failure);
+        return true;
+    }
 
+    private static AggregateException Combine(Exception? runFailure, List<Exception> releaseFailures)
+    {
+        List<Exception> all = [];
+        if (runFailure is not null)
+        {
+            all.Add(runFailure);
+        }
+
+        all.AddRange(releaseFailures);
+        return new AggregateException(all).Flatten();
+    }
+
+    /// <summary>
+    /// The run thread: the loop, then, when <see cref="Dispose"/> was called from the observer, the release; the task is
+    /// completed last, so that a release failure faults it and never leaves the thread.
+    /// </summary>
     private void Run(TaskCompletionSource<GpuOptimizationResult> completion, CancellationToken cancellationToken)
+    {
+        var outcome = Execute(cancellationToken);
+        bool release;
+        lock (_gate)
+        {
+            release = _releaseWhenTheRunEnds;
+        }
+
+        var releaseFailures = release ? ReleaseAndSignal() : [];
+        _ = releaseFailures.Count > 0 ? completion.TrySetException(Combine(outcome.Failure, releaseFailures))
+            : outcome.Failure is not null ? completion.TrySetException(outcome.Failure)
+            : outcome.Result is not null ? completion.TrySetResult(outcome.Result)
+            : completion.TrySetCanceled(outcome.CanceledBy);
+    }
+
+    /// <summary>The generations, until a limit, the stop rule, the token, <see cref="Dispose"/> or a failure of any kind; never throws.</summary>
+    private RunOutcome Execute(CancellationToken cancellationToken)
     {
         try
         {
-            using var binding = _lease.Accelerator.BindScoped();
+            using var binding = Lease.Accelerator.BindScoped();
             var stopped = false;
             do
             {
                 if (cancellationToken.IsCancellationRequested || _disposal.IsCancellationRequested)
                 {
                     // As in the CPU package, the stop rule is tested before the cancellation: a rule that fired before
-                    // the request, between two reads of the stop word, ends the run with its result (ACCEPTANCE.md, S18).
-                    if (_settings.Stagnation is not null && Stopped())
+                    // the request, between two looks at the stop word, ends the run with its result (ACCEPTANCE.md, S18).
+                    if (_settings.Stagnation is not null && ReadStop())
                     {
                         stopped = true;
                         break;
                     }
 
-                    _ = completion.TrySetCanceled(cancellationToken.IsCancellationRequested ? cancellationToken : _disposal.Token);
-                    return;
+                    // The best individual of the generation the run stops at is kept before the task is completed and before
+                    // anything is released (ACCEPTANCE.md, A16); a download that fails faults the run below.
+                    Volatile.Write(ref _lastResult, Result());
+                    return RunOutcome.Canceled(cancellationToken.IsCancellationRequested ? cancellationToken : _disposal.Token);
                 }
 
                 RunGeneration();
                 var generation = _state.Generation;
                 GenerationEnqueued?.Invoke(generation);
                 var observerDue = _settings.Handler is not null && generation % _settings.EveryNGenerations == 0;
-                if (_settings.Stagnation is not null
-                    && (observerDue || generation % _settings.StopReadInterval == 0)
-                    && Stopped())
+                if (_settings.Stagnation is not null)
                 {
-                    // As in the CPU package, the observer sees the generation the rule stops at, when it is due there:
-                    // the stop word is read at every due generation, so an earlier stop was never due.
-                    if (observerDue && _state.Generation == generation)
+                    if (observerDue)
                     {
-                        _settings.Handler!.Handle(Snapshot());
-                    }
+                        // The observer synchronises anyway: the word is read, with a synchronisation, before each of its calls.
+                        if (ReadStop())
+                        {
+                            // As in the CPU package, the observer sees the generation the rule stops at, when it is due there:
+                            // the stop word is read at every due generation, so an earlier stop was never due.
+                            if (_state.Generation == generation)
+                            {
+                                _settings.Handler!.Handle(Snapshot());
+                            }
 
-                    stopped = true;
-                    break;
+                            stopped = true;
+                            break;
+                        }
+                    }
+                    else if (generation % _settings.StopReadInterval == 0 && StopCopyShowsTheRuleFired())
+                    {
+                        // The copy taken an interval ago says the rule has fired: the end of the loop reads the word for good.
+                        break;
+                    }
                 }
 
                 if (observerDue)
@@ -236,31 +383,21 @@ public sealed class GpuDifferentialEvolution : IDisposable
             }
             while (!_settings.LimitReached(_state.Generation, _state.Evaluations));
 
-            // A limit beside the rule (RunSettings allows it; the public builder does not) can end the run between two reads
-            // of the stop word: a rule that fired before it ends the run at its own generation (ACCEPTANCE.md, S18).
+            // The end of every run that has not read the word since: a limit beside the rule (RunSettings allows it; the public
+            // builder does not) or a copy that showed the rule fired. A rule that fired before ends the run at its own
+            // generation (ACCEPTANCE.md, S18).
             if (!stopped && _settings.Stagnation is not null)
             {
-                _ = Stopped();
+                _ = ReadStop();
             }
 
-            _ = completion.TrySetResult(Result());
+            var result = Result();
+            Volatile.Write(ref _lastResult, result);
+            return RunOutcome.Completed(result);
         }
-        catch (Exception failure) when (IsReportedToTheTask(failure))
+        catch (Exception failure) when (IsAFailureOfTheRun(failure))
         {
-            _ = completion.TrySetException(failure);
-        }
-        finally
-        {
-            bool release;
-            lock (_gate)
-            {
-                release = _releaseWhenTheRunEnds;
-            }
-
-            if (release)
-            {
-                ReleaseAll();
-            }
+            return RunOutcome.Failed(failure);
         }
     }
 
@@ -293,14 +430,18 @@ public sealed class GpuDifferentialEvolution : IDisposable
     }
 
     /// <summary>
-    /// Reads the stop word. When the stagnation rule has fired, every kernel since has done nothing, and the host's
-    /// counters go back to the generation it fired in, so the run ends as if the word had been read every generation.
+    /// Reads the stop word, synchronising the accelerator. When the stagnation rule has fired, every kernel since has done
+    /// nothing, and the host's counters go back to the generation it fired in, so the run ends as if the word had been read
+    /// every generation.
     /// </summary>
     /// <returns>Whether the run stops.</returns>
-    private bool Stopped()
+    private bool ReadStop()
     {
         var stop = new int[BookkeepingKernels.StopLength];
-        _transfers.ReadStop(_lease.Accelerator, _bookkeeping.Views.Stop, stop);
+        _transfers.ReadStop(Lease.Accelerator, _bookkeeping.Views.Stop, stop);
+
+        // The synchronisation has landed any copy in flight, and the word read is the newest there is.
+        _stopCopyPending = false;
         var states = _sinceStopRead.ToArray();
         _sinceStopRead.Clear();
         if (stop[BookkeepingKernels.StopSet] == 0)
@@ -310,6 +451,39 @@ public sealed class GpuDifferentialEvolution : IDisposable
 
         _state = Array.Find(states, state => state.Generation == stop[BookkeepingKernels.StopGeneration])!;
         return true;
+    }
+
+    /// <summary>
+    /// At a read interval, looks at the stop word copied an interval ago, without waiting for it, and copies the word again,
+    /// without synchronising the accelerator: the copy lands in stream order, behind the generations enqueued so far, and is
+    /// read at the next interval. A copy that has not landed by then tells nothing and is waited for another interval.
+    /// </summary>
+    /// <returns>Whether the earlier copy showed the rule had fired.</returns>
+    private bool StopCopyShowsTheRuleFired()
+    {
+        var copy = _stopCopy!;
+        if (_stopCopyPending)
+        {
+            switch (PopulationTransfers.PollStopCopy(copy))
+            {
+                case StopCopyState.Set:
+                    return true;
+                case StopCopyState.InFlight:
+                    return false;
+                case StopCopyState.NotSet:
+                    // The rule had not fired by the generation the copy was taken at, so no state up to it is a stopping one.
+                    _ = _sinceStopRead.RemoveAll(state => state.Generation <= _stopCopyGeneration);
+                    _stopCopyPending = false;
+                    break;
+                default:
+                    throw new InvalidOperationException("Not a defined stop copy state.");
+            }
+        }
+
+        _transfers.BeginStopCopy(Lease.Accelerator.DefaultStream, _bookkeeping.Views.Stop, copy);
+        _stopCopyGeneration = _state.Generation;
+        _stopCopyPending = true;
+        return false;
     }
 
     private StepParameters Parameters(int generation, int populationSize)
@@ -338,7 +512,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
         var fitness = new double[populationSize];
         var views = _state.Views;
         _transfers.Download(
-            _lease.Accelerator, views.Current.SubView(0, genes.Length), views.CurrentFitness.SubView(0, populationSize), genes, fitness);
+            Lease.Accelerator, views.Current.SubView(0, genes.Length), views.CurrentFitness.SubView(0, populationSize), genes, fitness);
         return (genes, fitness);
     }
 
@@ -356,36 +530,145 @@ public sealed class GpuDifferentialEvolution : IDisposable
         return new GpuOptimizationResult(bestGenes, fitness[best], _state.Generation, _state.Evaluations, Device);
     }
 
+    private void WaitUntilReleased()
+    {
+        SecondDisposeWaiting?.Invoke();
+        lock (_gate)
+        {
+            while (!_released)
+            {
+                _ = Monitor.Wait(_gate);
+            }
+        }
+    }
+
     private MemoryBuffer1D<double, Stride1D.Dense> Allocate(Accelerator accelerator, long length)
     {
         var buffer = accelerator.Allocate1D<double>(length);
-        _allocated.Add(buffer);
+        _owned.Add(buffer);
         return buffer;
     }
 
-    private void ReleaseBuffers()
+    /// <summary>Releases everything and wakes the callers of <see cref="Dispose"/> that wait for it; never throws.</summary>
+    /// <returns>The failures of the releases; empty when every release succeeded.</returns>
+    private List<Exception> ReleaseAndSignal()
     {
-        foreach (var buffer in _allocated)
+        var failures = ReleaseAll();
+        lock (_gate)
         {
-            buffer.Dispose();
+            _released = true;
+            Monitor.PulseAll(_gate);
         }
 
-        _allocated.Clear();
+        return failures;
     }
 
-    private void ReleaseAll()
+    /// <summary>
+    /// Releases the buffers, the bookkeeping, the kernels, the lease and the cancellation source, each in its own <c>try</c>
+    /// (ACCEPTANCE.md, A6); a stop-word copy still in flight is waited for first, since its page-locked memory is freed.
+    /// </summary>
+    /// <returns>The failures, in release order; empty when every release succeeded.</returns>
+    private List<Exception> ReleaseAll()
     {
-        using (_lease.Accelerator.BindScoped())
-        {
-            ReleaseBuffers();
+        var failures = new List<Exception>();
 
-            // Null only when building failed before they were created.
-            _bookkeeping?.Dispose();
-            _launcher?.Dispose();
+        // Disposing an accelerator unbinds the thread whichever accelerator it is bound to, so what the caller's thread was
+        // bound to is bound again after the lease is disposed (ACCEPTANCE.md, A11).
+        var bound = Accelerator.Current;
+        ScopedAcceleratorBinding? binding = null;
+        try
+        {
+            binding = Lease.Accelerator.BindScoped();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter; the releases follow unbound, as far as they can.
         }
 
-        _lease.Dispose();
-        _disposal.Dispose();
+        if (_stopCopyPending)
+        {
+            try
+            {
+                Lease.Accelerator.Synchronize();
+            }
+            catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+            {
+                // Collected by the filter.
+            }
+
+            _stopCopyPending = false;
+        }
+
+        ReleaseFailures.Run(_owned, failures);
+        _owned.Clear();
+        try
+        {
+            _stopCopy?.Dispose();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter.
+        }
+
+        // The bookkeeping and the launcher are null only when building failed before they were created.
+        try
+        {
+            _bookkeeping?.Dispose();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter.
+        }
+
+        try
+        {
+            _launcher?.Dispose();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter.
+        }
+
+        try
+        {
+            binding?.Dispose();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter.
+        }
+
+        try
+        {
+            Lease.Dispose();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter.
+        }
+
+        try
+        {
+            if (bound is { IsDisposed: false })
+            {
+                bound.Bind();
+            }
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter.
+        }
+
+        try
+        {
+            _disposal.Dispose();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter.
+        }
+
+        return failures;
     }
 
     /// <summary>The host's counters after a generation, and where the population is.</summary>
@@ -395,4 +678,17 @@ public sealed class GpuDifferentialEvolution : IDisposable
     /// <param name="ArchiveCapacity">The archive's capacity for the next generation.</param>
     /// <param name="Views">The population, the current one in <c>Current</c>.</param>
     private sealed record RunState(int Generation, long Evaluations, int PopulationSize, int ArchiveCapacity, PopulationViews Views);
+
+    /// <summary>How the run ended, before its task is completed.</summary>
+    /// <param name="Result">The result, when it completed.</param>
+    /// <param name="Failure">The exception, when it failed.</param>
+    /// <param name="CanceledBy">The token that ended it, when neither of the others.</param>
+    private sealed record RunOutcome(GpuOptimizationResult? Result, Exception? Failure, CancellationToken CanceledBy)
+    {
+        public static RunOutcome Completed(GpuOptimizationResult result) => new(result, null, default);
+
+        public static RunOutcome Failed(Exception failure) => new(null, failure, default);
+
+        public static RunOutcome Canceled(CancellationToken token) => new(null, null, token);
+    }
 }

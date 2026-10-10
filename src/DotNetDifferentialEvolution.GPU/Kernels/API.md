@@ -44,10 +44,15 @@ internal static class GpuKernels
     public static void Initialize<TFunction>(Index1D index, TFunction function,
         StepParameters parameters, PopulationViews views)
         where TFunction : struct, IGpuFitnessFunction;
+    public static void SampleIndividual(int individual, StepParameters parameters,
+        PopulationViews views);
     public static void Generation<TFunction, TRule>(Index1D index, TFunction function,
         StepParameters parameters, PopulationViews views, StrategyViews strategy)
         where TFunction : struct, IGpuFitnessFunction
         where TRule : struct, IControlParameterRule;
+    public static void SelectAndRecord(int individual, double trialFitness,
+        double mutationForce, double crossoverProbability, StepParameters parameters,
+        PopulationViews views, StrategyViews strategy);
     public static void DrawSequence(Index1D index, StepParameters parameters,
         int individual, ArrayView<uint> output);
     public static void PhiloxBlocks(Index1D index, ArrayView<uint> counters,
@@ -67,7 +72,59 @@ internal static class GpuKernels
 - `Initialize`: thread i samples `lower + u·(upper − lower)` per gene from its
   generation-0 draws, then evaluates. `Generation`: thread i builds its trial, evaluates
   it and writes the survivor and its fitness into slot i of `Next`.
+- `SampleIndividual` is `Initialize`'s sampling, one draw per gene in gene order, into
+  slot i of `Current`; `SelectAndRecord` is `Generation`'s selection and records (the
+  survivor and its fitness into slot i of `Next`; jDE's F and CR handed to the individual
+  where the trial replaced its parent; JADE's and SHADE's F, CR and outcome). Each is one
+  function that the single-kernel and the pointwise kernels both call (P0, P1).
 - `DrawSequence` and `PhiloxBlocks` exist for the cross-backend checks 3a and 4b.
+
+## Pointwise ✅
+
+Designed and built 2026-10-09 (checks P0–P5 of this node's [ACCEPTANCE.md](ACCEPTANCE.md));
+the signatures are the design's, none changed in the build.
+
+```csharp
+internal readonly record struct PointwiseViews<TPoint>(ArrayView<TPoint> Results,
+    int PointCount, ArrayView<double> TrialMutationForces,
+    ArrayView<double> TrialCrossoverProbabilities)
+    where TPoint : unmanaged;
+
+internal static class PointwiseKernels
+{
+    public static void Sample(Index1D index, StepParameters parameters, PopulationViews views);
+    public static void EvaluatePoints<TFunction, TPoint>(Index1D index, TFunction function,
+        StepParameters parameters, ArrayView<double> population, PointwiseViews<TPoint> points,
+        ArrayView<int> stop)
+        where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
+        where TPoint : unmanaged;
+    public static void CombineInitial<TFunction, TPoint>(Index1D index, TFunction function,
+        StepParameters parameters, PopulationViews views, PointwiseViews<TPoint> points)
+        where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
+        where TPoint : unmanaged;
+    public static void BuildTrials<TRule>(Index1D index, StepParameters parameters,
+        PopulationViews views, StrategyViews strategy, ArrayView<double> trialMutationForces,
+        ArrayView<double> trialCrossoverProbabilities)
+        where TRule : struct, IControlParameterRule;
+    public static void Select<TFunction, TPoint>(Index1D index, TFunction function,
+        StepParameters parameters, PopulationViews views, StrategyViews strategy,
+        PointwiseViews<TPoint> points)
+        where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
+        where TPoint : unmanaged;
+}
+```
+
+- `EvaluatePoints` runs `N·P` threads over `population` (the current population at
+  initialisation, the trials in a generation): thread k writes result k, the point
+  `k mod P` of individual `k div P`; `stop` is the stop word. The initialisation has no
+  stop word of its own, so its launch passes a one-element word that is never set.
+- `BuildTrials` draws F and CR by `TRule`, builds the trial exactly as `Generation` does
+  (same draws, same order) and keeps F and CR in entry i of the two trial buffers, which
+  `Select` hands to `SelectAndRecord`. `BuildTrials`, `EvaluatePoints` and `Select` return
+  at once when the stop word is set; `Sample` and `CombineInitial` run before any stop.
+- `Select` combines, then calls `GpuKernels.SelectAndRecord`, the selection function
+  `Generation` calls; `Sample` calls `GpuKernels.SampleIndividual`, which `Initialize`
+  calls.
 
 ## Symmetry ✅
 

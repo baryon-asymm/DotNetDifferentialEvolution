@@ -263,3 +263,6 @@ ModelManifest.xml
 # Written by the protocol tests beside an approved snapshot when the two differ (ApprovedSnapshot.cs);
 # read it, then copy it over the approved file or fix the code. Never committed.
 *.actual.txt
+
+# coder-scope: a coder's scope file lives only while its task runs (tools/coder-scope)
+.claude/scopes/

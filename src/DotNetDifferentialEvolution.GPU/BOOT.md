@@ -21,6 +21,12 @@ parameters and defaults, with its semantics draw for draw. Between generations t
 device keeps what the configuration needs: the best index, the fitness ranking, the
 archive, the adaptation state, L-SHADE's population size ([Bookkeeping](Bookkeeping/API.md)).
 
+**A pointwise objective** (1.1.0, designed 2026-10-09 →
+HISTORY.md#pointwise-decided-2026-10-09): an objective of `P` independent parts, evaluated
+in `N·P` threads and combined per individual by the caller's `Combine`, for objectives
+whose parts make one thread per individual too slow. Each generation is then three
+launches. The single-kernel path stays as it is, bit for bit (Kernels, check P0).
+
 Not goals of 1.0.0: `float`; a caller's own scheme, variant, parameter provider,
 selection, stop rule, local search or initial sampling (the CPU package's open
 interfaces: kernel code is a struct compiled into the kernel); a host-side objective.
@@ -70,6 +76,9 @@ Each is checked by the item of the same number in [ACCEPTANCE.md](ACCEPTANCE.md)
    - `Dispose` frees what the optimizer allocated, and only that.
    - There is no `GC.Collect`.
    - A caller-owned `Accelerator` is never disposed.
+   - Since 2026-10-10 (Kernels `ACCEPTANCE.md`, A6–A8, A11): a release that throws stops no
+     other release and replaces no exception; nothing thrown on the run's thread ends
+     the process; two optimizers on one accelerator share nothing (Devices, A1).
 8. **Kernel code compiles on every backend.**
    - Nothing reachable from a kernel contains `throw`, `newarr`, `newobj` of a reference
      type or `box`.
@@ -142,10 +151,10 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 
 | Node | Public | Role |
 |---|---|---|
-| this node | yes | builder, optimizer, result, `GpuDevice`, observer and snapshot; `KernelLauncher`, `PopulationTransfers`, `BestPick`, `RunSettings` inside |
-| [Objectives](Objectives/API.md) | yes | `IGpuFitnessFunction`, `GeneView` |
+| this node | yes | builder, optimizer, result, `GpuDevice`, observer and snapshot; `KernelLauncher` (one per objective form), `PopulationTransfers`, `BestPick`, `RunSettings` inside |
+| [Objectives](Objectives/API.md) | yes | `IGpuFitnessFunction`, `GeneView`; `IGpuPointwiseFitnessFunction<TPoint>`, `PointView<TPoint>` (1.1.0) |
 | [Devices](Devices/API.md) | no | device selection with fallback reasons, accelerator ownership, kernel loading, the math probe kernel; child [LibDevice](Devices/LibDevice/API.md): libdevice and the post-link |
-| [Kernels](Kernels/API.md) | no | the init and generation kernels, the DE step over a draw source; every scheme, the parameter rules, selection with or without ties |
+| [Kernels](Kernels/API.md) | no | the init and generation kernels, the DE step over a draw source; every scheme, the parameter rules, selection with or without ties; the pointwise kernels (1.1.0) |
 | [Bookkeeping](Bookkeeping/API.md) | no | between generations, on the device: best index, ranking, archive, adaptation, L-SHADE's reduction, the stagnation rule |
 | [Random](Random/API.md) | no | Philox4x32-10, uniform doubles from 53 bits, Lemire index draws |
 

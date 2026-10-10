@@ -41,7 +41,7 @@ public class JdeInheritanceTests
         using var lowerBuffer = step.Upload(lower);
         using var upperBuffer = step.Upload(upper);
         var views = new PopulationViews(current.View, currentFitness.View, next.View, nextFitness.View, trial.View, lowerBuffer.View, upperBuffer.View);
-        using var launcher = new KernelLauncher<SteppedSphere>(accelerator, default, ParameterRule.Jde);
+        using var launcher = new KernelLauncher<SteppedSphere>(accelerator, default, PopulationSize, ParameterRule.Jde);
         using var bookkeeping = new GenerationBookkeeping(
             accelerator,
             new BookkeepingPlan(

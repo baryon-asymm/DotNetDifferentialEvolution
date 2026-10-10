@@ -443,11 +443,13 @@ sealed class (record) DotNetDifferentialEvolution.GPU.GpuDeviceInfo : IEquatable
 
 sealed class DotNetDifferentialEvolution.GPU.GpuDifferentialEvolution : IDisposable
     GpuDeviceInfo Device { get; }
+    GpuOptimizationResult? LastResult { get; }
     Task<GpuOptimizationResult> RunAsync(CancellationToken cancellationToken = null)
     Void Dispose()
 
 static class DotNetDifferentialEvolution.GPU.GpuDifferentialEvolutionBuilder
     static IGpuBoundsRequired<TFunction> ForFunction<TFunction>(TFunction function)
+    static IGpuBoundsRequired<TFunction> ForPointwiseFunction<TFunction, TPoint>(TFunction function, Int32 pointCount)
 
 sealed class DotNetDifferentialEvolution.GPU.GpuOptimizationResult : ISolution
     Double FitnessFunctionValue { get; }
@@ -509,6 +511,19 @@ readonly struct DotNetDifferentialEvolution.GPU.Objectives.GeneView : IEquatable
 
 interface DotNetDifferentialEvolution.GPU.Objectives.IGpuFitnessFunction
     Double Evaluate(GeneView genes)
+
+interface DotNetDifferentialEvolution.GPU.Objectives.IGpuPointwiseFitnessFunction`1
+    Double Combine(GeneView genes, PointView<TPoint> points)
+    TPoint EvaluatePoint(GeneView genes, Int32 point)
+
+readonly struct DotNetDifferentialEvolution.GPU.Objectives.PointView`1 : IEquatable<PointView<TPoint>>
+    Boolean Equals(Object? obj)
+    Boolean Equals(PointView<TPoint> other)
+    Int32 GetHashCode()
+    Int32 Length { get; }
+    TPoint this[Int32 index] { get; }
+    static Boolean op_Equality(PointView<TPoint> left, PointView<TPoint> right)
+    static Boolean op_Inequality(PointView<TPoint> left, PointView<TPoint> right)
 
 == DotNetDifferentialEvolution.Tests.Common
 

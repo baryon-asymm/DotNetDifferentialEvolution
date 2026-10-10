@@ -14,28 +14,28 @@ public static class GpuDifferentialEvolutionBuilder
         where TFunction : struct, IGpuFitnessFunction;
 }
 
-public interface IGpuBoundsRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuBoundsRequired<TFunction> where TFunction : struct
 { IGpuPopulationSizeRequired<TFunction> WithBounds(ReadOnlyMemory<double> lowerBound, ReadOnlyMemory<double> upperBound); }
 
-public interface IGpuPopulationSizeRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuPopulationSizeRequired<TFunction> where TFunction : struct
 { IGpuMutationStrategyRequired<TFunction> WithPopulationSize(int populationSize); }
 
-public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct
 { IGpuTerminationConditionRequired<TFunction> WithDefaultMutationStrategy(double mutationForce, double crossoverProbability); }
 
-public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct
 {
     IGpuDeviceRequired<TFunction> WithGenerationLimit(int maxGenerations);
     IGpuDeviceRequired<TFunction> WithEvaluationLimit(long maxEvaluations);
 }
 
-public interface IGpuDeviceRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuDeviceRequired<TFunction> where TFunction : struct
 {
     IGpuDifferentialEvolutionBuilder<TFunction> OnDevice(GpuDevice device);
     IGpuDifferentialEvolutionBuilder<TFunction> OnAccelerator(Accelerator accelerator);
 }
 
-public interface IGpuDifferentialEvolutionBuilder<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuDifferentialEvolutionBuilder<TFunction> where TFunction : struct
 {
     IGpuDifferentialEvolutionBuilder<TFunction> WithSeed(int seed);
     IGpuDifferentialEvolutionBuilder<TFunction> WithPopulationUpdateHandler(
@@ -72,12 +72,51 @@ public enum GpuDevice { Auto = 0, Cuda = 1, OpenCL = 2, Cpu = 3 }
 - **The objective type** must be visible to ILGPU's runtime assembly
   ([Objectives](Objectives/API.md)).
 
+## Pointwise objective ✅
+
+Designed 2026-10-09 ([HISTORY.md](HISTORY.md#pointwise-decided-2026-10-09)), built for 1.1.0
+(checks P1–P5 of the Kernels [ACCEPTANCE.md](Kernels/ACCEPTANCE.md)).
+
+```csharp
+public static class GpuDifferentialEvolutionBuilder
+{
+    public static IGpuBoundsRequired<TFunction> ForPointwiseFunction<TFunction, TPoint>(
+        TFunction function, int pointCount)
+        where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
+        where TPoint : unmanaged;
+}
+```
+
+- **The rest of the builder is shared.** Bounds, population size, every scheme and
+  variant, every stop rule, device, seed and observer are the same calls. The six stage
+  interfaces (`IGpuBoundsRequired<TFunction>` to `IGpuDifferentialEvolutionBuilder<TFunction>`)
+  relax their constraint from `struct, IGpuFitnessFunction` to `struct` so that both entry
+  points return them; code written against 1.0 compiles and runs unchanged.
+- **Both type arguments are written at the call**: C# infers `TFunction` from the argument but
+  not `TPoint` from the constraint, as in `ForPointwiseFunction<MyObjective, MyPoint>(f, 12)`.
+- **`pointCount`** is `P ≥ 1`, else `ForPointwiseFunction` throws
+  `ArgumentOutOfRangeException`. One thread per point: `WithPopulationSize` refuses
+  `N·P > int.MaxValue` as it refuses `N·D > int.MaxValue`, with the same exception.
+- **The run.** Initialisation and each generation are three launches instead of one
+  (Kernels `BOOT.md`); everything between generations (best index, ranking, archive,
+  adaptation, reduction, stop rule, observer) is the same. Results equal a monolithic
+  objective's with the same arithmetic, bit for bit on the CPU accelerator (Kernels
+  `ACCEPTANCE.md`, P1; ⚠ 2026-10-10: was on every device). On a GPU the device compiler
+  may fuse a multiply and an add of the monolithic form that the pointwise form stores, so
+  values can differ in the last bits (HISTORY.md#audit-fixes-decided-2026-10-10).
+- **The point type** (A5): `TPoint` of sequential layout, with fields of primitive numeric
+  types (not `bool` or `char`), their enums or such structs, and no packing below its
+  natural size; `ForPointwiseFunction` refuses any other (`## Errors`).
+- **Not in the CPU package.** On the host an objective computes its parts itself; the
+  split exists because on the device one thread per individual is one thread for all
+  its parts.
+
 ## Symmetry with the CPU package ✅
 
 Designed and built 2026-10-05 (HISTORY.md#symmetry-decided-2026-10-05), checks S1–S17.
 
 ```csharp
-public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struct
 {
     IGpuTerminationConditionRequired<TFunction> WithDefaultMutationStrategy(double mutationForce, double crossoverProbability);
     IGpuTerminationConditionRequired<TFunction> WithBestMutationStrategy(double mutationForce, double crossoverProbability);
@@ -91,7 +130,7 @@ public interface IGpuMutationStrategyRequired<TFunction> where TFunction : struc
         double archiveSizeRate = 2.6, int memorySize = 6);
 }
 
-public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct, IGpuFitnessFunction
+public interface IGpuTerminationConditionRequired<TFunction> where TFunction : struct
 {
     IGpuDeviceRequired<TFunction> WithGenerationLimit(int maxGenerations);
     IGpuDeviceRequired<TFunction> WithEvaluationLimit(long maxEvaluations);
@@ -125,6 +164,7 @@ public interface IGpuTerminationConditionRequired<TFunction> where TFunction : s
 public sealed class GpuDifferentialEvolution : IDisposable
 {
     public GpuDeviceInfo Device { get; }
+    public GpuOptimizationResult? LastResult { get; }   // since 1.1.0 (A16)
     public Task<GpuOptimizationResult> RunAsync(CancellationToken cancellationToken = default);
     public void Dispose();
 }
@@ -170,7 +210,19 @@ public sealed class GpuPopulationSnapshot
   the caller opts into it.
 - **`Dispose`** stops a run in progress between generations and waits for it, then frees
   the device buffers, and the device unless it was the caller's. Called from the
-  observer, it stops the run and the run's thread frees everything as it ends.
+  observer, it stops the run and returns; the run's thread frees everything before the task
+  completes. Every release runs even when one throws; the failures are then thrown together
+  (`## Errors`). A second call, also a concurrent one, returns once the first has stopped
+  the run and released everything, and throws nothing (Kernels `ACCEPTANCE.md`, A6–A8).
+- **Any exception on the run's thread**, `OutOfMemoryException` included, faults the task
+  with it; the process lives (A8).
+- **`LastResult`** (A16, since 1.1.0): `null` until a run ends. A completed run leaves its
+  result, the same object the task returns. A run that ends canceled, by the token or by
+  `Dispose`, leaves the best individual of the generation it stopped at, with that
+  generation's counts (one synchronised download; `NaN` worst, ties to the lowest index),
+  written before the task completes and before anything is released. A failure on the run's
+  thread, that download's included, leaves it `null`; a release failure after a cancel
+  faults the task and keeps it.
 
 ## Errors
 
@@ -191,17 +243,39 @@ public sealed class GpuPopulationSnapshot
 | `null` handler or accelerator | `ArgumentNullException` |
 | An accelerator other than CUDA, OpenCL or CPU | `ArgumentException` from `OnAccelerator` |
 | An explicit device that is not present, or `Cuda` without a CUDA Toolkit | `InvalidOperationException` from `Build`, naming the device and the reason |
-| The objective cannot be compiled by ILGPU | ILGPU's exception from `Build` |
+| The objective's type (or `TPoint`) is not visible to ILGPU's dynamic assembly (A15) | `InvalidOperationException` from `Build`, naming the type (`FullName`) and the remedies (public, or `[assembly: InternalsVisibleTo("ILGPURuntime")]`); `InnerException` is ILGPU's exception (an `InternalCompilerException` holding a `TypeLoadException` on the CPU accelerator, a bare `TypeLoadException` on CUDA); release failures in its `Data` (A6) |
+| The objective cannot be compiled by ILGPU | ILGPU's exception from `Build`; the failures of the releases that followed, if any, in its `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]` (an `AggregateException`; A6) |
+| An unsupported `TPoint` (A5) | `ArgumentException` from `ForPointwiseFunction`, ParamName `TPoint`, naming the type and the field |
+| N, or for a pointwise objective N·P, above `int.MaxValue − 1 023` (A9) | `ArgumentOutOfRangeException` from `WithPopulationSize` |
+| N·D or N·P above its limit when `Build` runs (a stage reused after `WithBounds`; A9) | `InvalidOperationException` from `Build`, naming the product and the limit |
+| JADE, SHADE or L-SHADE with N above 2³⁰ (A9) | `InvalidOperationException` from `Build`, naming the ranking's limit |
+| A release fails in `Dispose` (A6) | `AggregateException` of the failures, flattened, once everything else is released |
 | `RunAsync` while a run is in progress | `InvalidOperationException` |
 | `RunAsync` after `Dispose` | `ObjectDisposedException` |
 | The observer throws | the task faults with that exception |
+| Any other exception on the run's thread (A8) | the task faults with it; with release failures after an observer's `Dispose`, with an `AggregateException` of it and them, it first |
 
 ## Side effects
 
 `Build` opens a device context unless one is passed, allocates `3·N·D + 2·N + 2·D`
 doubles on the device and compiles two kernels; a configuration that needs bookkeeping
 allocates its buffers and compiles its kernels too ([Bookkeeping](Bookkeeping/API.md)). A run copies the population to the host
-once at the end, and once per observer call. No `GC.Collect`.
+once at the end, and once per observer call. No `GC.Collect`. Since 2026-10-10
+(HISTORY.md#audit-fixes-decided-2026-10-10):
+
+- `Build` compiles every kernel the configuration uses, each for the largest extent it is
+  launched with; `RunAsync` compiles none (A2, A10). A pointwise run allocates `N·P` point
+  results and `2·N` doubles besides the population.
+- `Build` opens the device on a thread of its own and leaves its caller's
+  `Accelerator.Current` as it found it; `Dispose` binds back what its thread had (A11).
+- On CUDA and OpenCL, a configuration that ranks (JADE, SHADE, L-SHADE) with N above 1 024
+  times both rankings in `Build` at up to three sizes, about 12 ms on the RTX 5070 Ti at
+  N ≥ 8 192 (estimated from the measured per-call times), and ranks by counting up to the
+  last size where it was not slower (A3 ⚠). Which ranking runs never changes a result.
+- With a stagnation limit, the stop word is copied every 16 generations to page-locked host
+  memory without synchronising and looked at one interval later; only the observer and the
+  end synchronise. A run may enqueue up to two intervals of generations past its stop,
+  which do nothing; the result is the stopping generation's (A13).
 
 ## Children
 

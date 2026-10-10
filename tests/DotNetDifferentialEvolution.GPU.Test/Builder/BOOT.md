@@ -52,7 +52,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 - No case needs a GPU: everything runs on ILGPU's CPU accelerator, in CI.
 - Objective structs are `internal`, never private nested: ILGPU's `ILGPURuntime`
-  assembly must see them.
+  assembly must see them. The exception is A15's subject: `InvisibleObjectiveTests` and
+  `ObjectiveVisibilityTests` declare private nested and dynamically emitted types on purpose
+  (2026-10-11).
 
 ## Acceptance criteria
 

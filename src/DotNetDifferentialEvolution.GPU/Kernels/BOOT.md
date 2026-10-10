@@ -12,6 +12,16 @@ trial by any of the CPU package's schemes, draws F and CR by its parameter rules
 jDE, JADE, SHADE), and selects with or without ties, recording what the
 [Bookkeeping](../Bookkeeping/API.md) passes need.
 
+**The pointwise path** (designed 2026-10-09 →
+[HISTORY.md](../HISTORY.md#pointwise-decided-2026-10-09)): for an
+`IGpuPointwiseFitnessFunction<TPoint>`, the evaluation leaves the generation kernel. A
+generation is three launches: **build** (thread i draws F and CR and builds trial i, as
+`Generation` does up to the evaluation, and keeps F and CR in per-individual buffers),
+**points** (thread k evaluates point `k mod P` of individual `k div P`'s trial), **select**
+(thread i combines its `P` results into the trial's fitness and selects by the code
+`Generation` selects with). Initialisation is likewise **sample**, **points** on the
+current population, **combine** into its fitness.
+
 ## Invariants
 
 - **The step is the CPU package's.** Donors, mutant, binomial crossover with `jrand`,
@@ -30,10 +40,23 @@ jDE, JADE, SHADE), and selects with or without ties, recording what the
 - **Kernel code compiles on every backend**: nothing a kernel reaches throws, allocates
   or boxes; `Math` only from the allow-list. Held by checks 8a–8c.
 - **Populations are individual-major**: individual i is genes `[i·D, (i+1)·D)`.
+- **The pointwise path draws and selects as the single kernel does.** Build consumes the
+  draws of `Generation` in the same order (the draws are a function of seed, individual
+  and generation only, so splitting the launch moves none); sample those of
+  `Initialize`. Selection and its records (jDE's hand-over, JADE's and SHADE's F, CR and
+  outcome) are one function that `Generation` and select both call, not two copies; the
+  sampling of `Initialize` likewise. Held by checks P0 and P1 (`ACCEPTANCE.md`).
+- **Point results are individual-major**: individual i's are `[i·P, (i+1)·P)`; thread k of
+  the point kernel writes only result k, and `Combine` of individual i reads only its
+  own `P`.
+- **Every pointwise kernel returns at once when the stop word is set**, as `Generation`
+  does. Select alone ignoring it changes nothing (it re-selects against the same trial);
+  P1 holds all three together, not build and select alone (ACCEPTANCE.md, P1's ⚠).
 
 ## Dependencies
 
-- [Objectives](../Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
+- [Objectives](../Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`;
+  `IGpuPointwiseFitnessFunction<TPoint>`, `PointView<TPoint>`.
 - [Random](../Random/API.md) — `PhiloxDraws`, `IDrawSource`.
 
 Outside the tree: ILGPU 1.5.3 (`Index1D`, `ArrayView<T>`).
@@ -42,7 +65,8 @@ Outside the tree: ILGPU 1.5.3 (`Index1D`, `ArrayView<T>`).
 
 Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
-- Indices are `int`: the builder refuses `N·D > int.MaxValue`.
+- Indices are `int`: the builder refuses `N·D > int.MaxValue`, and for a pointwise
+  objective `N·P > int.MaxValue`.
 - No constant on the left of an ordered floating-point comparison: ILGPU moves it to the
   right and inverts its `NaN` ordering (APT root `BOOT.md`, the third ILGPU defect).
 - A kernel entry point is any method whose first parameter is an `Index1D`; the guards
@@ -50,11 +74,13 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
-→ checks 1b–1g, 2b, 8a–8c and S2–S6, S16 of the package's [ACCEPTANCE.md](../ACCEPTANCE.md).
+→ [ACCEPTANCE.md](ACCEPTANCE.md)
 
 ## Taboos
 
-- **No write outside slot i of the trial and next buffers.**
+- **No write outside slot i of the trial and next buffers**, nor outside result k of the
+  point buffer.
+- **No second copy of the selection or the sampling** for the pointwise path.
 - **No draw consumed in a different order from the CPU step.** Parity (check 1g) is what
   lets the CPU package's semantics be argued for this one.
 - **No `throw`, no allocation, no virtual call in kernel code.**
