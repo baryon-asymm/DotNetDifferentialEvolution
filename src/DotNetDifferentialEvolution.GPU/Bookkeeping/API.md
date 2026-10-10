@@ -7,13 +7,16 @@ package root.
 ## Internal to the assembly ✅
 
 Built 2026-10-05 (checks S7–S12 of this node's [ACCEPTANCE.md](ACCEPTANCE.md); S6 and S14
-of the package's [ACCEPTANCE.md](../ACCEPTANCE.md)).
+of the package's [ACCEPTANCE.md](../ACCEPTANCE.md)); ranking by integer keys and the passes in
+chunks of 32 built 2026-10-10 (checks A3 and A4).
 
 ```csharp
-internal static class FitnessOrder           // the one total order (S9, S10)
+internal static class FitnessOrder           // the one total order (S9, S10, A3)
 {
+    public const long InfinityKey = 0x7FF0000000000000L;                     // the key of +∞ and of NaN
     public static double KeyOf(double fitness);                              // NaN → +∞
-    public static bool Precedes(double keyA, int indexA, double keyB, int indexB);
+    public static long OrderKey(double fitness);                             // the order of KeyOf, as an integer
+    public static bool Precedes(long keyA, int indexA, long keyB, int indexB);
 }
 
 internal readonly record struct SuccessSums( // one chunk's sums, added in index order (S7)
@@ -58,12 +61,14 @@ internal static class StagnationRule         // host and device (S12)
 
 internal static class BookkeepingKernels     // one entry point per pass, Index1D first
 {
-    public const int ChunkSize = 1024;
+    public const int ChunkSize = 1024;           // the sums (S7)
+    public const int WideChunkSize = 32;         // the order-independent passes (A4)
     public const int StopSet = 0;                // the stop word: set, generation, streak
     public const int StopGeneration = 1;
     public const int StopStreak = 2;
     public const int StopLength = 3;
-    public static int ChunkCount(int count);
+    public static int ChunkCount(int count);     // ⌈N / ChunkSize⌉
+    public static int WideChunkCount(int count); // ⌈N / WideChunkSize⌉
     // FillInts, FillDoubles; BestOfChunks, BestOfPartials; RankByCounting, LoadSortKeys,
     // BitonicStep; CountImproved, ScanImproved, PlaceImproved, CopyToArchive;
     // LargestWeights, SumSuccesses, Adapt; Compact; Stagnate.
@@ -82,7 +87,7 @@ internal sealed record BookkeepingPlan(
 
 internal sealed class GenerationBookkeeping : IDisposable
 {
-    public const int CountingRankLimit = 8192;
+    public const int CountingRankLimit = 2048;
     public GenerationBookkeeping(Accelerator accelerator, BookkeepingPlan plan, int seed);
     public StrategyViews Views { get; }
     public void AfterInitialization(PopulationViews views);
@@ -105,38 +110,23 @@ internal sealed class GenerationBookkeeping : IDisposable
   `InvalidOperationException` otherwise.
 - SHADE's weights are scaled before they are summed (check S19, added 2026-10-08):
   `ScaleOf(largestWeight, count)` is `largestWeight` when it exceeds
-  `double.MaxValue / (2·count)`, else 1.0. `LargestWeights` (one thread per chunk, SHADE
-  and L-SHADE only, one double per chunk in a buffer allocated under SHADE only) runs
-  before `SumSuccesses`, which takes the maximum over the chunks' largest weights and adds
-  `weight / scale`; JADE's scale is 1.
-- Chunks are 1 024 individuals; ranking by counting up to N = 8 192, the bitonic
-  network above it, over N rounded up to a power of two with +∞ keys at the end.
+  `double.MaxValue / (2·count)`, else 1.0. `LargestWeights` (one thread per wide chunk,
+  SHADE and L-SHADE only, one double per wide chunk in a buffer allocated under SHADE only)
+  runs before `SumSuccesses`, which takes the maximum over the wide chunks' largest weights
+  and adds `weight / scale`, skipping the division when the scale is 1.0 (it changes no
+  bit); JADE's scale is 1.
+- The sums (`SumSuccesses`, then `Adapt` over its partials) run in chunks of 1 024
+  individuals, S7's order. The passes whose result cannot depend on their order, the best
+  index (`BestOfChunks`, then `BestOfPartials` over the wide chunks in order), the improved
+  count, the scan and the placement of the archive, and `LargestWeights`, run in wide chunks
+  of 32: more partials, the same combine. A best-index thread keeps its incumbent's fitness
+  in a register.
+- `OrderKey` maps NaN, whatever its sign and payload, to `InfinityKey` and −0 to +0's key, a
+  non-negative value to its bits and a negative one to the negation of its magnitude's
+  bits, so that integer order is `KeyOf`'s; it uses no floating-point operation, which a
+  consumer GPU runs at a fraction of its integer rate. The ranking kernels compare keys with
+  `Precedes`; the bitonic network's key buffer is `long`s.
+- Ranking by counting up to N = 2 048 (`CountingRankLimit`), the bitonic network above it,
+  over N rounded up to a power of two with `InfinityKey` at the end.
 - The control block of the stop rule is the only buffer the host reads during a run:
   every 16 generations and before each observer call.
-
-## Audit fixes ⏳
-
-Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)), checks A3
-and A4; check A10 is built, above.
-
-```csharp
-internal static class FitnessOrder
-{
-    public static long OrderKey(double fitness);   // the order of KeyOf, as an integer
-    public static bool Precedes(long keyA, int indexA, long keyB, int indexB);
-}
-
-internal static class BookkeepingKernels
-{
-    public const int ChunkSize = 1024;             // sums (S7)
-    public const int WideChunkSize = 32;           // order-independent passes (A4)
-}
-
-internal sealed class GenerationBookkeeping
-{
-    public const int CountingRankLimit = 2048;
-}
-```
-
-- `OrderKey` maps NaN to +∞'s key and −0 to +0's, a non-negative value to its bits and a
-  negative one to its bits with the magnitude flipped, so that integer order is `KeyOf`'s.

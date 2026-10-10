@@ -11,6 +11,7 @@ Nothing outward. What this node proves about the GPU package's work between gene
 | Both rankings give the order by (key, index), `NaN` as +∞ (S9); the best index is `BestPick`'s (S10) | `RankingTests` | ✅ |
 | L-SHADE's sizes are the known answers and the CPU package's; the reduction keeps the ranking's first N (S11) | `LShadeReductionTests` | ✅ |
 | The stop rule is the CPU package's; a run stops where it says, whatever the read interval (S12) | `StagnationTests` | ✅ |
+| `OrderKey` orders −∞, −`double.MaxValue`, −1, −ε, −0, +0, ε, 1, `double.MaxValue`, +∞, NaN non-decreasingly with −0 = +0 and +∞ = NaN, as `KeyOf` orders any two doubles; `Precedes` is (key, index) (A3, CI) | `FitnessOrderTests` | ✅ |
 
 ## Tests ✅
 
@@ -20,10 +21,12 @@ Nothing outward. What this node proves about the GPU package's work between gene
 [Trait("Category", "Integration")] public sealed class RankingTests : IDisposable;
 [Trait("Category", "Integration")] public class LShadeReductionTests;
 [Trait("Category", "Integration")] public class StagnationTests;
+[Trait("Category", "Unit")] public class FitnessOrderTests;
 ```
 
 `RankingTests` builds its bookkeeping with an L-SHADE-shaped plan, which loads both rankings, since
-the plan decides which kernels are loaded (A10).
+the plan decides which kernels are loaded (A10); its arrays straddle the counting limit of 2 048
+and its best-index ties straddle the chunk boundaries of 32 and of 1 024.
 
 Helpers, internal to the node: `CpuGeneration` (the CPU contexts, records and a scripted
 provider), `HostArchive` (the archive's rule on the host).
