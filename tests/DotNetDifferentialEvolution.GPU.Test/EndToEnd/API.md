@@ -30,6 +30,11 @@ accelerator, and the run errors of the v1 contract.
 | A1: two JADE optimizers built with `OnAccelerator` on one CPU accelerator (Sphere D = 3, N = 32, 20 generations, seeds 1 and 2): after the first's `Dispose` the second runs and equals its run alone bit for bit, and a third built afterwards (seed 3) does too; on OpenCL (`Gpu`) the same, and four optimizers running at once (D = 10, N = 64, 200 generations, observer every 10, seeds 1 to 4), ten repeats, each equal to its run alone, result and every snapshot | `SharedKernelTests`; OpenCL under `Gpu` | ✅ CPU; `Gpu` by the orchestrator |
 | A2 (`Gpu`): P4's monolithic objective at N = 1 024 on CUDA takes at most 8 ms per generation (median of three batches of 50 after a warm-up batch); the figure is printed | `PointwiseLatencyTests.TheMonolithicGenerationTakesAtMostEightMillisecondsAtOneThousandAndTwentyFourIndividuals` | `Gpu`, by the orchestrator |
 | A10: for JADE, SHADE and L-SHADE with a stagnation limit and for a pointwise SHADE run on the CPU accelerator, `KernelLoader.LoadCount` after `Build` has grown by the number of distinct kernels of the configuration (14, 15, 16 and 15) and `RunAsync` adds none; the tests run alone in the `KernelLoadCount` collection, the count being a number of the process | `KernelLoadCountTests` | ✅ |
+| A6: with a release that throws planted first in the optimizer's own list and a second registered with the accelerator, on the CPU accelerator: `Dispose` releases every other buffer and kernel and the owned context, throws an `AggregateException` of both failures, and a second `Dispose` does nothing; a `Build` that fails on an objective ILGPU cannot compile throws `InternalCompilerException` itself, the release failure in `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]`; `Dispose` from the observer returns, and the task faults with the `AggregateException` | `ReleaseFailureTests` | ✅ |
+| A7: every buffer and kernel the optimizer allocated is `IsDisposed` after `Dispose` while an observer holds the run at generation 3 (the task ends canceled), after `Dispose` from the observer once the task has ended, and after a normal run; the caller's accelerator still allocates and runs a kernel in each | `DisposeTests` | ✅ |
+| A8: an exception of any type thrown by the observer (`OutOfMemoryException`, `AccessViolationException`, `InsufficientMemoryException`, `NotSupportedException`, `AggregateException`) faults the task with that same instance; a second `Dispose` from another thread, while the first waits for a held run or while the observer's own `Dispose` waits for the run's thread, returns only when the run has stopped and everything is disposed | `RunThreadTests` | ✅ |
+| A11: on a thread of its own, `Accelerator.Current` after `Build` and after `Dispose` is what it was before: none; the caller's accelerator; another accelerator while `OnAccelerator` uses the caller's; none after a `Build` that fails | `ThreadBindingTests` | ✅ |
+| A13: with a stagnation limit (SHADE, N = 50, streak 40) and no observer one synchronising stop-word read (the end) and a copy every 16 generations; with an observer every 10 generations the reads are its calls plus at most one; the result is bit for bit the same for read intervals 1, 2, 7, 16 and 1 000 | `StopWordCopyTests` | ✅ |
 | The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 (`Gpu`); the same code with `GpuDevice.Cpu` in place of `Auto` does on the CPU accelerator in CI, so that no test outside `Gpu` opens a device (A12) | `DocumentedExampleTests`, `Gpu`; `DocumentedExampleOnTheCpuTests` | ✅ |
 
 ## Tests ✅
@@ -157,6 +162,37 @@ public class KernelLoadCountTests
     [Trait("Category", "Integration")]
     public Task APointwiseShadeRunLoadsItsKernelsInBuild();
 }
+public class ReleaseFailureTests
+{
+    public void DisposeReleasesEverythingElseThenThrowsTheFailuresTogether();
+    public void AFailingBuildThrowsItsOwnExceptionWithTheReleaseFailureInItsData();
+    public async Task ADisposeFromTheObserverFaultsTheTaskWithTheReleaseFailure();
+}
+public class DisposeTests
+{
+    public async Task DisposeWhileTheObserverHoldsTheRunCancelsItAndFreesEverything();
+    public async Task DisposeFromTheObserverFreesEverythingByTheTimeTheTaskEnds();
+    public async Task DisposeAfterANormalRunFreesEverything();
+}
+public class RunThreadTests
+{
+    public async Task AnyExceptionOnTheRunThreadFaultsTheTaskWithIt(Type type);
+    public async Task ASecondDisposeWaitsUntilTheFirstHasStoppedTheRunAndFreedEverything();
+    public async Task ASecondDisposeWaitsForTheRunThreadsReleaseAfterAnObserversDispose();
+}
+public class ThreadBindingTests
+{
+    public Task AThreadBoundToNothingIsBoundToNothingAfterwards();
+    public Task AThreadBoundToTheCallersAcceleratorIsBoundToItAfterwards();
+    public Task AThreadBoundToAnotherAcceleratorStaysBoundToItWhenTheCallersIsUsed();
+    public Task AFailingBuildLeavesTheThreadBoundToNothing();
+}
+public class StopWordCopyTests
+{
+    public async Task ARunWithoutAnObserverReadsTheStopWordOnceAndCopiesItEverySixteenGenerations();
+    public async Task ARunWithAnObserverReadsTheStopWordOncePerObserverCallAndAtMostOnceMore();
+    public async Task TheRunEndsAtTheGenerationTheRuleFiredWhateverTheInterval();
+}
 public class SingleKernelPathTests
 {
     [Trait("Category", "Integration")]
@@ -213,3 +249,21 @@ Internal helpers: the objectives `Sphere`, `Rosenbrock`, `Rastrigin`; the observ
 `SnapshotHasher` (one SHA-256 per snapshot) and `StopwatchObserver` (a timestamp per call); and `RunRecord`, a run reduced to the bits it is compared by.
 Check P5 is in the Protocol tests (`GpuGuardTests`, check 8a), which find the pointwise kernels
 by their `Index1D` first parameter.
+
+## Seams internal to the assembly
+
+The A-checks read the package through seams that are internal and not public API:
+
+- `GpuDifferentialEvolution.Allocated` (every buffer, kernel and page-locked array the optimizer
+  allocated, as `ILGPU.Util.DisposeBase`, for `IsDisposed`; taken before `Dispose`, which empties
+  it), `Lease` (the accelerator and, through `Accelerator.Context`, the owned context),
+  `DisposeRequested`, `SecondDisposeWaiting` (an `Action` called on a second `Dispose`'s thread just
+  before it waits), `StopCopyCount` (beside `StopReadCount`, which now counts synchronising reads
+  only).
+- `GpuBuilder<T>.WithPlantedRelease(Func<Accelerator, IDisposable>)`: the optimizer adds what it
+  returns to its own releases, first of all; the tests plant `ReleaseThatThrows`, an
+  `AcceleratorObject` whose disposal throws, and register a second one with the accelerator itself.
+- Test helpers in `Observers.cs`: `DisposingObserver` (disposes the optimizer from the run's thread,
+  optionally holding afterwards) and `BoundedDisposal` (disposes an optimizer a case has held in a
+  run within `HangGuard.Limit`, so a `Dispose` that waits for a release that never comes fails the
+  case with a `TimeoutException`).
