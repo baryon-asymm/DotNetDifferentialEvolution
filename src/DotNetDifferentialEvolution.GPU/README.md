@@ -134,7 +134,9 @@ using var optimizer = GpuDifferentialEvolutionBuilder
   exceed `int.MaxValue`, and `pointCount` must be at least 1.
 - Draws and selection are the single-kernel path's: a pointwise objective that performs
   the arithmetic of an `IGpuFitnessFunction` in the same order gives the same run, bit
-  for bit.
+  for bit, on the CPU accelerator. On a GPU the device compiler may fuse a multiply and an
+  add of the monolithic form that the pointwise form stores, so values can differ in the
+  last bits.
 - What it buys, measured 2026-10-09 on an RTX 5070 Ti (P = 50 parts of 40 `Exp`/`Pow`
   rounds, DE/rand/1/bin, ms per generation, monolithic / pointwise): N = 1 024 —
   28.5 / 0.75 (38×); N = 16 384 — 28.5 / 11.2 (2.6×). The gain shrinks as `N` alone fills

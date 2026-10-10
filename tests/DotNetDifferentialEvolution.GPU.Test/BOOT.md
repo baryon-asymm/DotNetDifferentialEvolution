@@ -59,4 +59,6 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - **No looser tolerance or threshold for the sake of green.**
 - **No expected value taken from an optimizer run.**
 - **No device test without `Category=Gpu`.** CI would run it on runners without a GPU.
+  ⚠ 2026-10-10: three test classes broke it until check A12 (Kernels `ACCEPTANCE.md`):
+  on a machine with a GPU, `Category!=Gpu` ran CUDA and OpenCL.
 - **No `Skip`, no hidden theory data.** Held by `NoSuppressionGuardTests` in Protocol.Tests.

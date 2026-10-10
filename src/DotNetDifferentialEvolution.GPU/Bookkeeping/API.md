@@ -104,3 +104,32 @@ internal sealed class GenerationBookkeeping : IDisposable
   network above it, over N rounded up to a power of two with +∞ keys at the end.
 - The control block of the stop rule is the only buffer the host reads during a run:
   every 16 generations and before each observer call.
+
+## Audit fixes ⏳
+
+Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)), checks A3,
+A4 and A10.
+
+```csharp
+internal static class FitnessOrder
+{
+    public static long OrderKey(double fitness);   // the order of KeyOf, as an integer
+    public static bool Precedes(long keyA, int indexA, long keyB, int indexB);
+}
+
+internal static class BookkeepingKernels
+{
+    public const int ChunkSize = 1024;             // sums (S7)
+    public const int WideChunkSize = 32;           // order-independent passes (A4)
+}
+
+internal sealed class GenerationBookkeeping
+{
+    public const int CountingRankLimit = 2048;
+}
+```
+
+- `OrderKey` maps NaN to +∞'s key and −0 to +0's, a non-negative value to its bits and a
+  negative one to its bits with the magnitude flipped, so that integer order is `KeyOf`'s.
+- Every kernel a plan uses is loaded in the constructor, through `KernelLoader` with its
+  extent (A10, A2).

@@ -42,6 +42,12 @@ unless marked **Gpu**). P2 holds the package root's builder, whose file is full.
       11 of 11 green). Build and select without the check (11 of 11 green) put new trials
       beside stale results, which only the post-stop population would show, and no snapshot
       can be taken there: an observer reads the word first (S17). A known gap.
+      ⚠ 2026-10-10: the CUDA leg holds for arithmetic the device compiler leaves
+      uncontracted. ptxas fuses a monolithic `sum += r·r` into one DFMA, which the pointwise
+      form, storing `r·r`, cannot: a least-squares and a Sphere pair differed in 19 and 21 of
+      64 snapshot fitness values by 1–2 ulp (measured 2026-10-09, RTX 5070 Ti). This pair is
+      not contracted; the promise is now "bit for bit on the CPU accelerator"
+      ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)).
       2026-10-09, local, Release: `EndToEnd/PointwiseEquivalenceTests`, 11 of 11 on the
       CPU accelerator and 11 of 11 on CUDA (RTX 5070 Ti): best genes, fitness, generations,
       evaluations and 12 snapshot hashes (L-SHADE 924 generations, 36) equal the twin's;
@@ -85,3 +91,73 @@ unless marked **Gpu**). P2 holds the package root's builder, whose file is full.
       2026-10-09, local, Release: `Protocol.Tests/GpuGuardTests` green over the new
       kernels; with the `throw`, 8a red naming `PointwiseKernels.EvaluatePoints` for the
       `throw` and the `newobj` of `InvalidOperationException` (orchestrator's rerun).
+
+## Audit fixes — checks A5–A13, frozen 2026-10-10, before code
+
+From the audits of 2026-10-09 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)).
+They hold the package root (its file is full), as P2 does; A1–A2 are in
+[Devices](../Devices/ACCEPTANCE.md), A3–A4 in [Bookkeeping](../Bookkeeping/ACCEPTANCE.md).
+A seam a check needs is internal to the assembly and named in its test node's `API.md`.
+
+- [ ] **A5, the point type is checked** (MEM-3, MEM-4). `ForPointwiseFunction` accepts a
+      `TPoint` of sequential layout whose fields are `byte`, `sbyte`, `short`, `ushort`,
+      `int`, `uint`, `long`, `ulong`, `float`, `double`, enums of them, or structs that pass
+      the same rule, and whose size is its natural (unpacked) size: `double`, `int`, a record
+      struct of a `double` and an `int`, a struct nesting two such, a struct with an `int`
+      enum, and the point types of P1, P3 and P4. It throws `ArgumentException` (ParamName
+      `TPoint`, the message naming the type and the field) for a `bool` field, a `char`
+      field, `Pack = 1 {byte; double}`, `Pack = 4 {int; double}`, `LayoutKind.Auto`,
+      `LayoutKind.Explicit`, and a struct nesting a refused one. Red: the check removed
+      (`Pack = 1` accepted; at `c40868e` its run wrote 1 667 times out of bounds on CUDA).
+- [ ] **A6, a failing release stops nothing** (MEM-2). With a release that throws planted on
+      the optimizer's accelerator (`OnDevice(Cpu)`; a child whose release throws, as ILGPU's
+      half-built `CudaKernel` does): (a) `Dispose` still releases every other buffer and
+      kernel and the owned context, then throws `AggregateException` holding the failure; a
+      second `Dispose` does nothing; (b) a `Build` that fails on an objective ILGPU cannot
+      compile throws that compile exception itself, with the release failure in its
+      `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]`; (c) `Dispose` from the
+      observer: the process lives and the task faults with the `AggregateException`. Red,
+      each alone: a release loop without its per-item `try`; `AcceleratorLease.Dispose`
+      without its `finally`; the constructor's `catch` letting the release failure replace
+      the original; the run thread's `finally` letting it escape (the process dies).
+- [ ] **A7, `Dispose` frees and stops** (TEST-2). On the CPU accelerator, every buffer and
+      kernel the optimizer allocated is disposed (`IsDisposed`): (a) after `Dispose` while an
+      observer holds the run at generation 3 — the task ends canceled; (b) after `Dispose`
+      called from the observer, once the task has ended; (c) after a normal run and
+      `Dispose`; a caller's accelerator stays usable in each. Red, each alone: `Dispose`
+      not freeing the buffers; `Dispose` not canceling the run (the gate's wait ends under
+      `HangGuard`); nothing released after an observer's `Dispose` (2026-10-09: the three
+      together left 228 of 228 tests green).
+- [ ] **A8, the run thread and a second `Dispose`** (MEM-7, MEM-8). An exception of any type
+      thrown on the run's thread, an `OutOfMemoryException` from the observer included,
+      faults the task with it and the process lives. Two threads calling `Dispose` during a
+      run: neither returns before the run has stopped and A7's buffers are disposed. Red:
+      the run thread catching only what it catches at `c40868e`; the second `Dispose`
+      returning at once.
+- [ ] **A9, sizes a kernel can index** (PERF-4, MEM-6). `WithPopulationSize` refuses
+      N > `int.MaxValue − 1 023`, and for a pointwise objective N·P above it, with the
+      exception it throws for N·D: N = 4, P = 536 870 911 refused; N·P = 2³¹ − 2¹⁰ accepted
+      (P2's edge). `Build` checks N·D and N·P again, so a second `WithBounds` on a retained
+      stage cannot pass them (`InvalidOperationException`). JADE, SHADE and L-SHADE refuse
+      N > 2³⁰ at `Build` (`InvalidOperationException` naming the ranking's limit). Red:
+      `Build`'s re-check removed.
+- [ ] **A10, kernels compiled in `Build`, once** (DOC-1, PERF-11). For JADE, SHADE and
+      L-SHADE with a stagnation limit, and a pointwise SHADE run, `KernelLoader.LoadCount`
+      after `Build` has grown by the number of distinct kernels of the configuration, and
+      `RunAsync` adds none. Red: the bookkeeping's lazy loads restored.
+- [ ] **A11, the thread's binding restored** (MEM-5). After `Build` and `Dispose` on one
+      thread (`OnDevice(Cpu)`), that thread's `Accelerator.Current` is what it was before
+      `Build` (none in the test). Red: the binding left in place.
+- [ ] **A12, the CI filter opens no device** (TEST-1). On the owner's machine (CUDA and
+      OpenCL present) a run of `Category!=Gpu&Category!=Slow` over the solution shows no
+      test process in `nvidia-smi --query-compute-apps`, sampled every 0.2 s through the
+      run; tests that select a device run on the CPU accelerator or carry `Category=Gpu`
+      (the README's quick start runs verbatim under **Gpu**, and on `GpuDevice.Cpu` in CI).
+      **Gpu**, run by hand. Red: `DocumentedExampleTests` tagged `Integration` again (an
+      N = 10 000 run on CUDA, 2026-10-09).
+- [ ] **A13, the stop word without a synchronisation** (PERF-5). With a stagnation limit,
+      the control block is copied to page-locked host memory every 16 generations without
+      synchronising the accelerator, and the copy is read at the next interval; only the
+      observer and the end synchronise: `PopulationTransfers` counts observer calls + 1
+      synchronising reads in a run. S12, S17 and S18 stay green. Red: the synchronous read
+      restored (⌈G/16⌉ more).

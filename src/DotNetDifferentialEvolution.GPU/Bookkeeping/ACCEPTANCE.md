@@ -101,3 +101,25 @@ weight is divided by it; otherwise the weights are used as they are.
       device cases at N 3 000 and 5 000; with the scale at every bound: both CPU-parity tests.
       The non-GPU suite 319/319 →
       [HISTORY.md](../HISTORY.md#shade-weight-overflow-2026-10-08).
+
+## Audit fixes — checks A3–A4, frozen 2026-10-10, before code
+
+From the audits of 2026-10-09 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)),
+under the rules above.
+
+- [ ] **A3, ranking by integer keys, and its limit** (PERF-7, PERF-3).
+      `FitnessOrder.OrderKey` orders −∞, −`double.MaxValue`, −1, −ε (the smallest
+      subnormal), −0, +0, ε, 1, `double.MaxValue`, +∞, NaN non-decreasingly, with −0 = +0 and
+      +∞ = NaN; ranking compares (key, index) as integers; S9 and P0's hash stay green.
+      Counting runs up to N = 2 048, the bitonic network above. **Gpu**, CUDA:
+      `RankByCounting` at N = 2 048 is not slower than `RankByBitonicNetwork` at 2 048
+      (measured 2026-10-09 with integer keys: 263 against 421 µs). Red: −0 and +0 given
+      different keys (CI); the comparison on doubles again (**Gpu**; measured 686 against
+      522 µs).
+- [ ] **A4, order-independent passes in chunks of 32** (PERF-8). The best index, the
+      improved count, the archive placement and the largest weight run over chunks of 32
+      (more partials, the same combine); the best index carries its incumbent's value in a
+      register; `SumSuccesses` skips the division when the scale is 1.0 and keeps chunks of
+      1 024. S7, S8, S10, S19 and P0's hash stay green. **Gpu**, CUDA: `FindBest` at
+      N = 1 024 takes at most 25 µs per call (about 105 µs at `c40868e`, measured
+      2026-10-09). Red: chunks of 1 024 again for these passes (**Gpu**).

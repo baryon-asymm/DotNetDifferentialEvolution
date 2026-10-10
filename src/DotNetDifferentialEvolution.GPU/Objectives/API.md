@@ -81,8 +81,10 @@ public readonly struct PointView<TPoint> : IEquatable<PointView<TPoint>> where T
   (`GpuDifferentialEvolutionBuilder.ForPointwiseFunction`, package root `API.md`).
 - **`EvaluatePoint`** is called once per individual and point, each call in its own GPU
   thread, in no particular order. `genes` is the individual's genes and
-  `0 ≤ point < P`. It returns the point's result: any unmanaged struct (a value; several
-  values; a value and a flag).
+  `0 ≤ point < P`. It returns the point's result: an unmanaged struct (a value; several
+  values; a value and a flag). ⏳ 2026-10-10 (A5): of sequential layout, with fields of
+  primitive numeric types (not `bool` or `char`), their enums or such structs, and no
+  packing below its natural size; `ForPointwiseFunction` refuses any other.
 - **`Combine`** is called once per individual, in one thread, after all its points:
   `points[p]` is what `EvaluatePoint(genes, p)` returned for that individual. It returns
   the fitness, with `IGpuFitnessFunction`'s meaning: lower is better, `NaN` is allowed
@@ -91,8 +93,11 @@ public readonly struct PointView<TPoint> : IEquatable<PointView<TPoint>> where T
   every launch.
 - **The same run as a monolithic objective.** A pointwise objective whose `EvaluatePoint`
   and `Combine` perform the arithmetic of an `IGpuFitnessFunction`, operation for
-  operation and in the same order, gives the same run bit for bit (Kernels
-  `ACCEPTANCE.md`, check P1).
+  operation and in the same order, gives the same run bit for bit on the CPU accelerator
+  (Kernels `ACCEPTANCE.md`, check P1). ⚠ 2026-10-10: was "bit for bit" on every device; on
+  a GPU the device compiler may fuse a multiply and an add of the monolithic form that the
+  pointwise form stores, so values can differ in the last bits →
+  [HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10).
 - **Counting.** One evaluation is one individual: its `P` points and its `Combine`.
   Evaluation limits and `EvaluationCount` count individuals, as for
   `IGpuFitnessFunction`.

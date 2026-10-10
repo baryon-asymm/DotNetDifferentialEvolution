@@ -2,6 +2,85 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="audit-fixes-decided-2026-10-10"></a>
+## 2026-10-10 — the two audits of 1.1.0, and every fix in 1.1.0
+
+Two read-only audits of `c40868e` (1.1.0 before release) ran on 2026-10-09: performance, and
+leaks and defects (Opus, each in its own worktree; reports in the orchestrator's scratchpad,
+`audit-perf-report.md`, `audit-mem-report.md`). The orchestrator re-ran every finding it
+lists below as measured; the rest are by code (PTX, ILGPU's IL) as the auditors gave them.
+The owner, 2026-10-10: "Давай, мы все исправления засунем в 1.1.0" — every fix in 1.1.0, no
+1.0.2.
+
+**Measured by the orchestrator, 2026-10-09, RTX 5070 Ti (CUDA 13.4) and `gfx1036` (OpenCL),
+Release, scratch probes and patches on a detached worktree, reverted:**
+
+- *Launch groups (PERF-1).* ILGPU's auto-grouping takes the occupancy-maximising group
+  (640–768 threads on sm_120), so N threads use ⌈N/640⌉ of 70 SMs. P4's monolithic objective,
+  ms per generation (median of 3 batches of 50): N = 320 14.9, 640–44 800 about 29.5,
+  46 080 59.0 — a step at every 640·70. Forced groups of 32: N = 1 024 3.75, 16 384 11.5,
+  46 080 31.5; pointwise N = 1 024 0.69. The `Gpu` suite 57/57 at groups 32 and 256. So P4's
+  38× at N = 1 024 was mostly idle SMs; with the fix about 5.4×.
+- *Bookkeeping (PERF-7, PERF-3, PERF-8).* Sphere D = 10, N = 1 024, ms per generation: rand/1
+  0.023, best/1 0.128, JADE 0.738, SHADE 0.930. `RankByCounting` (µs per call) 1 024: 341,
+  2 048: 686, 8 192: 2 722; the bitonic network 402, 522, 635 — counting is slower from
+  2 048, so the limit of 8 192 was on the wrong side (JADE 3.46 ms at N = 8 192, 1.50 at
+  8 193). `FindBest` about 105 µs. With integer order keys: counting 127 µs at 1 024,
+  263 at 2 048 (bitonic 421), 541 at 4 096 (bitonic 512). Groups of 32 change ranking
+  little: its passes are serial per thread.
+- *Shared kernels (MEM-1, SUS-1, SUS-2).* On a caller's OpenCL accelerator two optimizers get
+  the same five `Kernel` objects from ILGPU's kernel cache; the first's `Dispose` disposes
+  the second's: its run throws `CLException`, and a third's `Build` too. Four optimizers
+  running at once end the process (`AccessViolationException` in `clSetKernelArg`). With
+  `CachingMode.NoKernelCaching`: 12 of 12 runs equal their runs alone. CUDA is not affected
+  (its loads are compiled explicitly). Present since 1.0.0.
+- *Packed `TPoint` (MEM-3).* `[StructLayout(Pack = 1)] {byte; double}`: a 9-byte host
+  element, a 16-byte device stride. The run looks clean; `compute-sanitizer memcheck` shows
+  1 667 out-of-bounds writes in `EvaluatePoints`. A `bool` field fails `Build` (MEM-4).
+- *Contraction (SUS-3).* On CUDA ptxas fuses a monolithic `sum += r·r` into one DFMA, which the
+  pointwise form, storing `r·r`, cannot: a least-squares and a Sphere pair end equal but
+  differ in 19 and 21 of 64 snapshot fitness values by 1–2 ulp. The CPU accelerator: bit
+  for bit. P1's pair is not contracted, which is why it passed on CUDA.
+- *Test tagging (TEST-1).* `Category!=Gpu` still opens CUDA and OpenCL: `DocumentedExampleTests`
+  (an N = 10 000 run on `Auto`), `DeviceSelectionTests`, `CudaLibDeviceTests`. Every
+  "CPU-only" suite run of 2026-10-09 touched the shared GPU unannounced.
+
+**Decisions** (the checks are A1–A13, frozen 2026-10-10 before code: A1–A2 in
+`Devices/ACCEPTANCE.md`, A3–A4 in `Bookkeeping/ACCEPTANCE.md`, A5–A13 in
+`Kernels/ACCEPTANCE.md`, which holds the root's as it holds P2):
+
+1. Every kernel is compiled explicitly on every backend, never through ILGPU's kernel cache
+   (A1).
+2. The group size comes from the launch: `clamp(w·⌈⌈n/m⌉/w⌉, w, occupancy limit)` for warp
+   size w, m multiprocessors and the kernel's largest extent n; the CPU accelerator keeps
+   ILGPU's grouping (forced large groups made the CPU suite 13× slower) (A2).
+3. Ranking compares integer order keys; counting up to N = 2 048, the bitonic network above,
+   from the measurement (A3). Passes whose result cannot depend on order run in chunks of
+   32; `SumSuccesses` keeps 1 024, S7's order (A4).
+4. `TPoint` is checked when the run is started: sequential layout, fields of primitive
+   numeric types (not `bool`, not `char`), their enums, or such structs, and no packing
+   below the natural size; otherwise `ArgumentException` naming the field (A5).
+5. Releases are exception-safe: every release runs; `Dispose` then throws an
+   `AggregateException` of the failures; a failing `Build` throws its own exception, the
+   release failures in its `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]`;
+   after an observer's `Dispose` they fault the task, never the process (A6). `Dispose` is
+   tested (A7); any exception on the run thread faults the task, and a concurrent second
+   `Dispose` waits (A8).
+6. N and N·P stay `int.MaxValue − 1 023` or below (the last group's thread index cannot
+   wrap); `Build` re-checks N·D and N·P; JADE, SHADE and L-SHADE refuse N > 2³⁰ (A9).
+   Every kernel is compiled in `Build`, once (A10). `Build` leaves its thread's accelerator
+   binding as it found it (A11).
+7. The CI filter opens no device (A12). The stop word is copied without synchronising the
+   accelerator and read one interval later (A13).
+8. The bit-identity of a pointwise objective and its monolithic twin is promised on the CPU
+   accelerator; on a GPU, within the device compiler's contraction of multiply-adds (P1 ⚠).
+   ILGPU 1.5.3 offers no switch for it.
+
+**Not in this wave**, being directions rather than fixes: fusing select into the point
+kernel, the trial built in registers, struct-of-arrays populations, a stream per optimizer
+(deferred, `gpu-future-streams`), a shared-memory sort above the counting limit (forbidden by
+`Bookkeeping/BOOT.md`; the owner's decision), and the auditors' notes PERF-6, PERF-9, PERF-10.
+
 <a id="pointwise-decided-2026-10-09"></a>
 ## 2026-10-09 — a pointwise objective, for objectives made of parts
 

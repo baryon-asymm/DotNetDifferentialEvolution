@@ -100,7 +100,8 @@ public static class GpuDifferentialEvolutionBuilder
 - **The run.** Initialisation and each generation are three launches instead of one
   (Kernels `BOOT.md`); everything between generations (best index, ranking, archive,
   adaptation, reduction, stop rule, observer) is the same. Results equal a monolithic
-  objective's with the same arithmetic, bit for bit (Kernels `ACCEPTANCE.md`, P1).
+  objective's with the same arithmetic, bit for bit on the CPU accelerator (Kernels
+  `ACCEPTANCE.md`, P1; ⚠ 2026-10-10: was on every device, see `## Audit fixes ⏳`).
 - **Not in the CPU package.** On the host an objective computes its parts itself; the
   split exists because on the device one thread per individual is one thread for all
   its parts.
@@ -252,3 +253,30 @@ once at the end, and once per observer call. No `GC.Collect`.
   search or initial sampling.
 - An objective on the host or through `IFitnessFunctionEvaluator`: a `ReadOnlySpan`
   cannot cross into an ILGPU kernel.
+
+## Audit fixes ⏳
+
+Designed 2026-10-10 ([HISTORY.md](HISTORY.md#audit-fixes-decided-2026-10-10)), checks A1–A13
+(Devices, Bookkeeping and Kernels `ACCEPTANCE.md`). No public signature changes.
+
+- **The point type** (A5). `ForPointwiseFunction` throws `ArgumentException` (ParamName
+  `TPoint`) unless `TPoint` has sequential layout, fields of primitive numeric types (not
+  `bool`, not `char`), their enums or such structs, and no packing below its natural size.
+- **Pointwise and monolithic** (P1 ⚠). The same arithmetic gives the same run bit for bit on
+  the CPU accelerator; on a GPU the device compiler may fuse a multiply and an add that the
+  pointwise form stores, so values can differ in the last bits.
+- **`Dispose`** (A6–A8) releases everything even when a release throws, then throws an
+  `AggregateException` of the failures; a second call, also a concurrent one, returns once
+  the release is done. A `Build` that fails throws its own exception, with any release
+  failures in `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]`. After `Dispose` from
+  the observer, release failures fault the task. Any exception on the run's thread faults
+  the task.
+- **New rows of the error table** (A5, A9): an unsupported `TPoint` → `ArgumentException`
+  from `ForPointwiseFunction`; N or N·P above `int.MaxValue − 1 023` →
+  `ArgumentOutOfRangeException` from `WithPopulationSize`; N·D or N·P above the limits when
+  `Build` runs (a stage reused after `WithBounds`) → `InvalidOperationException` from
+  `Build`; JADE, SHADE or L-SHADE with N above 2³⁰ → `InvalidOperationException` from `Build`.
+- **Side effects** (A10, A13, DOC-2). `Build` compiles every kernel the configuration uses;
+  `RunAsync` compiles none. A pointwise run allocates `N·P` point results and `2·N`
+  doubles besides the population. With a stagnation limit the control block is copied
+  without synchronising and read one interval later.

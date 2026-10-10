@@ -20,7 +20,12 @@ generation itself stays in [Kernels](../Kernels/API.md).
   index of the initial population, as the CPU builder computes them.
 - **One total order.** Ranking and best index order by (key, index) with `NaN` as +∞:
   ties go to the lower index. Ranking by counting (N ≤ 8 192) and the bitonic network
-  (above) give the same order (check S9).
+  (above) give the same order (check S9). ⏳ 2026-10-10 (A3): ranking compares integer
+  order keys (`FitnessOrder.OrderKey`, the same order, ±0 equal, NaN as +∞), and counting
+  stops at N = 2 048, where the bitonic network becomes faster (measured).
+- **Passes that cannot depend on their order are wide** ⏳ (2026-10-10, A4): the best index,
+  the improved count, the archive placement and the largest weight run over chunks of 32;
+  the sums (`SumSuccesses`) keep chunks of 1 024, the order S7 holds.
 - **Deterministic sums.** Every sum runs in index order within chunks of 1 024 and over
   the chunks in chunk order; no floating-point atomic anywhere. For N ≤ 1 024 that is
   the CPU package's order bit for bit (S7).

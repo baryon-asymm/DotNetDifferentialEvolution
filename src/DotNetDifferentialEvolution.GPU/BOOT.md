@@ -76,6 +76,9 @@ Each is checked by the item of the same number in [ACCEPTANCE.md](ACCEPTANCE.md)
    - `Dispose` frees what the optimizer allocated, and only that.
    - There is no `GC.Collect`.
    - A caller-owned `Accelerator` is never disposed.
+   - ⏳ 2026-10-10 (Kernels `ACCEPTANCE.md`, A6–A8, A11): a release that throws stops no
+     other release and replaces no exception; nothing thrown on the run's thread ends
+     the process; two optimizers on one accelerator share nothing (Devices, A1).
 8. **Kernel code compiles on every backend.**
    - Nothing reachable from a kernel contains `throw`, `newarr`, `newobj` of a reference
      type or `box`.
