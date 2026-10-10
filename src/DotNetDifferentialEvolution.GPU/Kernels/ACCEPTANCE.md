@@ -99,7 +99,7 @@ They hold the package root (its file is full), as P2 does; A1–A2 are in
 [Devices](../Devices/ACCEPTANCE.md), A3–A4 in [Bookkeeping](../Bookkeeping/ACCEPTANCE.md).
 A seam a check needs is internal to the assembly and named in its test node's `API.md`.
 
-- [ ] **A5, the point type is checked** (MEM-3, MEM-4). `ForPointwiseFunction` accepts a
+- [x] **A5, the point type is checked** (MEM-3, MEM-4). `ForPointwiseFunction` accepts a
       `TPoint` of sequential layout whose fields are `byte`, `sbyte`, `short`, `ushort`,
       `int`, `uint`, `long`, `ulong`, `float`, `double`, enums of them, or structs that pass
       the same rule, and whose size is its natural (unpacked) size: `double`, `int`, a record
@@ -109,6 +109,10 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       field, `Pack = 1 {byte; double}`, `Pack = 4 {int; double}`, `LayoutKind.Auto`,
       `LayoutKind.Explicit`, and a struct nesting a refused one. Red: the check removed
       (`Pack = 1` accepted; at `c40868e` its run wrote 1 667 times out of bounds on CUDA).
+      2026-10-10, local, Release: `Builder/PointTypeTests`, 20 of 20 (`PointLayout`, called
+      first in `ForPointwiseFunction`; also refused: `nint`, `Size` padding, a nested packed
+      struct; P1's and P3's shapes by same-shaped types). Red (orchestrator's rerun): the
+      check removed, 11 of 20 red — every refused case.
 - [ ] **A6, a failing release stops nothing** (MEM-2). With a release that throws planted on
       the optimizer's accelerator (`OnDevice(Cpu)`; a child whose release throws, as ILGPU's
       half-built `CudaKernel` does): (a) `Dispose` still releases every other buffer and
@@ -134,13 +138,18 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       run: neither returns before the run has stopped and A7's buffers are disposed. Red:
       the run thread catching only what it catches at `c40868e`; the second `Dispose`
       returning at once.
-- [ ] **A9, sizes a kernel can index** (PERF-4, MEM-6). `WithPopulationSize` refuses
+- [x] **A9, sizes a kernel can index** (PERF-4, MEM-6). `WithPopulationSize` refuses
       N > `int.MaxValue − 1 023`, and for a pointwise objective N·P above it, with the
       exception it throws for N·D: N = 4, P = 536 870 911 refused; N·P = 2³¹ − 2¹⁰ accepted
       (P2's edge). `Build` checks N·D and N·P again, so a second `WithBounds` on a retained
       stage cannot pass them (`InvalidOperationException`). JADE, SHADE and L-SHADE refuse
       N > 2³⁰ at `Build` (`InvalidOperationException` naming the ranking's limit). Red:
       `Build`'s re-check removed.
+      2026-10-10, local, Release: `Builder/PopulationLimitTests`, 13 of 13 (N·D keeps
+      `int.MaxValue`; the edges too large to allocate go through the internal
+      `GpuBuilder<T>.ValidateConfiguration`, which `Build` calls first; N·P cannot reach
+      `Build` above the limit, P being fixed first). Red (orchestrator's rerun): the
+      re-check removed, 2 of 13 red.
 - [ ] **A10, kernels compiled in `Build`, once** (DOC-1, PERF-11). For JADE, SHADE and
       L-SHADE with a stagnation limit, and a pointwise SHADE run, `KernelLoader.LoadCount`
       after `Build` has grown by the number of distinct kernels of the configuration, and
