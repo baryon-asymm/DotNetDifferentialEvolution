@@ -10,13 +10,13 @@ namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 /// <summary>
 /// Bookkeeping/ACCEPTANCE.md of the GPU package, checks S9 and S10, on ILGPU's CPU accelerator.
 /// <list type="bullet">
-/// <item>S9: for 200 random arrays, the bitonic network, and ranking by counting where N ≤ 8 192, each give exactly the
-/// order by (key, index), <see cref="double.NaN"/> as +∞. N: 150 arrays in [1, 3 000], 44 in [8 193, 20 000], and 1, 2,
-/// 8 192, 8 193, 16 384, 20 000. Values: <see cref="double.NaN"/>, ±∞, ±0 and ties from a small set, mixed with random
+/// <item>S9: for 200 random arrays, the bitonic network, and ranking by counting where N ≤ 2 048, each give exactly the
+/// order by (key, index), <see cref="double.NaN"/> as +∞. N: 150 arrays in [1, 2 048], 42 in [2 049, 20 000], and 1, 2,
+/// 2 048, 2 049, 8 192, 8 193, 16 384, 20 000. Values: <see cref="double.NaN"/>, ±∞, ±0 and ties from a small set, mixed with random
 /// ones. Every tenth array has distinct keys and is also held to the CPU package's
 /// <see cref="PopulationSortHelper"/>.</item>
 /// <item>S10: the best-index kernels equal <see cref="BestPick.IndexOf"/> on 200 random arrays, N in [1, 5 000], with ties
-/// placed across the 1 024 boundary and arrays of <see cref="double.NaN"/> only.</item>
+/// placed across the 32 and the 1 024 boundaries and arrays of <see cref="double.NaN"/> only.</item>
 /// </list>
 /// </summary>
 [Trait("Category", "Integration")]
@@ -27,7 +27,7 @@ public sealed class RankingTests : IDisposable
     private const int LargestPicked = 5000;
     private const int CaseSeed = 20261010;
 
-    private static readonly int[] EdgeSizes = [1, 2, 8192, 8193, 16384, 20000];
+    private static readonly int[] EdgeSizes = [1, 2, 2048, 2049, 8192, 8193, 16384, 20000];
     private static readonly double[] Specials = [double.NaN, double.PositiveInfinity, double.NegativeInfinity, 0.0, -0.0, 1.0, -1.0, 2.0];
 
     private readonly HostStep _step = new();
@@ -45,7 +45,11 @@ public sealed class RankingTests : IDisposable
         var counted = 0;
         for (var array = 0; array < ArrayCount; array++)
         {
-            var count = array < EdgeSizes.Length ? EdgeSizes[array] : array < EdgeSizes.Length + 150 ? 1 + random.Next(3000) : 8193 + random.Next(LargestRanked - 8192);
+            var count = array < EdgeSizes.Length
+                ? EdgeSizes[array]
+                : array < EdgeSizes.Length + 150
+                    ? 1 + random.Next(GenerationBookkeeping.CountingRankLimit)
+                    : GenerationBookkeeping.CountingRankLimit + 1 + random.Next(LargestRanked - GenerationBookkeeping.CountingRankLimit);
             var distinct = array % 10 == 0;
             var values = Values(random, count, distinct);
             fitness.View.SubView(0, count).CopyFromCPU(values);
@@ -87,6 +91,12 @@ public sealed class RankingTests : IDisposable
             {
                 // The same lowest value just before and after a chunk boundary, and in a later chunk.
                 values[1023] = values[1024] = values[2048] = -1e300;
+            }
+
+            if (array % 3 == 0 && count > 96)
+            {
+                // The same, for the chunks of 32 the order-independent passes run in.
+                values[31] = values[32] = values[95] = -1e300;
             }
 
             fitness.View.SubView(0, count).CopyFromCPU(values);

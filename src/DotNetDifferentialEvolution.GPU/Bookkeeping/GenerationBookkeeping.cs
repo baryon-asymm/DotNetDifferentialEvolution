@@ -16,7 +16,7 @@ namespace DotNetDifferentialEvolution.GPU.Bookkeeping;
 internal sealed class GenerationBookkeeping : IDisposable
 {
     /// <summary>The largest N ranked by counting; above it, the bitonic network.</summary>
-    public const int CountingRankLimit = 8192;
+    public const int CountingRankLimit = 2048;
 
     private readonly Accelerator _accelerator;
     private readonly AcceleratorStream _stream;
@@ -29,7 +29,7 @@ internal sealed class GenerationBookkeeping : IDisposable
     private readonly ArrayView<int> _owners;
     private readonly ArrayView<double> _partials;
     private readonly ArrayView<double> _largestWeights;
-    private readonly ArrayView<double> _sortKeys;
+    private readonly ArrayView<long> _sortKeys;
     private readonly ArrayView<int> _memoryIndex;
     private readonly ArrayView<double> _lastBest;
     private Action<AcceleratorStream, Index1D, ArrayView<int>, int>? _fillInts;
@@ -37,8 +37,8 @@ internal sealed class GenerationBookkeeping : IDisposable
     private Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>? _bestOfChunks;
     private Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>, ArrayView<int>>? _bestOfPartials;
     private Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>? _rankByCounting;
-    private Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<double>, ArrayView<int>, ArrayView<int>>? _loadSortKeys;
-    private Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, int, int, ArrayView<int>>? _bitonicStep;
+    private Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<long>, ArrayView<int>, ArrayView<int>>? _loadSortKeys;
+    private Action<AcceleratorStream, Index1D, ArrayView<long>, ArrayView<int>, int, int, ArrayView<int>>? _bitonicStep;
     private Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>>? _countImproved;
     private Action<AcceleratorStream, Index1D, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>>? _scanImproved;
     private Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>, int, int, ArrayView<int>>? _placeImproved;
@@ -65,6 +65,7 @@ internal sealed class GenerationBookkeeping : IDisposable
         {
             var populationSize = plan.PopulationSize;
             var chunks = BookkeepingKernels.ChunkCount(populationSize);
+            var wideChunks = BookkeepingKernels.WideChunkCount(populationSize);
             var rankingLength = plan.NeedsRanking ? SortLength(populationSize) : 1;
             var archiveCapacity = Math.Max(plan.ArchiveCapacity, 0);
             var perIndividual = plan.Rule == ParameterRule.Fixed ? 1 : populationSize;
@@ -86,16 +87,16 @@ internal sealed class GenerationBookkeeping : IDisposable
             var crossovers = Doubles(perIndividual);
             var outcomes = Ints(perIndividual);
             Views = new StrategyViews(stop, bestIndex, ranking, archive, archiveSize, adaptation, forces, crossovers, outcomes);
-            _partialIndices = Ints(plan.NeedsBestIndex ? chunks : 1);
-            _counts = Ints(archiveCapacity > 0 ? chunks : 1);
+            _partialIndices = Ints(plan.NeedsBestIndex ? wideChunks : 1);
+            _counts = Ints(archiveCapacity > 0 ? wideChunks : 1);
             _owners = Ints(Math.Max(1, archiveCapacity));
             _partials = Doubles(plan.Adapts ? (long)chunks * SuccessSums.Width : 1);
-            _largestWeights = Doubles(plan.Rule == ParameterRule.Shade ? chunks : 1);
-            _sortKeys = Doubles(plan.NeedsRanking && populationSize > CountingRankLimit ? rankingLength : 1);
+            _largestWeights = Doubles(plan.Rule == ParameterRule.Shade ? wideChunks : 1);
+            _sortKeys = Longs(plan.NeedsRanking && populationSize > CountingRankLimit ? rankingLength : 1);
             _memoryIndex = Ints(1);
             _lastBest = Doubles(1);
 
-            LoadKernels(chunks, rankingLength, adaptationLength);
+            LoadKernels(chunks, wideChunks, rankingLength, adaptationLength);
 
             FillInts(stop, 0);
             FillInts(bestIndex, 0);
@@ -258,14 +259,14 @@ internal sealed class GenerationBookkeeping : IDisposable
     {
         var bestOfChunks = Required(_bestOfChunks);
         var bestOfPartials = Required(_bestOfPartials);
-        var chunks = BookkeepingKernels.ChunkCount(count);
+        var chunks = BookkeepingKernels.WideChunkCount(count);
         bestOfChunks(_stream, chunks, fitness, count, _partialIndices, Views.Stop);
         bestOfPartials(_stream, 1, fitness, chunks, _partialIndices, Views.BestIndex, Views.Stop);
     }
 
     private void UpdateArchive(ArrayView<double> parents, int generation, int count, int capacity)
     {
-        var chunks = BookkeepingKernels.ChunkCount(count);
+        var chunks = BookkeepingKernels.WideChunkCount(count);
         Required(_countImproved)(_stream, chunks, Views.Outcomes, count, _counts, Views.Stop);
         Required(_scanImproved)(_stream, 1, chunks, _counts, Views.ArchiveSize, capacity, Views.Stop);
         Required(_placeImproved)(_stream, chunks, Views.Outcomes, count, _counts, Views.ArchiveSize, capacity, _owners, _seed, generation, Views.Stop);
@@ -277,7 +278,7 @@ internal sealed class GenerationBookkeeping : IDisposable
         var chunks = BookkeepingKernels.ChunkCount(count);
         if (_plan.Rule == ParameterRule.Shade)
         {
-            Required(_largestWeightsPass)(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights);
+            Required(_largestWeightsPass)(_stream, BookkeepingKernels.WideChunkCount(count), _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights);
         }
 
         Required(_sumSuccesses)(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights, _partials);
@@ -297,6 +298,13 @@ internal sealed class GenerationBookkeeping : IDisposable
         return buffer.View;
     }
 
+    private ArrayView<long> Longs(long length)
+    {
+        var buffer = _accelerator.Allocate1D<long>(length);
+        _buffers.Add(buffer);
+        return buffer.View;
+    }
+
     private ArrayView<double> Doubles(long length)
     {
         var buffer = _accelerator.Allocate1D<double>(length);
@@ -311,14 +319,15 @@ internal sealed class GenerationBookkeeping : IDisposable
     /// <summary>
     /// Loads, once, every kernel the plan uses, each for the largest extent it is launched with in the run: the fills for
     /// the longest buffer they fill, the ranking for N (counting: at most the counting limit), the chunked passes for the
-    /// chunk count of the initial population, the single-thread passes for 1, the archive copy for the capacity, the
-    /// reduction for the largest next population. L-SHADE's population shrinks, so its ranking may fall below the counting
-    /// limit from above it and loads both rankings there.
+    /// chunk count of the initial population (the sums' chunks of 1 024, the other passes' wide chunks), the single-thread
+    /// passes for 1, the archive copy for the capacity, the reduction for the largest next population. L-SHADE's population
+    /// shrinks, so its ranking may fall below the counting limit from above it and loads both rankings there.
     /// </summary>
-    /// <param name="chunks">The chunk count of the initial population.</param>
+    /// <param name="chunks">The chunk count of the initial population, for the sums.</param>
+    /// <param name="wideChunks">The wide chunk count of the initial population, for the order-independent passes.</param>
     /// <param name="rankingLength">The length the ranking sorts, or 1.</param>
     /// <param name="adaptationLength">The length of the adaptation buffer.</param>
-    private void LoadKernels(int chunks, int rankingLength, int adaptationLength)
+    private void LoadKernels(int chunks, int wideChunks, int rankingLength, int adaptationLength)
     {
         var plan = _plan;
         var populationSize = plan.PopulationSize;
@@ -338,9 +347,9 @@ internal sealed class GenerationBookkeeping : IDisposable
 
             if (populationSize > CountingRankLimit)
             {
-                _loadSortKeys = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<double>, ArrayView<int>, ArrayView<int>>>(
+                _loadSortKeys = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<long>, ArrayView<int>, ArrayView<int>>>(
                     rankingLength, nameof(BookkeepingKernels.LoadSortKeys));
-                _bitonicStep = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, int, int, ArrayView<int>>>(
+                _bitonicStep = Load<Action<AcceleratorStream, Index1D, ArrayView<long>, ArrayView<int>, int, int, ArrayView<int>>>(
                     rankingLength, nameof(BookkeepingKernels.BitonicStep));
             }
         }
@@ -348,7 +357,7 @@ internal sealed class GenerationBookkeeping : IDisposable
         if (plan.NeedsBestIndex)
         {
             _bestOfChunks = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>>(
-                chunks, nameof(BookkeepingKernels.BestOfChunks));
+                wideChunks, nameof(BookkeepingKernels.BestOfChunks));
             _bestOfPartials = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>, ArrayView<int>>>(
                 1, nameof(BookkeepingKernels.BestOfPartials));
         }
@@ -356,11 +365,11 @@ internal sealed class GenerationBookkeeping : IDisposable
         if (archiveCapacity > 0)
         {
             _countImproved = Load<Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>>>(
-                chunks, nameof(BookkeepingKernels.CountImproved));
+                wideChunks, nameof(BookkeepingKernels.CountImproved));
             _scanImproved = Load<Action<AcceleratorStream, Index1D, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>>>(
                 1, nameof(BookkeepingKernels.ScanImproved));
             _placeImproved = Load<Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>, int, int, ArrayView<int>>>(
-                chunks, nameof(BookkeepingKernels.PlaceImproved));
+                wideChunks, nameof(BookkeepingKernels.PlaceImproved));
             _copyToArchive = Load<Action<AcceleratorStream, Index1D, ArrayView<int>, ArrayView<double>, ArrayView<double>, int, ArrayView<int>>>(
                 archiveCapacity, nameof(BookkeepingKernels.CopyToArchive));
         }
@@ -374,7 +383,7 @@ internal sealed class GenerationBookkeeping : IDisposable
             if (plan.Rule == ParameterRule.Shade)
             {
                 _largestWeightsPass = Load<Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
-                    chunks, nameof(BookkeepingKernels.LargestWeights));
+                    wideChunks, nameof(BookkeepingKernels.LargestWeights));
             }
         }
 
