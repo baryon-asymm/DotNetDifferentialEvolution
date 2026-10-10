@@ -26,7 +26,8 @@ public class DisposeTests
         using var context = Context.Create(builder => builder.CPU());
         using var accelerator = context.CreateCPUAccelerator(0);
         using var gate = new GateObserver(HeldAt, Environment.CurrentManagedThreadId);
-        using var optimizer = Build(accelerator, gate, generations: 1000);
+        using var guard = new BoundedDisposal(Build(accelerator, gate, generations: 1000));
+        var optimizer = guard.Optimizer;
         var allocated = optimizer.Allocated.ToList();
         Assert.NotEmpty(allocated);
 
@@ -59,7 +60,8 @@ public class DisposeTests
         using var context = Context.Create(builder => builder.CPU());
         using var accelerator = context.CreateCPUAccelerator(0);
         var observer = new DisposingObserver(HeldAt);
-        using var optimizer = Build(accelerator, observer, generations: 1000);
+        using var guard = new BoundedDisposal(Build(accelerator, observer, generations: 1000));
+        var optimizer = guard.Optimizer;
         observer.Optimizer = optimizer;
         var allocated = optimizer.Allocated.ToList();
         Assert.NotEmpty(allocated);
@@ -80,7 +82,8 @@ public class DisposeTests
     {
         using var context = Context.Create(builder => builder.CPU());
         using var accelerator = context.CreateCPUAccelerator(0);
-        using var optimizer = Build(accelerator, observer: null, generations: 20);
+        using var guard = new BoundedDisposal(Build(accelerator, observer: null, generations: 20));
+        var optimizer = guard.Optimizer;
         var allocated = optimizer.Allocated.ToList();
         Assert.NotEmpty(allocated);
 

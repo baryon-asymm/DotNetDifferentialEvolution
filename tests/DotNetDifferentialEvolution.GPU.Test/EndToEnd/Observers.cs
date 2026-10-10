@@ -145,3 +145,24 @@ internal sealed class DisposingObserver(int disposeAtGeneration, ManualResetEven
         }
     }
 }
+
+/// <summary>
+/// Owns an optimizer a case holds in a run, and disposes it at the end of the case within <see cref="HangGuard.Limit"/>: a
+/// <c>Dispose</c> that waits for a release which never comes then fails the case instead of hanging the test host.
+/// </summary>
+/// <param name="optimizer">The optimizer.</param>
+internal sealed class BoundedDisposal(GpuDifferentialEvolution optimizer) : IDisposable
+{
+    /// <summary>Gets the optimizer.</summary>
+    public GpuDifferentialEvolution Optimizer { get; } = optimizer;
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        var disposing = Task.Run(Optimizer.Dispose);
+        if (!disposing.Wait(HangGuard.Limit))
+        {
+            throw new TimeoutException("Dispose did not return within the hang guard: it waits for a release that never comes.");
+        }
+    }
+}

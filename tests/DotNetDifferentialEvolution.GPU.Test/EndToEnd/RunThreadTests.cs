@@ -27,7 +27,8 @@ public class RunThreadTests
     public async Task AnyExceptionOnTheRunThreadFaultsTheTaskWithIt(Type type)
     {
         var thrown = (Exception)Activator.CreateInstance(type)!;
-        using var optimizer = Stage(new ThrowingObserver(thrown, throwAtGeneration: 2), generations: 10).Build();
+        using var guard = new BoundedDisposal(Stage(new ThrowingObserver(thrown, throwAtGeneration: 2), generations: 10).Build());
+        var optimizer = guard.Optimizer;
 
         var run = optimizer.RunAsync();
         var failure = await Assert.ThrowsAsync(type, () => run.WaitAsync(HangGuard.Limit)).ConfigureAwait(true);
@@ -47,7 +48,8 @@ public class RunThreadTests
         using var context = Context.Create(builder => builder.CPU());
         using var accelerator = context.CreateCPUAccelerator(0);
         using var gate = new GateObserver(holdAtGeneration: 3, Environment.CurrentManagedThreadId);
-        using var optimizer = Stage(gate, generations: 1000, accelerator).Build();
+        using var guard = new BoundedDisposal(Stage(gate, generations: 1000, accelerator).Build());
+        var optimizer = guard.Optimizer;
         var allocated = optimizer.Allocated.ToList();
         Assert.NotEmpty(allocated);
         var waiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -88,7 +90,8 @@ public class RunThreadTests
         using var accelerator = context.CreateCPUAccelerator(0);
         using var hold = new ManualResetEventSlim();
         var observer = new DisposingObserver(disposeAtGeneration: 3, holdUntil: hold);
-        using var optimizer = Stage(observer, generations: 1000, accelerator).Build();
+        using var guard = new BoundedDisposal(Stage(observer, generations: 1000, accelerator).Build());
+        var optimizer = guard.Optimizer;
         observer.Optimizer = optimizer;
         var allocated = optimizer.Allocated.ToList();
         Assert.NotEmpty(allocated);

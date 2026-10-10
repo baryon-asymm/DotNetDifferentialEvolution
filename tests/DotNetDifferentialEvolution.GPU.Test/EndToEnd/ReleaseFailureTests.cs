@@ -65,7 +65,8 @@ public class ReleaseFailureTests
     public async Task ADisposeFromTheObserverFaultsTheTaskWithTheReleaseFailure()
     {
         var observer = new DisposingObserver(disposeAtGeneration: 3);
-        using var optimizer = Planted(default(Sphere), observer).Build();
+        using var guard = new BoundedDisposal(Planted(default(Sphere), observer).Build());
+        var optimizer = guard.Optimizer;
         observer.Optimizer = optimizer;
         var others = optimizer.Allocated.Where(allocated => allocated is not ReleaseThatThrows).ToList();
 
