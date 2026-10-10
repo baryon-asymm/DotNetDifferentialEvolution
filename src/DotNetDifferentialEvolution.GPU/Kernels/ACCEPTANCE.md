@@ -208,7 +208,10 @@ From [HISTORY.md](../HISTORY.md#consumer-review-2026-10-10).
       assembly `ILGPURuntime`, which sees a type only when it, every type it is nested in and
       every generic argument is public, or internal (not private or protected) in an
       assembly that declares `[assembly: InternalsVisibleTo("ILGPURuntime")]`. When loading
-      the kernels in `Build` throws `TypeLoadException` and the objective type (or `TPoint`)
+      the kernels in `Build` throws `TypeLoadException` (⚠ 2026-10-11: or an exception with
+      one among its inner exceptions — measured by the coder, ILGPU's CPU accelerator wraps it
+      in `InternalCompilerException`; the CUDA probe of 2026-10-10 saw it bare) and the
+      objective type (or `TPoint`)
       is not visible by that rule, `Build` throws `InvalidOperationException` naming the type
       and both remedies (make it public; or declare the attribute, with a private or
       protected nested type never usable), ILGPU's exception as `InnerException`; release

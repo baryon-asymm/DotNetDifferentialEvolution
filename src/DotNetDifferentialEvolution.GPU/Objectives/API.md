@@ -24,7 +24,8 @@ public interface IGpuFitnessFunction
 - **Visibility.** ILGPU emits its launchers into a dynamic assembly named
   `ILGPURuntime`. The objective type must be public, or internal in an assembly that
   declares `[assembly: InternalsVisibleTo("ILGPURuntime")]`; a private nested type
-  fails at `Build` with ILGPU's "Access is denied".
+  fails at `Build` with an `InvalidOperationException` naming the type and the remedies,
+  ILGPU's "Access is denied" as its inner exception (A15, since 2026-10-11).
 
 ## Gene view ✅
 

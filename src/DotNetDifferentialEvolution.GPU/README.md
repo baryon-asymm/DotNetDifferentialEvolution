@@ -83,7 +83,9 @@ read-only view of one individual's genes and returns its fitness: lower is bette
 
 The type must be **public**, or internal in an assembly that declares
 `[assembly: InternalsVisibleTo("ILGPURuntime")]`: ILGPU emits its launchers into a dynamic
-assembly of that name. A private nested struct fails at `Build` with "Access is denied".
+assembly of that name. Otherwise `Build` throws an `InvalidOperationException` that names
+the type and these remedies (ILGPU's "Access is denied" is its inner exception); a private
+or protected nested struct can never be used.
 
 ILGPU reports code it cannot compile when the optimizer is built, not when C# compiles.
 

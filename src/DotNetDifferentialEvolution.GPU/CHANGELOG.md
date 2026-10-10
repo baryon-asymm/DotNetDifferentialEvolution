@@ -34,6 +34,10 @@ Behaviour changes a caller can see (nothing else changes; reviewed by a consumer
   ranks (JADE, SHADE, L-SHADE) with N above 1 024 times two ranking methods once, a few
   milliseconds.
 - **New refusals** (below): sizes and point types that could not run correctly before.
+- **An objective type ILGPU cannot see** (private nested, or internal without
+  `[assembly: InternalsVisibleTo("ILGPURuntime")]`) now fails `Build` with an
+  `InvalidOperationException` that names the type and the remedies; ILGPU's "Access is
+  denied" is its inner exception.
 
 Fixes and speed-ups from two audits of the package, no other public signature change:
 

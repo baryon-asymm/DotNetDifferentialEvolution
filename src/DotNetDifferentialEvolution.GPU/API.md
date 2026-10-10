@@ -160,12 +160,6 @@ public interface IGpuTerminationConditionRequired<TFunction> where TFunction : s
 
 ## Optimizer and result ✅
 
-⏳ 2026-10-11 (Kernels `ACCEPTANCE.md`, A16; HISTORY.md#last-result-decided-2026-10-11):
-`public GpuOptimizationResult? LastResult { get; }` on `GpuDifferentialEvolution` — `null`
-until a run ends; a completed run's result; after a cancel (token or `Dispose`), the best
-individual of the generation the run stopped at, set before the task completes; `null` after
-a fault.
-
 ```csharp
 public sealed class GpuDifferentialEvolution : IDisposable
 {
@@ -222,6 +216,21 @@ public sealed class GpuPopulationSnapshot
 - **Any exception on the run's thread**, `OutOfMemoryException` included, faults the task
   with it; the process lives (A8).
 
+## Last result ⏳
+
+Designed 2026-10-11 (Kernels `ACCEPTANCE.md`, A16; HISTORY.md#last-result-decided-2026-10-11).
+
+```csharp
+public sealed class GpuDifferentialEvolution
+{
+    public GpuOptimizationResult? LastResult { get; }
+}
+```
+
+- `null` until a run ends; a completed run's result (the same object); after a cancel (the
+  token or `Dispose`), the best individual of the generation the run stopped at, with that
+  generation's counts, set before the task completes; `null` after a fault.
+
 ## Errors
 
 | Situation | Behaviour |
@@ -241,7 +250,7 @@ public sealed class GpuPopulationSnapshot
 | `null` handler or accelerator | `ArgumentNullException` |
 | An accelerator other than CUDA, OpenCL or CPU | `ArgumentException` from `OnAccelerator` |
 | An explicit device that is not present, or `Cuda` without a CUDA Toolkit | `InvalidOperationException` from `Build`, naming the device and the reason |
-| The objective's type (or `TPoint`) is not visible to ILGPU's dynamic assembly (A15) | `InvalidOperationException` from `Build`, naming the type and the remedies (public, or `[assembly: InternalsVisibleTo("ILGPURuntime")]`), ILGPU's `TypeLoadException` inner |
+| The objective's type (or `TPoint`) is not visible to ILGPU's dynamic assembly (A15) | `InvalidOperationException` from `Build`, naming the type (`FullName`) and the remedies (public, or `[assembly: InternalsVisibleTo("ILGPURuntime")]`); `InnerException` is ILGPU's exception (an `InternalCompilerException` holding a `TypeLoadException` on the CPU accelerator, a bare `TypeLoadException` on CUDA); release failures in its `Data` (A6) |
 | The objective cannot be compiled by ILGPU | ILGPU's exception from `Build`; the failures of the releases that followed, if any, in its `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]` (an `AggregateException`; A6) |
 | An unsupported `TPoint` (A5) | `ArgumentException` from `ForPointwiseFunction`, ParamName `TPoint`, naming the type and the field |
 | N, or for a pointwise objective N·P, above `int.MaxValue − 1 023` (A9) | `ArgumentOutOfRangeException` from `WithPopulationSize` |
