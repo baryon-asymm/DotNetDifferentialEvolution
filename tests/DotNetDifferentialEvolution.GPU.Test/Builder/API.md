@@ -26,6 +26,11 @@ population `Build` samples.
 | A9: `WithPopulationSize` refuses N above `int.MaxValue − 1 023` and, for a pointwise objective, N·P above it (N = 4, P = 536 870 911; one above the limit), with `ArgumentOutOfRangeException` naming the product and the limit; N and N·P at the limit (2³¹ − 2¹⁰) pass | `APopulationAboveTheLastGroupsIndexLimitIsRejected`, `FourIndividualsOfFiveHundredThirtySixMillionPointsAreRejected`, `APointwisePopulationIsRejectedOneAboveTheLimitAndAcceptedAtIt` | ✅ |
 | A9: `Build` checks N·D again: a stage retained across a second, longer `WithBounds` (2⁵⁰ − 2²⁰ genes) → `InvalidOperationException` naming the product and `int.MaxValue`, before a device is opened; at the edge N = 2³⁰ and D = 2 (2³¹) is refused and N = 2³⁰ − 1 (2³¹ − 2) passes; a longer bound within the range builds. N·P is checked there too but cannot be reached: P is fixed at the first call and N is checked when set | `ARetainedStageWithLongerBoundsIsRefusedByBuild`, `ARetainedStageIsRefusedOneAboveTheGenesIndexRangeAndAcceptedBelowIt`, `ARetainedStageWithinTheRangeBuilds` | ✅ |
 | A9: JADE, SHADE and L-SHADE refuse N = 2³⁰ + 1 at `Build` with `InvalidOperationException` naming the scheme and 2³⁰; N = 2³⁰ passes the configuration check; rand/1 and jDE pass it at 2³⁰ + 1 | `ARankingSchemeRefusesAPopulationAboveTwoToTheThirtyAtBuild`, `ARankingSchemeAcceptsAPopulationOfTwoToTheThirty`, `TheSchemesThatDoNotRankAcceptAPopulationAboveTwoToTheThirty` | ✅ |
+| A15: the rule on known answers — visible: a public struct, a public type nested in a public class, an internal struct and an internal nested one in an assembly that grants `ILGPURuntime` (case-insensitively, among other grants, in a dynamic assembly too), a protected internal struct there, a public struct in an internal class there, a public generic over a public struct, an open generic; not visible: an internal struct without the grant (or with a grant to another assembly, or to a longer name), a public struct in an internal class without it, a private, a protected and a private protected nested struct (the grant notwithstanding), a public struct in a private class, a public generic over a private struct or over an ungranted internal one, a generic over a generic over a private one, an array of a private one; the part named is the first of the type, its enclosing types, then its generic arguments | `ObjectiveVisibilityTests`, 22 cases | ✅ |
+| A15: a private nested objective, which ILGPU's CPU accelerator refuses with an `InternalCompilerException` holding a `TypeLoadException` (measured 2026-10-11), makes `Build` throw `InvalidOperationException` naming the type (`FullName`) and both remedies, ILGPU's exception as `InnerException`; a pointwise one names the objective | `APrivateNestedObjectiveIsRefusedWithTheTypeAndTheRemedies`, `APrivateNestedPointwiseObjectiveIsRefusedNamingTheObjective` | ✅ |
+| A15: through the seam, a load that throws `TypeLoadException` for an invisible type becomes the same exception with that `TypeLoadException` as `InnerException` (also one beneath another exception, and a type invisible by its generic argument, which is named with the argument); an invisible point type is named when the objective is visible; the release failures are in the hint's `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]` | `ATypeLoadFailureOnAnInvisibleObjectiveBecomesTheHint`, `ATypeLoadFailureBeneathAnotherExceptionOnAnInvisibleObjectiveBecomesTheHint`, `AnObjectiveInvisibleByAGenericArgumentNamesTheArgument`, `AnInvisiblePointTypeIsNamedWhenTheObjectiveIsVisible`, `TheReleaseFailuresRideOnTheHint` | ✅ |
+| A15: a visible type's `TypeLoadException` (objective or point type), and any other exception for an invisible type, propagate as they are (the same instance) | `ATypeLoadFailureOnAVisibleObjectiveIsNotWrapped`, `ATypeLoadFailureOnAVisiblePointTypeIsNotWrapped`, `AnotherFailureOnAnInvisibleObjectiveIsNotWrapped` | ✅ |
+| A15, **Gpu**: on CUDA, a private nested objective makes `Build` throw the hint | `APrivateNestedObjectiveIsRefusedOnCuda` (run by the orchestrator) | ⏳ |
 
 ## Tests ✅
 
@@ -112,6 +117,47 @@ public class PopulationLimitTests
     public void ARankingSchemeAcceptsAPopulationOfTwoToTheThirty(string method);
     public void TheSchemesThatDoNotRankAcceptAPopulationAboveTwoToTheThirty();
 }
+public class ObjectiveVisibilityTests
+{
+    // visible
+    public void APublicStructIsVisible();
+    public void APublicTypeNestedInAPublicClassIsVisible();
+    public void AnInternalStructWithTheAttributeIsVisible();
+    public void AnInternalNestedStructWithTheAttributeIsVisible();
+    public void AProtectedInternalStructWithTheAttributeIsVisible();
+    public void AnInternalStructOfADynamicAssemblyWithTheAttributeIsVisible();
+    public void TheGrantIsMatchedWithoutRegardToCase();
+    public void AGrantAmongOthersMakesAnInternalStructVisible();
+    public void APublicStructInAnInternalClassWithTheAttributeIsVisible();
+    public void APublicGenericOverAPublicStructIsVisible();
+    public void AnOpenPublicGenericIsVisible();
+    // not visible
+    public void AnInternalStructWithoutTheAttributeIsNotVisible();
+    public void AGrantToAnotherAssemblyDoesNotMakeAnInternalStructVisible();
+    public void APublicStructInAnInternalClassWithoutTheAttributeIsNotVisible();
+    public void APrivateNestedStructIsNotVisible();
+    public void AProtectedNestedStructIsNotVisible();
+    public void APrivateProtectedNestedStructIsNotVisible();
+    public void APublicStructInAPrivateClassIsNotVisible();
+    public void APublicGenericOverAPrivateStructIsNotVisible();
+    public void APublicGenericOverAnInternalStructWithoutTheAttributeIsNotVisible();
+    public void AGenericOverAGenericOverAPrivateStructIsNotVisible();
+    public void AnArrayOfAPrivateStructIsNotVisible();
+}
+public class InvisibleObjectiveTests
+{
+    public void APrivateNestedObjectiveIsRefusedWithTheTypeAndTheRemedies();
+    public void APrivateNestedPointwiseObjectiveIsRefusedNamingTheObjective();
+    public void ATypeLoadFailureOnAnInvisibleObjectiveBecomesTheHint();
+    public void AnObjectiveInvisibleByAGenericArgumentNamesTheArgument();
+    public void ATypeLoadFailureOnAVisibleObjectiveIsNotWrapped();
+    public void AnotherFailureOnAnInvisibleObjectiveIsNotWrapped();
+    public void ATypeLoadFailureBeneathAnotherExceptionOnAnInvisibleObjectiveBecomesTheHint();
+    public void TheReleaseFailuresRideOnTheHint();
+    public void AnInvisiblePointTypeIsNamedWhenTheObjectiveIsVisible();
+    public void ATypeLoadFailureOnAVisiblePointTypeIsNotWrapped();
+    [Trait("Category", "Gpu")] public void APrivateNestedObjectiveIsRefusedOnCuda();
+}
 ```
 
 Internal helpers: `Sphere`, `Throwing` (an objective with a `throw`), `IgnoringHandler`, and
@@ -125,3 +171,14 @@ Internal helpers: `Sphere`, `Throwing` (an objective with a `throw`), `IgnoringH
 assembly) runs what `Build` runs before it opens a device, so that the accepted edges of
 populations too large to allocate (N = 2³⁰, N·D = 2³¹ − 2) are checked without allocating.
 `Build` calls it first; the refusals are also asserted through `Build` itself.
+
+**The seam of A15.** `GpuBuilder<TFunction>.WithLauncherFactory(Func<Accelerator, TFunction,
+ParameterRule, int, KernelLauncher>)` (internal to the GPU assembly), beside `WithPlantedRelease`
+and `WithDevicePresence`, replaces what `Build` calls to compile the kernels for the objective, so
+that a load that throws `TypeLoadException` (or anything else) can be planted on the CPU
+accelerator. The pointwise path is reached by the builder's own constructor, whose fourth
+argument is `TPoint` (`new GpuBuilder<Sphere>(default, 3, factory, pointType)`). Internal helpers
+of A15: `TypesOfEveryAccessibility` (an internal class whose nested structs are of every
+accessibility, fetched by name), `DynamicTypes` (types of dynamic assemblies that grant, or do
+not grant, `ILGPURuntime` access), `Wrapping<T>` and the private nested objectives of
+`InvisibleObjectiveTests`.

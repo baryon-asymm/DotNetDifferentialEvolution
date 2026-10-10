@@ -16,10 +16,12 @@ namespace DotNetDifferentialEvolution.GPU;
 /// <param name="function">The objective.</param>
 /// <param name="pointCount"><c>P</c> of a pointwise objective, or <see langword="null"/> for a single-kernel one.</param>
 /// <param name="launcherFor">Compiles the kernels for the objective: its accelerator, the objective, the parameter rule and N.</param>
+/// <param name="pointType"><c>TPoint</c> of a pointwise objective, or <see langword="null"/> for a single-kernel one: the second type ILGPU must see.</param>
 internal sealed class GpuBuilder<TFunction>(
     TFunction function,
     int? pointCount,
-    Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> launcherFor)
+    Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> launcherFor,
+    Type? pointType = null)
     : IGpuBoundsRequired<TFunction>,
       IGpuPopulationSizeRequired<TFunction>,
       IGpuMutationStrategyRequired<TFunction>,
@@ -35,6 +37,7 @@ internal sealed class GpuBuilder<TFunction>(
     private const int MaxRankedPopulationSize = 1 << 30;
 
     private readonly TFunction _function = function;
+    private Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> _launcherFor = launcherFor;
     private double[] _lowerBound = [];
     private double[] _upperBound = [];
     private int _populationSize;
@@ -281,7 +284,19 @@ internal sealed class GpuBuilder<TFunction>(
         };
         var function = _function;
         var populationSize = _populationSize;
-        KernelLauncher Compile(Accelerator accelerator) => launcherFor(accelerator, function, strategy.Rule, populationSize);
+        var launcherFactory = _launcherFor;
+        KernelLauncher Compile(Accelerator accelerator)
+        {
+            try
+            {
+                return launcherFactory(accelerator, function, strategy.Rule, populationSize);
+            }
+            catch (Exception failure) when (IsATypeLoadFailureOnAnInvisibleType(failure, out var invisible))
+            {
+                // The release failures that follow ride on this exception, as they would on ILGPU's (ACCEPTANCE.md, A6, A15).
+                throw new InvalidOperationException(InvisibleObjectiveMessage(invisible), failure);
+            }
+        }
 
         // The lease goes straight into the constructor, which owns it from then on. ILGPU binds every accelerator it creates, and
         // the binding of a thread can be given back only by disposing the accelerator, so the device is opened on a thread of
@@ -345,6 +360,20 @@ internal sealed class GpuBuilder<TFunction>(
         return this;
     }
 
+    /// <summary>
+    /// Replaces what <see cref="Build"/> calls to compile the kernels for the objective: for the tests of check A15, whose
+    /// subject is a load that throws <see cref="TypeLoadException"/> for a type that ILGPU's runtime assembly can see
+    /// (ACCEPTANCE.md, A15).
+    /// </summary>
+    /// <param name="launcherFor">Compiles the kernels: the accelerator, the objective, the parameter rule and N.</param>
+    /// <returns>This builder.</returns>
+    internal GpuBuilder<TFunction> WithLauncherFactory(Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> launcherFor)
+    {
+        ArgumentNullException.ThrowIfNull(launcherFor);
+        _launcherFor = launcherFor;
+        return this;
+    }
+
     /// <summary>Runs <paramref name="build"/> on a new thread and waits for it; its exception is rethrown unchanged, with its stack.</summary>
     private static GpuDifferentialEvolution OnAThreadOfItsOwn(Func<GpuDifferentialEvolution> build)
     {
@@ -376,6 +405,52 @@ internal sealed class GpuBuilder<TFunction>(
         captured = ExceptionDispatchInfo.Capture(exception);
         return true;
     }
+
+    /// <summary>
+    /// Whether <paramref name="failure"/> is a <see cref="TypeLoadException"/>, or has one among its inner exceptions (ILGPU
+    /// wraps the load failure of a type it cannot see in its <see cref="ILGPU.InternalCompilerException"/>), while a type the
+    /// kernels name, the objective's or the point's, is not visible to ILGPU's runtime assembly (ACCEPTANCE.md, A15).
+    /// </summary>
+    private bool IsATypeLoadFailureOnAnInvisibleType(Exception failure, out Type invisible)
+    {
+        invisible = typeof(TFunction);
+        var typeLoad = false;
+        for (var cause = failure; cause is not null; cause = cause.InnerException)
+        {
+            typeLoad |= cause is TypeLoadException;
+        }
+
+        if (!typeLoad)
+        {
+            return false;
+        }
+
+        Type[] namedByTheKernels = pointType is null ? [typeof(TFunction)] : [typeof(TFunction), pointType];
+        foreach (var named in namedByTheKernels)
+        {
+            if (!ObjectiveVisibility.IsVisible(named))
+            {
+                invisible = named;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>The message of the exception <see cref="Build"/> throws for an objective type ILGPU cannot see (ACCEPTANCE.md, A15).</summary>
+    private static string InvisibleObjectiveMessage(Type type)
+    {
+        var part = ObjectiveVisibility.FirstInvisiblePart(type)!;
+        var which = part == type ? string.Empty : $" ('{NameOf(part)}' is the part it cannot see)";
+        return $"ILGPU could not load the kernels because its runtime assembly '{ObjectiveVisibility.RuntimeAssemblyName}' cannot see the " +
+            $"type '{NameOf(type)}'{which}: a type must be public, or internal in an assembly that declares " +
+            $"[assembly: InternalsVisibleTo(\"{ObjectiveVisibility.RuntimeAssemblyName}\")], and so must every type it is nested in and " +
+            "every generic argument. Make the type public; or declare the attribute in its assembly (a private or protected nested type " +
+            "can never be used: make it public or internal).";
+    }
+
+    private static string NameOf(Type type) => type.FullName ?? type.Name;
 
     private static void RequireMutationForce(double mutationForce, string name)
     {

@@ -46,6 +46,7 @@ public static class GpuDifferentialEvolutionBuilder
             function,
             pointCount,
             (accelerator, objective, rule, populationSize) =>
-                new PointwiseKernelLauncher<TFunction, TPoint>(accelerator, objective, pointCount, populationSize, rule));
+                new PointwiseKernelLauncher<TFunction, TPoint>(accelerator, objective, pointCount, populationSize, rule),
+            typeof(TPoint));
     }
 }
