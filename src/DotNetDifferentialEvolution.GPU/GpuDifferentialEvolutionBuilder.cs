@@ -17,7 +17,7 @@ public static class GpuDifferentialEvolutionBuilder
         new GpuBuilder<TFunction>(
             function,
             null,
-            (accelerator, objective, rule, _) => new KernelLauncher<TFunction>(accelerator, objective, rule));
+            (accelerator, objective, rule, populationSize) => new KernelLauncher<TFunction>(accelerator, objective, rule, populationSize));
 
     /// <summary>
     /// Starts a run for a pointwise <paramref name="function"/>: an objective of <paramref name="pointCount"/> independent
