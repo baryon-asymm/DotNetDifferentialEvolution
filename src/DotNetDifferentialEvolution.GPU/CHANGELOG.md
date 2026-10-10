@@ -18,6 +18,23 @@ A new form of objective, and the fixes of two audits; code written for 1.0 compi
 - The builder's stage interfaces now constrain `TFunction` to `struct` only, so both
   entry points use them; code written for 1.0 compiles and runs unchanged.
 
+Behaviour changes a caller can see (nothing else changes; reviewed by a consumer, 2026-10-10):
+
+- **Seeded runs reproduce 1.0.1 bit for bit**, on the CPU accelerator and on CUDA, through
+  `OnDevice` and `OnAccelerator` alike (48 runs compared: result and every snapshot).
+- **Cancellation is unchanged:** a cancelled token ends the task as canceled
+  (`OperationCanceledException` when awaited), also when cancelled from the observer, and a
+  `Dispose` after it throws nothing unless a release fails.
+- **`Dispose` throws an `AggregateException`** of every failed release, after running them
+  all; 1.0.1 threw the first failure and skipped the rest.
+- **An exception on the run's thread faults the task** whatever its type; before, some could
+  end the process.
+- **`Build` does more:** it loads every kernel on a thread of its own (the caller's
+  `Accelerator.Current` is left as it was), and on CUDA and OpenCL a configuration that
+  ranks (JADE, SHADE, L-SHADE) with N above 1 024 times two ranking methods once, a few
+  milliseconds.
+- **New refusals** (below): sizes and point types that could not run correctly before.
+
 Fixes and speed-ups from two audits of the package, no other public signature change:
 
 - **Kernels fill the device.** Each kernel is loaded with a group size fitted to how many

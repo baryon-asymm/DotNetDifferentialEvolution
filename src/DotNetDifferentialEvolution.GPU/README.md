@@ -127,9 +127,17 @@ using var optimizer = GpuDifferentialEvolutionBuilder
     // ... every later stage is the same as after ForFunction
 ```
 
-- `TPoint` is any unmanaged struct; C# cannot infer it, so name both type arguments.
+- `TPoint` is a struct of sequential layout whose fields are numeric primitives (not
+  `bool` or `char`), their enums or such structs, not packed below its natural size;
+  `ForPointwiseFunction` refuses any other with an `ArgumentException` naming the field.
+  C# cannot infer it, so name both type arguments.
 - The rules for the objective's body, data and visibility are those above; both methods
-  are kernel code.
+  are kernel code, and both may read the objective's `ArrayView` fields (data on the
+  device), as `FitObjective` reads `xs` and `ys`.
+- `Combine` runs once per individual, in one thread, with `points[p]` the result of
+  `EvaluatePoint(genes, p)` for that individual's genes. Everything after it (selection,
+  the best individual, the observer's snapshots, the stop rules) is the single-kernel
+  path's.
 - The point results take `N·P·sizeof(TPoint)` bytes on the device; `N·P` must not
   exceed `int.MaxValue`, and `pointCount` must be at least 1.
 - Draws and selection are the single-kernel path's: a pointwise objective that performs
@@ -166,14 +174,23 @@ using var optimizer = GpuDifferentialEvolutionBuilder
   `StagnationStreakTerminationStrategy`.
 - **Asynchronous:** `RunAsync` returns at once and runs the generations on a thread of its
   own. A cancellation token is observed between generations and ends the task as
-  canceled. After a run, calling `RunAsync` again returns the same task.
+  canceled (an `OperationCanceledException` when awaited), whether the token is cancelled
+  from the observer or elsewhere. After a run, calling `RunAsync` again returns the same
+  task.
+- **`Dispose`** stops a run in progress and frees the device buffers, and the device unless
+  it was yours. Every release runs even when one fails; the failures are then thrown
+  together as an `AggregateException`. Nothing is thrown after a normal or a cancelled run
+  whose releases succeed.
 - **The population stays on the device.** It is copied to the host once at the end, and
   once per observer call if you register one with `WithPopulationUpdateHandler(handler,
   everyNGenerations)`.
 - **Reproducible:** the same seed on the same device, with the same package and ILGPU
   versions, gives a bit-identical result. The random numbers (Philox4x32-10, a
   counter-based generator) are identical on every backend, but results across backends
-  may differ, because floating-point code generation is the backend's.
+  may differ, because floating-point code generation is the backend's. 1.1.0 reproduces
+  1.0.1's seeded runs bit for bit: measured 2026-10-10 on 48 runs (six schemes, two
+  objectives, the CPU accelerator, and CUDA through `OnDevice` and `OnAccelerator`, up to
+  N = 16 384), the result and every snapshot equal.
 - **Result:** the best individual of the final population (`ISolution` from
   `DotNetOptimization.Abstractions`), with the number of generations and evaluations and
   the device it ran on.
