@@ -22,12 +22,12 @@ generation itself stays in [Kernels](../Kernels/API.md).
   ties go to the lower index. Ranking compares integer order keys (`FitnessOrder.OrderKey`,
   the same order, ±0 equal, NaN as +∞; A3). Ranking by counting (N ≤ the limit) and the
   bitonic network (above) give the same order (check S9), so the limit changes speed, never
-  a result. ⏳ 2026-10-10 (A3 ⚠): the limit is the instance's, timed on the device in the
-  constructor (HISTORY.md#ranking-calibrated-2026-10-10, decision 2); built: 2 048 fixed.
+  a result. The limit is the instance's, timed on CUDA and OpenCL in the constructor
+  (A3 ⚠; HISTORY.md#ranking-calibrated-2026-10-10, decision 2).
 - **Passes that cannot depend on their order are wide** (A4): the best index, the improved
   count, the archive placement and the largest weight run over wide chunks; the sums
-  (`SumSuccesses`) keep chunks of 1 024, the order S7 holds. ⏳ 2026-10-10 (A4 ⚠): the wide
-  chunk is `max(32, 32·⌈⌈√N_init⌉/32⌉)`, fixed for the run; built: 32.
+  (`SumSuccesses`) keep chunks of 1 024, the order S7 holds. The wide chunk is
+  `max(32, 32·⌈⌈√N_init⌉/32⌉)`, fixed for the run (A4 ⚠).
 - **Deterministic sums.** Every sum runs in index order within chunks of 1 024 and over
   the chunks in chunk order; no floating-point atomic anywhere. For N ≤ 1 024 that is
   the CPU package's order bit for bit (S7).

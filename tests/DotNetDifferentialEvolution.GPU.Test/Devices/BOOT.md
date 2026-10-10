@@ -7,7 +7,8 @@ checks D1 and D2 of the package's
 [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md) and B1's row
 "an explicit device that is not present", and L1–L7, L9 of
 [LibDevice/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Devices/LibDevice/ACCEPTANCE.md)
-(L8 lives in Protocol.Tests). The checks are
+(L8 lives in Protocol.Tests); A14 of
+[Devices/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Devices/ACCEPTANCE.md). The checks are
 frozen; their numbers (4 ULP, 10⁴ arguments, 64 MiB) are copied, never chosen here.
 
 ## Invariants
@@ -48,14 +49,14 @@ frozen; their numbers (4 ULP, 10⁴ arguments, 64 MiB) are copied, never chosen 
 
 ## Dependencies
 
-- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector`, `AcceleratorLease`, `KernelLoader`, `MathProbe` (internal).
+- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector` (with `OpenForTiming`), `AcceleratorLease`, `KernelLoader`, `MathProbe` (internal).
 - [LibDevice](../../../src/DotNetDifferentialEvolution.GPU/Devices/LibDevice/API.md) — `LibDeviceLocator`, `LibDevicePostLink`, `CudaWslDevices` (internal).
 - [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
 - [DotNetDifferentialEvolution.GPU](../../../src/DotNetDifferentialEvolution.GPU/API.md)
   — the builder, `GpuDeviceInfo`.
 
 Outside the tree: ILGPU 1.5.3 (`Context`, CUDA, OpenCL, `PTXBackend`, `NvvmAPI`,
-`CudaAPI`), xUnit 2.9.3; for the `Gpu` cases, the owner's RTX 5070 Ti, `gfx1036` and a CUDA
+`CudaAPI`, profiling markers), xUnit 2.9.3; for the `Gpu` cases, the owner's RTX 5070 Ti, `gfx1036` and a CUDA
 Toolkit.
 
 ## Constraints
@@ -100,6 +101,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       variables, not yet on a hosted runner.
 - [x] S15 (D3) is green on CUDA and red with the post-link returning the kernel unchanged:
       2026-10-05, the evidence in the package's [ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/ACCEPTANCE.md).
+- [x] A14 is green on the CPU accelerator and red with profiling left off in
+      `OpenForTiming`: 2026-10-10, `TimingLeaseTests`, the evidence in
+      [Devices/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Devices/ACCEPTANCE.md).
 
 ## Taboos
 

@@ -47,9 +47,12 @@ From the audits of 2026-10-09 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-20
 
 From [HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10), decision 3.
 
-- [ ] **A14, a lease that measures device time.** On the CPU accelerator (CI):
+- [x] **A14, a lease that measures device time.** On the CPU accelerator (CI):
       `OpenForTiming(Backend.Cpu)` gives an accelerator whose two profiling markers around a
       launched kernel and a synchronisation measure a non-negative time; on a lease from
       `Open(Backend.Cpu)` adding a marker throws ILGPU's exception for profiling disabled.
       Red: profiling left off in `OpenForTiming` (the first fails). If ILGPU 1.5.3's CPU
       accelerator does not support markers, the coder stops and reports.
+      2026-10-10, `ca62ba0`: `Devices/TimingLeaseTests` (2) green; red with profiling off,
+      the marker test fails with ILGPU's `NotSupportedException` (orchestrator's rerun). Used
+      by Bookkeeping's A4 on CUDA.

@@ -88,9 +88,9 @@ checks A1, A2 and A10 are built, above.
 - `AcceleratorLease.Dispose` disposes the owned context in a `finally`; when the accelerator's
   `Dispose` throws, that exception propagates after the context is released.
 
-## Timing seam ⏳
+## Timing seam ✅
 
-Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10), decision 3),
+Designed and built 2026-10-10 ([HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10), decision 3),
 check A14. For the **Gpu** timing checks only; the package never calls it.
 
 ```csharp

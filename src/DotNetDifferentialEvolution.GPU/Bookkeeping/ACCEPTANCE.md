@@ -109,7 +109,7 @@ weight is divided by it; otherwise the weights are used as they are.
 From the audits of 2026-10-09 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)),
 under the rules above.
 
-- [ ] **A3, ranking by integer keys, and its limit** (PERF-7, PERF-3).
+- [x] **A3, ranking by integer keys, and its limit** (PERF-7, PERF-3).
       `FitnessOrder.OrderKey` orders −∞, −`double.MaxValue`, −1, −ε (the smallest
       subnormal), −0, +0, ε, 1, `double.MaxValue`, +∞, NaN non-decreasingly, with −0 = +0 and
       +∞ = NaN; ranking compares (key, index) as integers; S9 and P0's hash stay green. Red:
@@ -125,7 +125,13 @@ under the rules above.
       nothing. **Gpu**: an instance with N_init = 8 192 and ranking calibrates L = 4 096 on
       the RTX 5070 Ti (CUDA) and L = 1 024 on the gfx1036 (OpenCL), this machine's devices.
       Red: the calibration skipped, L fixed at 2 048 (**Gpu**: both known answers fail).
-- [ ] **A4, order-independent passes in wide chunks** (PERF-8). The best index, the
+      2026-10-10, `aa122ed` + `f87e57b` (coders), every proof rerun by the orchestrator: CI
+      `FitnessOrderTests`, `RankingCalibrationTests` (12), `RankingTests`; red with `LimitOf`
+      not stopping at the first slower n, 4 of 12. **Gpu**, three runs: L = 4 096 on CUDA
+      (2 048: 183–185 against 400–491 µs; 4 096: 359–361 against 461–598; 8 192: 718–747
+      against 565–666), L = 1 024 on OpenCL (2 048: 464–469 against 248–379); red with the
+      calibration skipped, both at 2 048. The Gpu category 68/68.
+- [x] **A4, order-independent passes in wide chunks** (PERF-8). The best index, the
       improved count, the archive placement and the largest weight run over wide chunks
       (more partials, the same combine); the best index carries its incumbent's value in a
       register; `SumSuccesses` skips the division when the scale is 1.0 and keeps chunks of
@@ -141,3 +147,8 @@ under the rules above.
       with `c(N)` not slower than with chunks of 1 024 nor than with chunks of 32 (both forced
       through the test seam, same process); all three printed. Red: chunks of 1 024 again
       (the 25 µs fails); chunks of 32 for every N (46 080 fails against 1 024).
+      2026-10-10, `f87e57b`, rerun by the orchestrator: CI `WideChunkTests` (21) and S7–S12,
+      S19, P0 green; red with the chunk `max(32, ⌈√N⌉/32 rounded up)` unscaled, 8 of 21.
+      **Gpu**, device time, three runs: `FindBest` at 1 024 20.8–21.3 µs; at 46 080 c = 224
+      79.0–80.3 µs, chunks of 1 024 143.6–143.8, chunks of 32 295.9–298.0. Reds: chunks of
+      1 024, 108.4 µs at 1 024; chunks of 32 for every N, 297.4 against 144.2 at 46 080.

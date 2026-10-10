@@ -6,7 +6,8 @@ The work between generations of the GPU package's
 [Bookkeeping](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/API.md), held to the
 CPU package's classes: checks **S7** (adaptation), **S8** (archive), **S9**
 (ranking), **S10** (best index), **S11** (L-SHADE's reduction), **S12** (stagnation), **A3**
-(ranking by integer keys) and **A4** (the wide passes) of
+(ranking by integer keys and its calibrated limit) and **A4** (the wide passes and their
+chunk) of
 [Bookkeeping/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/ACCEPTANCE.md).
 The checks are frozen; their numbers are copied, never chosen here.
 
@@ -18,7 +19,9 @@ The checks are frozen; their numbers are copied, never chosen here.
 | S11 | `LShadeReductionTests` | the schedule's known answers; a CPU-package and a GPU run side by side; the reduction pass |
 | S12 | `StagnationTests` | the rule against `StagnationStreakTerminationStrategy`; runs that stop |
 | A3 (CI) | `FitnessOrderTests` | `OrderKey`'s known answers, every NaN, 20 000 random pairs against `KeyOf` |
-| A3, A4 (**Gpu**) | `BookkeepingTimingTests` | medians of 20 calls on CUDA: counting against the bitonic network at 2 048; `FindBest` at 1 024 |
+| A3 ⚠ (CI) | `RankingCalibrationTests` | `LimitOf` against a scripted time that records the n asked |
+| A3 ⚠, A4 ⚠ (CI) | `RankingTests`, `WideChunkTests` | the CPU instance's L = 2 048 and a forced limit; `WideChunkSizeOf`'s known answers, the instance's fixed chunk, the best index under forced chunks |
+| A3 ⚠, A4 ⚠ (**Gpu**) | `BookkeepingTimingTests` | calibrated L = 4 096 (CUDA) and 1 024 (OpenCL) at N_init 8 192, the times printed; `FindBest`'s device time through `OpenForTiming` at 1 024 (≤ 25 µs) and at 46 080 (c(N) against forced 1 024 and 32) |
 
 ## Invariants
 
@@ -36,8 +39,8 @@ The checks are frozen; their numbers are copied, never chosen here.
 
 ## Dependencies
 
-- [Bookkeeping](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/API.md) — the rules, `GenerationBookkeeping`, `BookkeepingPlan`, `SuccessSums` (internal).
-- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector`, `Backend`, `AcceleratorLease` (internal): CUDA for the **Gpu** timings of A3 and A4.
+- [Bookkeeping](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/API.md) — the rules, `GenerationBookkeeping`, `BookkeepingPlan`, `SuccessSums`, `FitnessOrder`, `RankingCalibration`, `RankingTimes`, `RankingMeasurement`, `BookkeepingTuning`, `BookkeepingKernels.WideChunkSizeOf` (internal).
+- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector.Open`, `OpenForTiming`, `Backend`, `AcceleratorLease` (internal): CUDA and OpenCL for the **Gpu** checks of A3 and A4.
 - [Kernels](../../../src/DotNetDifferentialEvolution.GPU/Kernels/API.md) — `PopulationViews`, `StrategyViews`, `ParameterRule`, `SchemeKind`, `Selection` (internal).
 - [Random](../../../src/DotNetDifferentialEvolution.GPU/Random/API.md) — `PhiloxDraws` on the archive's stream, `IDrawSource` (internal).
 - [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
@@ -59,19 +62,23 @@ The checks are frozen; their numbers are copied, never chosen here.
 - [TerminationStrategies](../../../src/DotNetDifferentialEvolution/TerminationStrategies/API.md) — the CPU package: `StagnationStreakTerminationStrategy`, the limits
 - [TerminationStrategies/Interfaces](../../../src/DotNetDifferentialEvolution/TerminationStrategies/Interfaces/API.md) — the CPU package: `ITerminationStrategy`
 
-Outside the tree: ILGPU 1.5.3 (the CPU accelerator), xUnit 2.9.3.
+Outside the tree: ILGPU 1.5.3 (the CPU accelerator; profiling markers for the **Gpu** timings),
+xUnit 2.9.3.
 
 ## Constraints
 
 Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 - Every case carries a category. Only `BookkeepingTimingTests` needs a GPU (category `Gpu`,
-  CUDA, run by hand); every other case runs in CI on the CPU accelerator.
+  CUDA and OpenCL, this machine's devices, run by hand); every other case runs in CI on the
+  CPU accelerator.
 
 ## Acceptance criteria
 
 - [x] S7–S12 are green and each was red once on its named mutation: 2026-10-05, the
       evidence and the mutations in [Bookkeeping/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/ACCEPTANCE.md).
+- [x] A3 ⚠ and A4 ⚠ are green, in CI and under **Gpu**, and each was red on its named
+      mutations: 2026-10-10, the evidence in the same file.
 
 ## Taboos
 
