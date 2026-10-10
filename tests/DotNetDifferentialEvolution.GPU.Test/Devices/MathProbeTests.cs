@@ -89,7 +89,7 @@ public class MathProbeTests(ITestOutputHelper output)
         {
             var accelerator = lease.Accelerator;
             deviceName = accelerator.Name;
-            using var kernel = KernelLoader.Load(accelerator, typeof(MathProbe).GetMethod(nameof(MathProbe.Probe))!);
+            using var kernel = KernelLoader.Load(accelerator, typeof(MathProbe).GetMethod(nameof(MathProbe.Probe))!, arguments.Length);
             var probe = kernel.CreateLauncherDelegate<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<double>>>();
             using var inputs = accelerator.Allocate1D(arguments);
             using var outputs = accelerator.Allocate1D<double>(arguments.Length * MathProbe.FunctionCount);

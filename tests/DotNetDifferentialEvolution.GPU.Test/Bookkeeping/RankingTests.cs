@@ -40,7 +40,7 @@ public sealed class RankingTests : IDisposable
     public void BothRankingsGiveTheOrderByKeyThenIndex()
     {
         var random = new SeededRandomProvider(CaseSeed);
-        using var bookkeeping = Bookkeeping(LargestRanked, SchemeKind.CurrentToPBest);
+        using var bookkeeping = Bookkeeping(LargestRanked, SchemeKind.CurrentToPBest, shrinks: true);
         using var fitness = _step.Accelerator.Allocate1D<double>(LargestRanked);
         var counted = 0;
         for (var array = 0; array < ArrayCount; array++)
@@ -121,10 +121,11 @@ public sealed class RankingTests : IDisposable
         return values;
     }
 
-    private GenerationBookkeeping Bookkeeping(int populationSize, SchemeKind scheme) =>
+    /// <summary>A bookkeeping for <paramref name="populationSize"/>; L-SHADE's, whose population shrinks, loads both rankings (A10).</summary>
+    private GenerationBookkeeping Bookkeeping(int populationSize, SchemeKind scheme, bool shrinks = false) =>
         new(
             _step.Accelerator,
-            new BookkeepingPlan(populationSize, 1, scheme, ParameterRule.Fixed, 0, 0, 0.0, false, double.NaN, double.NaN, null),
+            new BookkeepingPlan(populationSize, 1, scheme, ParameterRule.Fixed, 0, 0, 0.0, shrinks, double.NaN, double.NaN, null),
             seed: 1);
 
     private int[] Ranking(GenerationBookkeeping bookkeeping, int count)

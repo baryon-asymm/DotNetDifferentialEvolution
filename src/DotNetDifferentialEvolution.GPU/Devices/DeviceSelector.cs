@@ -19,6 +19,9 @@ namespace DotNetDifferentialEvolution.GPU.Devices;
 /// </summary>
 internal static class DeviceSelector
 {
+    /// <summary>The extent the bind-time probe is loaded for: it is only loaded, never launched.</summary>
+    private const int ProbeExtent = 1;
+
     private static readonly Backend[] AutoOrder = [Backend.Cuda, Backend.OpenCL, Backend.Cpu];
 
     private static readonly MethodInfo ProbeKernel =
@@ -249,7 +252,7 @@ internal static class DeviceSelector
         try
         {
             using var binding = accelerator.BindScoped();
-            using var probe = KernelLoader.Load(accelerator, ProbeKernel);
+            using var probe = KernelLoader.Load(accelerator, ProbeKernel, ProbeExtent);
         }
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {

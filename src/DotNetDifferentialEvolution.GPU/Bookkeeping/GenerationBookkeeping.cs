@@ -9,8 +9,9 @@ namespace DotNetDifferentialEvolution.GPU.Bookkeeping;
 /// <summary>
 /// The device state of one run's configuration and the passes that keep it between generations, enqueued on the
 /// accelerator's default stream in the CPU package's order (BOOT.md): the ranking, the archive, the adaptation, L-SHADE's
-/// reduction, the best index, the stop rule. Allocates only what the configuration uses and loads each kernel on its
-/// first use, through <see cref="KernelLoader"/>; a configuration with nothing to keep loads none.
+/// reduction, the best index, the stop rule. Allocates only what the configuration uses and loads exactly the kernels it
+/// uses, once, in the constructor (check A10), each through <see cref="KernelLoader"/> with the largest extent it is
+/// launched with; no pass is loaded afterwards.
 /// </summary>
 internal sealed class GenerationBookkeeping : IDisposable
 {
@@ -94,6 +95,8 @@ internal sealed class GenerationBookkeeping : IDisposable
             _memoryIndex = Ints(1);
             _lastBest = Doubles(1);
 
+            LoadKernels(chunks, rankingLength, adaptationLength);
+
             FillInts(stop, 0);
             FillInts(bestIndex, 0);
             FillInts(archiveSize, 0);
@@ -171,8 +174,7 @@ internal sealed class GenerationBookkeeping : IDisposable
 
         if (nextPopulationSize < populationSize)
         {
-            _compact ??= Load<Action<AcceleratorStream, Index1D, PopulationViews, int, StrategyViews, int>>(nameof(BookkeepingKernels.Compact));
-            _compact(_stream, nextPopulationSize, views, _plan.GenomeSize, Views, nextArchiveCapacity);
+            Required(_compact)(_stream, nextPopulationSize, views, _plan.GenomeSize, Views, nextArchiveCapacity);
             views = views.Swapped();
         }
 
@@ -183,9 +185,7 @@ internal sealed class GenerationBookkeeping : IDisposable
 
         if (_plan.Stagnation is { } stagnation)
         {
-            _stagnate ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, ArrayView<double>, double, int, int, ArrayView<int>>>(
-                nameof(BookkeepingKernels.Stagnate));
-            _stagnate(_stream, 1, views.CurrentFitness, Views.BestIndex, _lastBest, stagnation.Threshold, stagnation.MaxStreak, generation, Views.Stop);
+            Required(_stagnate)(_stream, 1, views.CurrentFitness, Views.BestIndex, _lastBest, stagnation.Threshold, stagnation.MaxStreak, generation, Views.Stop);
         }
     }
 
@@ -230,29 +230,23 @@ internal sealed class GenerationBookkeeping : IDisposable
     /// <summary>Ranks by counting, whatever N; the ranking buffer must hold N (ACCEPTANCE.md, S9).</summary>
     /// <param name="fitness">The fitness values.</param>
     /// <param name="count">N.</param>
-    internal void RankByCounting(ArrayView<double> fitness, int count)
-    {
-        _rankByCounting ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>>(
-            nameof(BookkeepingKernels.RankByCounting));
-        _rankByCounting(_stream, count, fitness, count, Views.Ranking, Views.Stop);
-    }
+    internal void RankByCounting(ArrayView<double> fitness, int count) =>
+        Required(_rankByCounting)(_stream, count, fitness, count, Views.Ranking, Views.Stop);
 
     /// <summary>Ranks by the bitonic network, whatever N; the ranking and key buffers must hold N rounded up to a power of two (ACCEPTANCE.md, S9).</summary>
     /// <param name="fitness">The fitness values.</param>
     /// <param name="count">N.</param>
     internal void RankByBitonicNetwork(ArrayView<double> fitness, int count)
     {
-        _loadSortKeys ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<double>, ArrayView<int>, ArrayView<int>>>(
-            nameof(BookkeepingKernels.LoadSortKeys));
-        _bitonicStep ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, int, int, ArrayView<int>>>(
-            nameof(BookkeepingKernels.BitonicStep));
+        var loadSortKeys = Required(_loadSortKeys);
+        var bitonicStep = Required(_bitonicStep);
         var length = (int)System.Numerics.BitOperations.RoundUpToPowerOf2((uint)count);
-        _loadSortKeys(_stream, length, fitness, count, _sortKeys, Views.Ranking, Views.Stop);
+        loadSortKeys(_stream, length, fitness, count, _sortKeys, Views.Ranking, Views.Stop);
         for (var block = 2; block <= length; block <<= 1)
         {
             for (var span = block >> 1; span > 0; span >>= 1)
             {
-                _bitonicStep(_stream, length, _sortKeys, Views.Ranking, span, block, Views.Stop);
+                bitonicStep(_stream, length, _sortKeys, Views.Ranking, span, block, Views.Stop);
             }
         }
     }
@@ -262,61 +256,39 @@ internal sealed class GenerationBookkeeping : IDisposable
     /// <param name="count">N.</param>
     internal void FindBest(ArrayView<double> fitness, int count)
     {
-        _bestOfChunks ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>>(
-            nameof(BookkeepingKernels.BestOfChunks));
-        _bestOfPartials ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>, ArrayView<int>>>(
-            nameof(BookkeepingKernels.BestOfPartials));
+        var bestOfChunks = Required(_bestOfChunks);
+        var bestOfPartials = Required(_bestOfPartials);
         var chunks = BookkeepingKernels.ChunkCount(count);
-        _bestOfChunks(_stream, chunks, fitness, count, _partialIndices, Views.Stop);
-        _bestOfPartials(_stream, 1, fitness, chunks, _partialIndices, Views.BestIndex, Views.Stop);
+        bestOfChunks(_stream, chunks, fitness, count, _partialIndices, Views.Stop);
+        bestOfPartials(_stream, 1, fitness, chunks, _partialIndices, Views.BestIndex, Views.Stop);
     }
 
     private void UpdateArchive(ArrayView<double> parents, int generation, int count, int capacity)
     {
-        _countImproved ??= Load<Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>>>(
-            nameof(BookkeepingKernels.CountImproved));
-        _scanImproved ??= Load<Action<AcceleratorStream, Index1D, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>>>(
-            nameof(BookkeepingKernels.ScanImproved));
-        _placeImproved ??= Load<Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>, int, int, ArrayView<int>>>(
-            nameof(BookkeepingKernels.PlaceImproved));
-        _copyToArchive ??= Load<Action<AcceleratorStream, Index1D, ArrayView<int>, ArrayView<double>, ArrayView<double>, int, ArrayView<int>>>(
-            nameof(BookkeepingKernels.CopyToArchive));
         var chunks = BookkeepingKernels.ChunkCount(count);
-        _countImproved(_stream, chunks, Views.Outcomes, count, _counts, Views.Stop);
-        _scanImproved(_stream, 1, chunks, _counts, Views.ArchiveSize, capacity, Views.Stop);
-        _placeImproved(_stream, chunks, Views.Outcomes, count, _counts, Views.ArchiveSize, capacity, _owners, _seed, generation, Views.Stop);
-        _copyToArchive(_stream, capacity, _owners, parents, Views.Archive, _plan.GenomeSize, Views.Stop);
+        Required(_countImproved)(_stream, chunks, Views.Outcomes, count, _counts, Views.Stop);
+        Required(_scanImproved)(_stream, 1, chunks, _counts, Views.ArchiveSize, capacity, Views.Stop);
+        Required(_placeImproved)(_stream, chunks, Views.Outcomes, count, _counts, Views.ArchiveSize, capacity, _owners, _seed, generation, Views.Stop);
+        Required(_copyToArchive)(_stream, capacity, _owners, parents, Views.Archive, _plan.GenomeSize, Views.Stop);
     }
 
     private void Adapt(PopulationViews views, int count)
     {
-        _sumSuccesses ??= Load<Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
-            nameof(BookkeepingKernels.SumSuccesses));
-        _adapt ??= Load<Action<AcceleratorStream, Index1D, ParameterRule, int, ArrayView<double>, double, int, MemoryRule, ArrayView<double>, ArrayView<int>, ArrayView<int>>>(
-            nameof(BookkeepingKernels.Adapt));
         var chunks = BookkeepingKernels.ChunkCount(count);
         if (_plan.Rule == ParameterRule.Shade)
         {
-            _largestWeightsPass ??= Load<Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
-                nameof(BookkeepingKernels.LargestWeights));
-            _largestWeightsPass(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights);
+            Required(_largestWeightsPass)(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights);
         }
 
-        _sumSuccesses(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights, _partials);
-        _adapt(_stream, 1, _plan.Rule, chunks, _partials, _plan.AdaptationRate, _plan.MemorySize, _plan.LShade ? MemoryRule.LShade : MemoryRule.Shade, Views.Adaptation, _memoryIndex, Views.Stop);
+        Required(_sumSuccesses)(_stream, chunks, _plan.Rule, count, Views, views.NextFitness, views.CurrentFitness, _largestWeights, _partials);
+        Required(_adapt)(_stream, 1, _plan.Rule, chunks, _partials, _plan.AdaptationRate, _plan.MemorySize, _plan.LShade ? MemoryRule.LShade : MemoryRule.Shade, Views.Adaptation, _memoryIndex, Views.Stop);
     }
 
-    private void FillInts(ArrayView<int> target, int value)
-    {
-        _fillInts ??= Load<Action<AcceleratorStream, Index1D, ArrayView<int>, int>>(nameof(BookkeepingKernels.FillInts));
-        _fillInts(_stream, target.IntLength, target, value);
-    }
+    private void FillInts(ArrayView<int> target, int value) =>
+        Required(_fillInts)(_stream, target.IntLength, target, value);
 
-    private void FillDoubles(ArrayView<double> target, double value)
-    {
-        _fillDoubles ??= Load<Action<AcceleratorStream, Index1D, ArrayView<double>, double>>(nameof(BookkeepingKernels.FillDoubles));
-        _fillDoubles(_stream, target.IntLength, target, value);
-    }
+    private void FillDoubles(ArrayView<double> target, double value) =>
+        Required(_fillDoubles)(_stream, target.IntLength, target, value);
 
     private ArrayView<int> Ints(long length)
     {
@@ -332,11 +304,98 @@ internal sealed class GenerationBookkeeping : IDisposable
         return buffer.View;
     }
 
-    private TDelegate Load<TDelegate>(string name)
+    private static TDelegate Required<TDelegate>(TDelegate? pass)
+        where TDelegate : Delegate =>
+        pass ?? throw new InvalidOperationException("The plan of this bookkeeping does not use that pass, so its kernel was not loaded.");
+
+    /// <summary>
+    /// Loads, once, every kernel the plan uses, each for the largest extent it is launched with in the run: the fills for
+    /// the longest buffer they fill, the ranking for N (counting: at most the counting limit), the chunked passes for the
+    /// chunk count of the initial population, the single-thread passes for 1, the archive copy for the capacity, the
+    /// reduction for the largest next population. L-SHADE's population shrinks, so its ranking may fall below the counting
+    /// limit from above it and loads both rankings there.
+    /// </summary>
+    /// <param name="chunks">The chunk count of the initial population.</param>
+    /// <param name="rankingLength">The length the ranking sorts, or 1.</param>
+    /// <param name="adaptationLength">The length of the adaptation buffer.</param>
+    private void LoadKernels(int chunks, int rankingLength, int adaptationLength)
+    {
+        var plan = _plan;
+        var populationSize = plan.PopulationSize;
+        var archiveCapacity = Math.Max(plan.ArchiveCapacity, 0);
+        _fillInts = Load<Action<AcceleratorStream, Index1D, ArrayView<int>, int>>(
+            Math.Max(BookkeepingKernels.StopLength, archiveCapacity), nameof(BookkeepingKernels.FillInts));
+        _fillDoubles = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, double>>(
+            Math.Max(adaptationLength, plan.Rule == ParameterRule.Jde ? populationSize : 1), nameof(BookkeepingKernels.FillDoubles));
+
+        if (plan.NeedsRanking)
+        {
+            if (populationSize <= CountingRankLimit || plan.LShade)
+            {
+                _rankByCounting = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>>(
+                    Math.Min(populationSize, CountingRankLimit), nameof(BookkeepingKernels.RankByCounting));
+            }
+
+            if (populationSize > CountingRankLimit)
+            {
+                _loadSortKeys = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<double>, ArrayView<int>, ArrayView<int>>>(
+                    rankingLength, nameof(BookkeepingKernels.LoadSortKeys));
+                _bitonicStep = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, int, int, ArrayView<int>>>(
+                    rankingLength, nameof(BookkeepingKernels.BitonicStep));
+            }
+        }
+
+        if (plan.NeedsBestIndex)
+        {
+            _bestOfChunks = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>>>(
+                chunks, nameof(BookkeepingKernels.BestOfChunks));
+            _bestOfPartials = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, int, ArrayView<int>, ArrayView<int>, ArrayView<int>>>(
+                1, nameof(BookkeepingKernels.BestOfPartials));
+        }
+
+        if (archiveCapacity > 0)
+        {
+            _countImproved = Load<Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>>>(
+                chunks, nameof(BookkeepingKernels.CountImproved));
+            _scanImproved = Load<Action<AcceleratorStream, Index1D, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>>>(
+                1, nameof(BookkeepingKernels.ScanImproved));
+            _placeImproved = Load<Action<AcceleratorStream, Index1D, ArrayView<int>, int, ArrayView<int>, ArrayView<int>, int, ArrayView<int>, int, int, ArrayView<int>>>(
+                chunks, nameof(BookkeepingKernels.PlaceImproved));
+            _copyToArchive = Load<Action<AcceleratorStream, Index1D, ArrayView<int>, ArrayView<double>, ArrayView<double>, int, ArrayView<int>>>(
+                archiveCapacity, nameof(BookkeepingKernels.CopyToArchive));
+        }
+
+        if (plan.Adapts)
+        {
+            _sumSuccesses = Load<Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
+                chunks, nameof(BookkeepingKernels.SumSuccesses));
+            _adapt = Load<Action<AcceleratorStream, Index1D, ParameterRule, int, ArrayView<double>, double, int, MemoryRule, ArrayView<double>, ArrayView<int>, ArrayView<int>>>(
+                1, nameof(BookkeepingKernels.Adapt));
+            if (plan.Rule == ParameterRule.Shade)
+            {
+                _largestWeightsPass = Load<Action<AcceleratorStream, Index1D, ParameterRule, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
+                    chunks, nameof(BookkeepingKernels.LargestWeights));
+            }
+        }
+
+        if (plan.LShade)
+        {
+            _compact = Load<Action<AcceleratorStream, Index1D, PopulationViews, int, StrategyViews, int>>(
+                Math.Max(1, populationSize - 1), nameof(BookkeepingKernels.Compact));
+        }
+
+        if (plan.Stagnation is not null)
+        {
+            _stagnate = Load<Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, ArrayView<double>, double, int, int, ArrayView<int>>>(
+                1, nameof(BookkeepingKernels.Stagnate));
+        }
+    }
+
+    private TDelegate Load<TDelegate>(int extent, string name)
         where TDelegate : Delegate
     {
         var method = typeof(BookkeepingKernels).GetMethod(name, BindingFlags.Public | BindingFlags.Static)!;
-        var kernel = KernelLoader.Load(_accelerator, method);
+        var kernel = KernelLoader.Load(_accelerator, method, extent);
         _kernels.Add(kernel);
         return kernel.CreateLauncherDelegate<TDelegate>();
     }

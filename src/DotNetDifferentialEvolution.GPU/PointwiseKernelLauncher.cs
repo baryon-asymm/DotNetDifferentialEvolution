@@ -54,16 +54,17 @@ internal sealed class PointwiseKernelLauncher<TFunction, TPoint> : KernelLaunche
             _points = new PointwiseViews<TPoint>(results.View, pointCount, forces.View, probabilities.View);
             _noStop = noStop.View;
 
+            var pointExtent = populationSize * pointCount;
             _sample = Load<Action<AcceleratorStream, Index1D, StepParameters, PopulationViews>>(
-                accelerator, nameof(PointwiseKernels.Sample));
+                accelerator, populationSize, nameof(PointwiseKernels.Sample));
             _evaluatePoints = Load<Action<AcceleratorStream, Index1D, TFunction, StepParameters, ArrayView<double>, PointwiseViews<TPoint>, ArrayView<int>>>(
-                accelerator, nameof(PointwiseKernels.EvaluatePoints), typeof(TFunction), typeof(TPoint));
+                accelerator, pointExtent, nameof(PointwiseKernels.EvaluatePoints), typeof(TFunction), typeof(TPoint));
             _combineInitial = Load<Action<AcceleratorStream, Index1D, TFunction, StepParameters, PopulationViews, PointwiseViews<TPoint>>>(
-                accelerator, nameof(PointwiseKernels.CombineInitial), typeof(TFunction), typeof(TPoint));
+                accelerator, populationSize, nameof(PointwiseKernels.CombineInitial), typeof(TFunction), typeof(TPoint));
             _buildTrials = Load<Action<AcceleratorStream, Index1D, StepParameters, PopulationViews, StrategyViews, ArrayView<double>, ArrayView<double>>>(
-                accelerator, nameof(PointwiseKernels.BuildTrials), RuleType(rule));
+                accelerator, populationSize, nameof(PointwiseKernels.BuildTrials), RuleType(rule));
             _select = Load<Action<AcceleratorStream, Index1D, TFunction, StepParameters, PopulationViews, StrategyViews, PointwiseViews<TPoint>>>(
-                accelerator, nameof(PointwiseKernels.Select), typeof(TFunction), typeof(TPoint));
+                accelerator, populationSize, nameof(PointwiseKernels.Select), typeof(TFunction), typeof(TPoint));
         }
         catch
         {
@@ -109,11 +110,11 @@ internal sealed class PointwiseKernelLauncher<TFunction, TPoint> : KernelLaunche
         return buffer;
     }
 
-    private TDelegate Load<TDelegate>(Accelerator accelerator, string name, params Type[] typeArguments)
+    private TDelegate Load<TDelegate>(Accelerator accelerator, int extent, string name, params Type[] typeArguments)
         where TDelegate : Delegate
     {
         var method = typeof(PointwiseKernels).GetMethod(name, BindingFlags.Public | BindingFlags.Static)!;
-        var kernel = KernelLoader.Load(accelerator, typeArguments.Length == 0 ? method : method.MakeGenericMethod(typeArguments));
+        var kernel = KernelLoader.Load(accelerator, typeArguments.Length == 0 ? method : method.MakeGenericMethod(typeArguments), extent);
         _owned.Add(kernel);
         return kernel.CreateLauncherDelegate<TDelegate>();
     }

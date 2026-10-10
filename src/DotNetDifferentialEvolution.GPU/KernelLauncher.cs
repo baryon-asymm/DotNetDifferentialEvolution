@@ -57,15 +57,19 @@ internal sealed class KernelLauncher<TFunction> : KernelLauncher
     /// <param name="accelerator">The accelerator.</param>
     /// <param name="function">The objective, passed to every launch.</param>
     /// <param name="rule">The parameter rule the generation kernel is compiled for.</param>
-    public KernelLauncher(Accelerator accelerator, TFunction function, ParameterRule rule = ParameterRule.Fixed)
+    /// <param name="populationSize">
+    /// <c>N_init</c>, the largest population of the run: the extent both kernels are loaded for. The builder's call site
+    /// is to pass it; until it does, 1 loads them in groups of one warp.
+    /// </param>
+    public KernelLauncher(Accelerator accelerator, TFunction function, ParameterRule rule = ParameterRule.Fixed, int populationSize = 1)
     {
         ArgumentNullException.ThrowIfNull(accelerator);
         _stream = accelerator.DefaultStream;
         _function = function;
-        _initializeKernel = KernelLoader.Load(accelerator, Entry(nameof(GpuKernels.Initialize), typeof(TFunction)));
+        _initializeKernel = KernelLoader.Load(accelerator, Entry(nameof(GpuKernels.Initialize), typeof(TFunction)), populationSize);
         try
         {
-            _generationKernel = KernelLoader.Load(accelerator, Entry(nameof(GpuKernels.Generation), typeof(TFunction), RuleType(rule)));
+            _generationKernel = KernelLoader.Load(accelerator, Entry(nameof(GpuKernels.Generation), typeof(TFunction), RuleType(rule)), populationSize);
             try
             {
                 _initialize = _initializeKernel.CreateLauncherDelegate<Action<AcceleratorStream, Index1D, TFunction, StepParameters, PopulationViews>>();
