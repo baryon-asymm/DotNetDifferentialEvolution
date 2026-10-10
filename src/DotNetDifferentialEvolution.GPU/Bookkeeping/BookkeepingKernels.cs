@@ -7,20 +7,18 @@ namespace DotNetDifferentialEvolution.GPU.Bookkeeping;
 /// <summary>
 /// The passes between two generations, one kernel entry point each. A chunk pass runs one thread per chunk of
 /// individuals in index order, <see cref="ChunkSize"/> for the sums, whose floating-point order is fixed, and
-/// <see cref="WideChunkSize"/> for the passes whose result cannot depend on the chunking; a closing pass runs one thread
-/// over the chunks in chunk order. So every result is fixed by the data alone, whatever the device's scheduling, and no
-/// floating-point value is ever combined by an atomic. Every pass returns at once when the stop word is set (BOOT.md).
+/// <see cref="WideChunkSizeOf"/> for the passes whose result cannot depend on the chunking, which take that size as an
+/// argument; a closing pass runs one thread over the chunks in chunk order. So every result is fixed by the data alone,
+/// whatever the device's scheduling, and no floating-point value is ever combined by an atomic. Every pass returns at once
+/// when the stop word is set (BOOT.md).
 /// </summary>
 internal static class BookkeepingKernels
 {
     /// <summary>The individuals one thread of a summing pass walks, in index order: S7's order.</summary>
     public const int ChunkSize = 1024;
 
-    /// <summary>
-    /// The individuals one thread of a pass walks whose result cannot depend on the chunking (the best index, the improved
-    /// count, the archive placement, the largest weight): few, so that many threads share the work (check A4).
-    /// </summary>
-    public const int WideChunkSize = 32;
+    /// <summary>The smallest wide chunk, and the step it grows in: a warp (check A4).</summary>
+    private const int WideChunkStep = 32;
 
     /// <summary>The stop word's entries: set, the generation that set it, the streak.</summary>
     public const int StopSet = 0;
@@ -39,10 +37,33 @@ internal static class BookkeepingKernels
     /// <returns>⌈N / <see cref="ChunkSize"/>⌉.</returns>
     public static int ChunkCount(int count) => (count + ChunkSize - 1) / ChunkSize;
 
+    /// <summary>
+    /// The individuals one thread of a pass walks whose result cannot depend on the chunking (the best index, the improved
+    /// count, the archive placement, the largest weight), for a run whose initial population is
+    /// <paramref name="populationSize"/>: a pass of c serial steps and a closing pass over N / c partials are shortest
+    /// together at c ≈ √N, so c is the ceiling square root rounded up to a multiple of 32, at least 32 (check A4).
+    /// </summary>
+    /// <param name="populationSize">N_init, at least 1.</param>
+    /// <returns>max(32, 32·⌈⌈√N⌉ / 32⌉).</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="populationSize"/> is below 1.</exception>
+    public static int WideChunkSizeOf(int populationSize)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(populationSize, 1);
+        var root = (long)Math.Sqrt(populationSize);
+        while (root * root < populationSize)
+        {
+            root++;
+        }
+
+        var steps = ((int)root + WideChunkStep - 1) / WideChunkStep;
+        return Math.Max(WideChunkStep, WideChunkStep * steps);
+    }
+
     /// <summary>The number of wide chunks of <paramref name="count"/> individuals.</summary>
     /// <param name="count">N.</param>
-    /// <returns>⌈N / <see cref="WideChunkSize"/>⌉.</returns>
-    public static int WideChunkCount(int count) => (count + WideChunkSize - 1) / WideChunkSize;
+    /// <param name="wideChunkSize">The wide chunk, <see cref="WideChunkSizeOf"/> of the run's initial population.</param>
+    /// <returns>⌈N / <paramref name="wideChunkSize"/>⌉, 0 for no individual.</returns>
+    public static int WideChunkCount(int count, int wideChunkSize) => count <= 0 ? 0 : (count - 1) / wideChunkSize + 1;
 
     /// <summary>Writes <paramref name="value"/> into every entry: a buffer's initial state.</summary>
     /// <param name="index">The entry.</param>
@@ -63,17 +84,18 @@ internal static class BookkeepingKernels
     /// <param name="chunk">The wide chunk.</param>
     /// <param name="fitness">The current fitness values.</param>
     /// <param name="count">N.</param>
+    /// <param name="wideChunkSize">The wide chunk.</param>
     /// <param name="partialIndices">Receives the chunk's best index.</param>
     /// <param name="stop">The stop word.</param>
-    public static void BestOfChunks(Index1D chunk, ArrayView<double> fitness, int count, ArrayView<int> partialIndices, ArrayView<int> stop)
+    public static void BestOfChunks(Index1D chunk, ArrayView<double> fitness, int count, int wideChunkSize, ArrayView<int> partialIndices, ArrayView<int> stop)
     {
         if (stop[StopSet] != 0)
         {
             return;
         }
 
-        var first = chunk * WideChunkSize;
-        var end = Math.Min(first + WideChunkSize, count);
+        var first = chunk * wideChunkSize;
+        var end = EndOf(first, wideChunkSize, count);
         var best = first;
         var bestFitness = fitness[first];
         for (var i = first + 1; i < end; i++)
@@ -217,17 +239,18 @@ internal static class BookkeepingKernels
     /// <param name="chunk">The wide chunk.</param>
     /// <param name="outcomes">The trials' outcomes.</param>
     /// <param name="count">N.</param>
+    /// <param name="wideChunkSize">The wide chunk.</param>
     /// <param name="counts">Receives the wide chunk's count.</param>
     /// <param name="stop">The stop word.</param>
-    public static void CountImproved(Index1D chunk, ArrayView<int> outcomes, int count, ArrayView<int> counts, ArrayView<int> stop)
+    public static void CountImproved(Index1D chunk, ArrayView<int> outcomes, int count, int wideChunkSize, ArrayView<int> counts, ArrayView<int> stop)
     {
         if (stop[StopSet] != 0)
         {
             return;
         }
 
-        var first = chunk * WideChunkSize;
-        var end = Math.Min(first + WideChunkSize, count);
+        var first = chunk * wideChunkSize;
+        var end = EndOf(first, wideChunkSize, count);
         var improved = 0;
         for (var i = first; i < end; i++)
         {
@@ -278,6 +301,7 @@ internal static class BookkeepingKernels
     /// <param name="chunk">The wide chunk.</param>
     /// <param name="outcomes">The trials' outcomes.</param>
     /// <param name="count">N.</param>
+    /// <param name="wideChunkSize">The wide chunk.</param>
     /// <param name="offsets">The number of improved trials before each wide chunk.</param>
     /// <param name="archiveSize">Entry 1: the size before the generation.</param>
     /// <param name="capacity">The capacity; at least 1.</param>
@@ -289,6 +313,7 @@ internal static class BookkeepingKernels
         Index1D chunk,
         ArrayView<int> outcomes,
         int count,
+        int wideChunkSize,
         ArrayView<int> offsets,
         ArrayView<int> archiveSize,
         int capacity,
@@ -302,8 +327,8 @@ internal static class BookkeepingKernels
             return;
         }
 
-        var first = chunk * WideChunkSize;
-        var end = Math.Min(first + WideChunkSize, count);
+        var first = chunk * wideChunkSize;
+        var end = EndOf(first, wideChunkSize, count);
         var fillPosition = archiveSize[1] + offsets[chunk];
         for (var i = first; i < end; i++)
         {
@@ -356,6 +381,7 @@ internal static class BookkeepingKernels
     /// <param name="chunk">The wide chunk.</param>
     /// <param name="rule">SHADE.</param>
     /// <param name="count">N.</param>
+    /// <param name="wideChunkSize">The wide chunk.</param>
     /// <param name="strategy">The trials' outcomes.</param>
     /// <param name="parentFitness">The fitness before the generation.</param>
     /// <param name="trialFitness">The fitness after it, the trial's where it improved.</param>
@@ -364,6 +390,7 @@ internal static class BookkeepingKernels
         Index1D chunk,
         ParameterRule rule,
         int count,
+        int wideChunkSize,
         StrategyViews strategy,
         ArrayView<double> parentFitness,
         ArrayView<double> trialFitness,
@@ -374,8 +401,8 @@ internal static class BookkeepingKernels
             return;
         }
 
-        var first = chunk * WideChunkSize;
-        var end = Math.Min(first + WideChunkSize, count);
+        var first = chunk * wideChunkSize;
+        var end = EndOf(first, wideChunkSize, count);
         var maximum = 0.0;
         for (var i = first; i < end; i++)
         {
@@ -397,6 +424,7 @@ internal static class BookkeepingKernels
     /// <param name="chunk">The chunk.</param>
     /// <param name="rule">JADE or SHADE.</param>
     /// <param name="count">N.</param>
+    /// <param name="wideChunkSize">The wide chunk of <see cref="LargestWeights"/>; read under SHADE only.</param>
     /// <param name="strategy">The trials' F, CR and outcomes.</param>
     /// <param name="parentFitness">The fitness before the generation.</param>
     /// <param name="trialFitness">The fitness after it, the trial's where it improved.</param>
@@ -406,6 +434,7 @@ internal static class BookkeepingKernels
         Index1D chunk,
         ParameterRule rule,
         int count,
+        int wideChunkSize,
         StrategyViews strategy,
         ArrayView<double> parentFitness,
         ArrayView<double> trialFitness,
@@ -421,7 +450,8 @@ internal static class BookkeepingKernels
         if (rule == ParameterRule.Shade)
         {
             var maximum = 0.0;
-            for (var c = 0; c < WideChunkCount(count); c++)
+            var wideChunks = WideChunkCount(count, wideChunkSize);
+            for (var c = 0; c < wideChunks; c++)
             {
                 if (largest[c] > maximum)
                 {
@@ -576,6 +606,9 @@ internal static class BookkeepingKernels
             stop[StopSet] = 1;
         }
     }
+
+    /// <summary>The end of the chunk starting at <paramref name="first"/>, cut to <paramref name="count"/>, without a sum that can wrap.</summary>
+    private static int EndOf(int first, int size, int count) => count - first < size ? count : first + size;
 
     private static void Store(ArrayView<double> partials, int chunk, SuccessSums sums)
     {

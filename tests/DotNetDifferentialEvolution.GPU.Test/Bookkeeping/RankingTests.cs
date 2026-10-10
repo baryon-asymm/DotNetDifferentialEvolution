@@ -10,9 +10,10 @@ namespace DotNetDifferentialEvolution.GPU.Test.Bookkeeping;
 /// <summary>
 /// Bookkeeping/ACCEPTANCE.md of the GPU package, checks S9 and S10, on ILGPU's CPU accelerator.
 /// <list type="bullet">
-/// <item>S9: for 200 random arrays, the bitonic network, and ranking by counting where N ≤ 2 048, each give exactly the
-/// order by (key, index), <see cref="double.NaN"/> as +∞. N: 150 arrays in [1, 2 048], 42 in [2 049, 20 000], and 1, 2,
-/// 2 048, 2 049, 8 192, 8 193, 16 384, 20 000. Values: <see cref="double.NaN"/>, ±∞, ±0 and ties from a small set, mixed with random
+/// <item>S9: for 200 random arrays, the bitonic network, and ranking by counting where N is at most the instance's limit
+/// (2 048 on the CPU accelerator, which is not timed), each give exactly the order by (key, index),
+/// <see cref="double.NaN"/> as +∞. N: 150 arrays in [1, limit], 42 above it up to 20 000, and 1, 2,
+/// 2 048, 2 049, 8 192, 8 193, 16 384, 20 000; a limit forced on the instance decides the ranking too. Values: <see cref="double.NaN"/>, ±∞, ±0 and ties from a small set, mixed with random
 /// ones. Every tenth array has distinct keys and is also held to the CPU package's
 /// <see cref="PopulationSortHelper"/>.</item>
 /// <item>S10: the best-index kernels equal <see cref="BestPick.IndexOf"/> on 200 random arrays, N in [1, 5 000], with ties
@@ -42,14 +43,19 @@ public sealed class RankingTests : IDisposable
         var random = new SeededRandomProvider(CaseSeed);
         using var bookkeeping = Bookkeeping(LargestRanked, SchemeKind.CurrentToPBest, shrinks: true);
         using var fitness = _step.Accelerator.Allocate1D<double>(LargestRanked);
+
+        // The CPU accelerator is not timed (A3): the instance's limit is the untimed one, which the edge sizes straddle.
+        var limit = bookkeeping.RankingLimit;
+        Assert.Equal(RankingCalibration.UntimedLimit, limit);
+        Assert.Empty(bookkeeping.RankingMeasurements);
         var counted = 0;
         for (var array = 0; array < ArrayCount; array++)
         {
             var count = array < EdgeSizes.Length
                 ? EdgeSizes[array]
                 : array < EdgeSizes.Length + 150
-                    ? 1 + random.Next(GenerationBookkeeping.CountingRankLimit)
-                    : GenerationBookkeeping.CountingRankLimit + 1 + random.Next(LargestRanked - GenerationBookkeeping.CountingRankLimit);
+                    ? 1 + random.Next(limit)
+                    : limit + 1 + random.Next(LargestRanked - limit);
             var distinct = array % 10 == 0;
             var values = Values(random, count, distinct);
             fitness.View.SubView(0, count).CopyFromCPU(values);
@@ -57,7 +63,7 @@ public sealed class RankingTests : IDisposable
 
             bookkeeping.RankByBitonicNetwork(fitness.View, count);
             Assert.Equal(expected, Ranking(bookkeeping, count));
-            if (count <= GenerationBookkeeping.CountingRankLimit)
+            if (count <= limit)
             {
                 bookkeeping.RankByCounting(fitness.View, count);
                 Assert.Equal(expected, Ranking(bookkeeping, count));
@@ -74,6 +80,34 @@ public sealed class RankingTests : IDisposable
 
         Assert.True(counted >= 150, $"ranked by counting {counted} times");
     }
+
+    /// <summary>A3: a limit forced on the instance times nothing and decides which ranking runs; both give the order by (key, index).</summary>
+    [Fact]
+    public void AForcedLimitDecidesTheRankingAndTimesNothing()
+    {
+        const int forced = 100;
+        var random = new SeededRandomProvider(CaseSeed + 2);
+        using var bookkeeping = Bookkeeping(1000, SchemeKind.CurrentToPBest, shrinks: true, new BookkeepingTuning(RankingLimit: forced));
+        using var fitness = _step.Accelerator.Allocate1D<double>(1000);
+        Assert.Equal(forced, bookkeeping.RankingLimit);
+        Assert.Empty(bookkeeping.RankingMeasurements);
+
+        foreach (var count in new[] { 1, forced - 1, forced, forced + 1, 500, 1000 })
+        {
+            var values = Values(random, count, distinct: false);
+            fitness.View.SubView(0, count).CopyFromCPU(values);
+            var expected = Enumerable.Range(0, count).OrderBy(i => double.IsNaN(values[i]) ? double.PositiveInfinity : values[i]).ThenBy(i => i).ToArray();
+
+            bookkeeping.Rank(fitness.View, count);
+
+            Assert.Equal(expected, Ranking(bookkeeping, count));
+        }
+    }
+
+    /// <summary>A forced limit below 1 is refused.</summary>
+    [Fact]
+    public void AForcedLimitBelowOneIsRefused() =>
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => Bookkeeping(100, SchemeKind.CurrentToPBest, shrinks: false, new BookkeepingTuning(RankingLimit: 0)));
 
     /// <summary>S10: the best index is <see cref="BestPick.IndexOf"/>'s.</summary>
     [Fact]
@@ -95,8 +129,15 @@ public sealed class RankingTests : IDisposable
 
             if (array % 3 == 0 && count > 96)
             {
-                // The same, for the chunks of 32 the order-independent passes run in.
+                // The same, for chunks of 32, the smallest the order-independent passes run in.
                 values[31] = values[32] = values[95] = -1e300;
+            }
+
+            var wide = bookkeeping.WideChunkSize;
+            if (array % 5 == 0 && count > 3 * wide)
+            {
+                // The same, for the instance's own wide chunk, c(N_init) (A4).
+                values[wide - 1] = values[wide] = values[2 * wide - 1] = -1e300;
             }
 
             fitness.View.SubView(0, count).CopyFromCPU(values);
@@ -132,11 +173,12 @@ public sealed class RankingTests : IDisposable
     }
 
     /// <summary>A bookkeeping for <paramref name="populationSize"/>; L-SHADE's, whose population shrinks, loads both rankings (A10).</summary>
-    private GenerationBookkeeping Bookkeeping(int populationSize, SchemeKind scheme, bool shrinks = false) =>
+    private GenerationBookkeeping Bookkeeping(int populationSize, SchemeKind scheme, bool shrinks = false, BookkeepingTuning? tuning = null) =>
         new(
             _step.Accelerator,
             new BookkeepingPlan(populationSize, 1, scheme, ParameterRule.Fixed, 0, 0, 0.0, shrinks, double.NaN, double.NaN, null),
-            seed: 1);
+            seed: 1,
+            tuning ?? new BookkeepingTuning());
 
     private int[] Ranking(GenerationBookkeeping bookkeeping, int count)
     {

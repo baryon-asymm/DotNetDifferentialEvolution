@@ -28,6 +28,7 @@ math through libdevice, and its math probe.
 | L7 (`Gpu`): a bad libnvvm is named and costs no device memory | `CudaLibDeviceTests.ABadLibraryIsNamedAndNeverReachesTheDevice` | ✅ local |
 | A1, on the CPU accelerator: two `KernelLoader.Load` calls for one kernel method give two `Kernel` objects; disposing the first leaves the second undisposed and launchable (the whole-run half is in [EndToEnd](../EndToEnd/API.md), `SharedKernelTests`) | `KernelLoaderTests.TwoLoadsOfOneMethodAreTwoKernelsDisposedIndependently` | ✅ |
 | A2: `KernelLoader.GroupSize` gives, for warp 32, 70 multiprocessors and a limit of 640, 32 for extents 1 and 1 024, 256 for 16 384, 640 for 44 800 and 10⁶; for warp 64, 12 multiprocessors and a limit of 256, 128 for 1 024; it does not overflow at `int.MaxValue` and refuses an argument below 1 | `KernelLoaderTests` (the theories) | ✅ |
+| A14, on the CPU accelerator: a lease from `OpenForTiming(Backend.Cpu)` measures a non-negative time between two profiling markers around a launched kernel and a synchronisation; a lease from `Open(Backend.Cpu)` has profiling off, and adding a marker throws `NotSupportedException` ("Cannot add profiling marker. Ensure that profiling is enabled from the ContextBuilder.") | `TimingLeaseTests` | ✅ |
 | L9: the WSL resolver failure is recognised by where it was thrown; (`Gpu`) three CUDA optimizers of one process each bind | `IlgpuPinTests.TheResolverFailureIsRecognisedByWhereItWasThrownNotByItsMessage`, `CudaLibDeviceTests.EveryCudaOptimizerOfTheProcessBinds` | ✅ on Windows; not run under WSL |
 
 ## Tests ✅
@@ -120,6 +121,12 @@ public class KernelLoaderTests
     public void TheLargestExtentDoesNotOverflow();
     public void AnArgumentBelowOneIsRefused(int extent, int warpSize, int multiprocessors, int occupancyLimit, string parameter);
     public void TwoLoadsOfOneMethodAreTwoKernelsDisposedIndependently();
+}
+[Trait("Category", "Integration")]
+public class TimingLeaseTests
+{
+    public void ALeaseForTimingMeasuresATimeBetweenTwoMarkers();
+    public void ALeaseFromOpenKeepsProfilingOff();
 }
 public class IlgpuPinTests
 {
