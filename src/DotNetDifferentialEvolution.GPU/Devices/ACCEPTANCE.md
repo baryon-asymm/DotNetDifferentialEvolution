@@ -44,6 +44,8 @@ From the audits of 2026-10-09 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-20
       kernels load for an extent of 1. 2026-10-10, **Gpu** half after `8118d57` (N_init
       wired): P4's monolithic objective at N = 1 024 3.79 and 3.95 ms per generation (two
       runs); red with ILGPU's own group size on CUDA, 27.9 ms. The Gpu category 68/68.
+      `609a233`: `KernelLauncher`'s `populationSize` is required (no interim default of 1);
+      its four construction sites pass N.
 
 ## Timing — check A14, frozen 2026-10-10, before code
 
