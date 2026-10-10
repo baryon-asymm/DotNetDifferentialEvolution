@@ -42,3 +42,14 @@ From the audits of 2026-10-09 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-20
       rerun) without the upper clamp, 2 of 12 (14 304 and 30 678 368 against 640). The **Gpu**
       half waits for the single-kernel launcher to receive N_init (wave C): until then its two
       kernels load for an extent of 1.
+
+## Timing — check A14, frozen 2026-10-10, before code
+
+From [HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10), decision 3.
+
+- [ ] **A14, a lease that measures device time.** On the CPU accelerator (CI):
+      `OpenForTiming(Backend.Cpu)` gives an accelerator whose two profiling markers around a
+      launched kernel and a synchronisation measure a non-negative time; on a lease from
+      `Open(Backend.Cpu)` adding a marker throws ILGPU's exception for profiling disabled.
+      Red: profiling left off in `OpenForTiming` (the first fails). If ILGPU 1.5.3's CPU
+      accelerator does not support markers, the coder stops and reports.

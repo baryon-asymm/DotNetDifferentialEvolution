@@ -87,3 +87,19 @@ checks A1, A2 and A10 are built, above.
 
 - `AcceleratorLease.Dispose` disposes the owned context in a `finally`; when the accelerator's
   `Dispose` throws, that exception propagates after the context is released.
+
+## Timing seam ⏳
+
+Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10), decision 3),
+check A14. For the **Gpu** timing checks only; the package never calls it.
+
+```csharp
+internal static class DeviceSelector
+{
+    internal static AcceleratorLease OpenForTiming(Backend backend); // as Open(backend), profiling on
+}
+```
+
+- The context is configured as `Open(backend)` configures it, plus ILGPU's profiling, so
+  that profiling markers on the accelerator's streams measure device time. A lease from
+  `Open` keeps profiling off.

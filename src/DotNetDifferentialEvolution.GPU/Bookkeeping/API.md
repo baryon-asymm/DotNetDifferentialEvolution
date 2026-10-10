@@ -130,3 +130,48 @@ internal sealed class GenerationBookkeeping : IDisposable
   over N rounded up to a power of two with `InfinityKey` at the end.
 - The control block of the stop rule is the only buffer the host reads during a run:
   every 16 generations and before each observer call.
+
+## Audit fixes, revised ⏳
+
+Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10)), checks A3 ⚠
+and A4 ⚠. Replaces `CountingRankLimit` and the constant `WideChunkSize` above.
+
+```csharp
+internal readonly record struct RankingTimes(double Counting, double Bitonic); // µs at one n
+
+internal static class RankingCalibration     // decision 2 (A3)
+{
+    public const int Floor = 1024;           // N_init ≤ Floor: L = Floor, nothing timed
+    public const int Ceiling = 8192;         // the largest n timed
+    public const int UntimedLimit = 2048;    // L on the CPU accelerator
+    public static int LimitOf(int populationSize, Func<int, RankingTimes> time);
+}
+
+internal static class BookkeepingKernels
+{
+    public static int WideChunkSizeOf(int populationSize); // max(32, 32·⌈⌈√N⌉/32⌉) (A4)
+    // the wide passes take the chunk size as an int argument
+}
+
+internal sealed record BookkeepingTuning(int? RankingLimit = null, int? WideChunkSize = null);
+
+internal sealed class GenerationBookkeeping
+{
+    internal GenerationBookkeeping(Accelerator accelerator, BookkeepingPlan plan, int seed,
+        BookkeepingTuning tuning);           // tests: forces L or c; nothing timed when L is
+    public int RankingLimit { get; }         // L: counting ranks count ≤ L
+    public int WideChunkSize { get; }        // c(N_init), fixed for the run
+}
+```
+
+- `LimitOf` asks `time` at n = 2 048, 4 096, 8 192, each capped at `populationSize`,
+  ascending and distinct; L is the last n at which `Counting ≤ Bitonic`, stopping at the
+  first n at which it is not, and `Floor` when that is the first. `populationSize ≤ Floor`
+  returns `Floor` without asking.
+- The constructor times, on CUDA and OpenCL, when the plan ranks and N_init > `Floor`: after
+  the fills, both rankings over a scratch buffer of N_init zeros (released after), each
+  call followed by a synchronisation, host clock, the median of 3 after 1 warm-up. Both
+  rankings are then loaded (counting for N_init, the network for its sort length) and the
+  sort keys allocated, whatever L comes out. Without timing, loads follow L as they followed
+  the limit: counting when N_init ≤ L or under L-SHADE, the network when N_init > L.
+- Results never depend on L or on c (S9; A4's order-independence); P0's hash does not move.

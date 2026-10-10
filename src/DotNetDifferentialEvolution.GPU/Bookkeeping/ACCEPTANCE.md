@@ -36,6 +36,8 @@ file.
       `PopulationSortHelper`'s order. Red: `NaN` not mapped; ties by the higher index.
       2026-10-05: `GPU.Test/Bookkeeping/RankingTests` (seed 20261010; 6 edge sizes, 150 by
       counting, 44 bitonic only); red with `NaN` not mapped and with ties by the higher index.
+      ⚠ 2026-10-10 (A3): the test's split follows the counting limit (`2aa421c`: 8 edge sizes,
+      150 by counting up to 2 048, 42 bitonic only); the check's words are unchanged.
 - [x] **S10, best index** (device). The best-index kernels equal `BestPick.IndexOf` on
       200 random arrays (N in [1, 5 000], ties across the 1 024-chunk boundary, all
       `NaN`). Red: `<=` for `<`.
@@ -110,16 +112,32 @@ under the rules above.
 - [ ] **A3, ranking by integer keys, and its limit** (PERF-7, PERF-3).
       `FitnessOrder.OrderKey` orders −∞, −`double.MaxValue`, −1, −ε (the smallest
       subnormal), −0, +0, ε, 1, `double.MaxValue`, +∞, NaN non-decreasingly, with −0 = +0 and
-      +∞ = NaN; ranking compares (key, index) as integers; S9 and P0's hash stay green.
-      Counting runs up to N = 2 048, the bitonic network above. **Gpu**, CUDA:
-      `RankByCounting` at N = 2 048 is not slower than `RankByBitonicNetwork` at 2 048
-      (measured 2026-10-09 with integer keys: 263 against 421 µs). Red: −0 and +0 given
-      different keys (CI); the comparison on doubles again (**Gpu**; measured 686 against
-      522 µs).
-- [ ] **A4, order-independent passes in chunks of 32** (PERF-8). The best index, the
-      improved count, the archive placement and the largest weight run over chunks of 32
+      +∞ = NaN; ranking compares (key, index) as integers; S9 and P0's hash stay green. Red:
+      −0 and +0 given different keys (CI; 2026-10-10, the orchestrator: 3 red, among them S9).
+      ⚠ 2026-10-10, the limit reworded ([HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10)):
+      was "counting up to 2 048; **Gpu**: counting at 2 048 not slower than the network; red:
+      doubles again", whose red stayed green after wave A (254 against 418–438 µs). Now:
+      `RankingCalibration.LimitOf(N_init, time)` is the rule of decision 2; CI, with scripted
+      times: N_init ≤ 1 024 → 1 024 and `time` never called; counting faster at 2 048 and
+      4 096, slower at 8 192 → 4 096; slower at 2 048 → 1 024; faster everywhere with
+      N_init = 3 000 → 3 000 (times asked at 2 048 and 3 000 only); faster everywhere with
+      N_init = 20 000 → 8 192. The CPU accelerator's instance has L = 2 048 and times
+      nothing. **Gpu**: an instance with N_init = 8 192 and ranking calibrates L = 4 096 on
+      the RTX 5070 Ti (CUDA) and L = 1 024 on the gfx1036 (OpenCL), this machine's devices.
+      Red: the calibration skipped, L fixed at 2 048 (**Gpu**: both known answers fail).
+- [ ] **A4, order-independent passes in wide chunks** (PERF-8). The best index, the
+      improved count, the archive placement and the largest weight run over wide chunks
       (more partials, the same combine); the best index carries its incumbent's value in a
       register; `SumSuccesses` skips the division when the scale is 1.0 and keeps chunks of
-      1 024. S7, S8, S10, S19 and P0's hash stay green. **Gpu**, CUDA: `FindBest` at
-      N = 1 024 takes at most 25 µs per call (about 105 µs at `c40868e`, measured
-      2026-10-09). Red: chunks of 1 024 again for these passes (**Gpu**).
+      1 024. S7, S8, S10, S19 and P0's hash stay green. ⚠ 2026-10-10, reworded
+      ([HISTORY.md](../HISTORY.md#ranking-calibrated-2026-10-10)): was "chunks of 32; **Gpu**:
+      `FindBest` at 1 024 at most 25 µs per call", host-timed, which regressed at large N and
+      sat at the host's floor. Now: the wide chunk is `c(N_init)` of decision 1; CI known
+      answers `c` = 32 for N_init 1, 1 024; 64 for 1 025; 128 for 16 384; 224 for 46 080;
+      the instance's `WideChunkSize` is fixed at construction (an L-SHADE instance of 1 025
+      keeps 64 when it finds the best of 1 024, and its result is `BestPick`'s).
+      **Gpu**, CUDA, device time (median of 20 after 2 warm-ups, through
+      `DeviceSelector.OpenForTiming`): `FindBest` at N = 1 024 at most 25 µs; at N = 46 080
+      with `c(N)` not slower than with chunks of 1 024 nor than with chunks of 32 (both forced
+      through the test seam, same process); all three printed. Red: chunks of 1 024 again
+      (the 25 µs fails); chunks of 32 for every N (46 080 fails against 1 024).

@@ -19,13 +19,15 @@ generation itself stays in [Kernels](../Kernels/API.md).
   best index, then the stop rule. Before the first generation: the ranking and the best
   index of the initial population, as the CPU builder computes them.
 - **One total order.** Ranking and best index order by (key, index) with `NaN` as +∞:
-  ties go to the lower index. Ranking by counting (N ≤ 8 192) and the bitonic network
-  (above) give the same order (check S9). ⏳ 2026-10-10 (A3): ranking compares integer
-  order keys (`FitnessOrder.OrderKey`, the same order, ±0 equal, NaN as +∞), and counting
-  stops at N = 2 048, where the bitonic network becomes faster (measured).
-- **Passes that cannot depend on their order are wide** ⏳ (2026-10-10, A4): the best index,
-  the improved count, the archive placement and the largest weight run over chunks of 32;
-  the sums (`SumSuccesses`) keep chunks of 1 024, the order S7 holds.
+  ties go to the lower index. Ranking compares integer order keys (`FitnessOrder.OrderKey`,
+  the same order, ±0 equal, NaN as +∞; A3). Ranking by counting (N ≤ the limit) and the
+  bitonic network (above) give the same order (check S9), so the limit changes speed, never
+  a result. ⏳ 2026-10-10 (A3 ⚠): the limit is the instance's, timed on the device in the
+  constructor (HISTORY.md#ranking-calibrated-2026-10-10, decision 2); built: 2 048 fixed.
+- **Passes that cannot depend on their order are wide** (A4): the best index, the improved
+  count, the archive placement and the largest weight run over wide chunks; the sums
+  (`SumSuccesses`) keep chunks of 1 024, the order S7 holds. ⏳ 2026-10-10 (A4 ⚠): the wide
+  chunk is `max(32, 32·⌈⌈√N_init⌉/32⌉)`, fixed for the run; built: 32.
 - **Deterministic sums.** Every sum runs in index order within chunks of 1 024 and over
   the chunks in chunk order; no floating-point atomic anywhere. For N ≤ 1 024 that is
   the CPU package's order bit for bit (S7).

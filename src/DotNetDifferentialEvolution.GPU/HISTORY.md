@@ -2,6 +2,59 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="ranking-calibrated-2026-10-10"></a>
+## 2026-10-10 — wave B measured: the ranking limit calibrated, the wide chunk √N
+
+Wave B (A3, A4; `2aa421c`..`aa122ed`) was accepted in CI and measured on both of this
+machine's devices by the orchestrator, `BookkeepingTimingTests`: median of 20 host-timed calls,
+each with a synchronisation, after 2 warm-ups, µs; one run per size unless a range is given.
+
+| | RTX 5070 Ti, CUDA | gfx1036, OpenCL |
+|---|---|---|
+| ranking at 2 048, counting / bitonic | 218 / 455–466 (2 runs) | 468 / 228 |
+| ranking at 4 096, counting / bitonic | 405 / 514 | 1 527 / 377 |
+| ranking at 8 192, counting / bitonic | 805 / 551 | — |
+| ranking at 1 024 / 512, counting / bitonic | — | 171 / 185; 131 / 165 |
+| counting at 2 048 on doubles (A3's red) | 253–255, bitonic 418–438 (3 runs) | — |
+| `FindBest`, chunks of 32: N 1 024; 16 384; 46 080 | 21.5–42.0 (8 runs); 116; 299–313 | 63–92; 140–145; 359–370 |
+| `FindBest`, chunks of 1 024 (A4's red) | 109.5–109.6; 125–126; 144 (4 runs) | 144–329; 170–187; 226–250 (2 runs) |
+
+What it showed:
+
+- **A3's Gpu red no longer reddens.** Its basis (686 against 522 µs) was measured before wave
+  A's group sizes; with them, doubles at 2 048 still beat the network. Integer keys stay (the
+  CI known answers; 218 against 254 µs on the RTX).
+- **The crossover of counting and the network is the device's**: between 4 096 and 8 192 on
+  the RTX, between 1 024 and 2 048 on the gfx1036. No fixed limit suits both: 4 096 makes the
+  gfx1036 4× slower there, 1 024 makes the RTX up to 2× slower between 1 024 and 5 000.
+- **Chunks of 32 regress at large N**: the closing pass is one thread over N/32 partials
+  (at 46 080 the RTX takes 299–313 µs against 144 with chunks of 1 024; the gfx1036 the
+  same). A pass of c serial steps and one of N/c are shortest together at c ≈ √N, on any
+  device.
+- **A4's 25 µs is at the floor of a host-timed call** (two launches and a synchronisation):
+  4 of 8 runs above it on the RTX, while the red is a steady 109.5.
+
+The owner, 2026-10-10, choosing among the options put to them: the chunk ≈ √N ("Кусок ≈ √N");
+device-side time for the timing checks ("Время на GPU"); the ranking limit calibrated per
+device ("Калибровка"), after asking whether the answers were the card's or universal.
+
+**Decisions** (A3 and A4 reworded ⚠ in `Bookkeeping/ACCEPTANCE.md`; A14 added to
+`Devices/ACCEPTANCE.md`):
+
+1. The wide chunk is `c(N_init) = max(32, 32·⌈⌈√N_init⌉ / 32⌉)`, ⌈√·⌉ the integer ceiling
+   square root, fixed for the run (L-SHADE's N only falls, so ⌈N / c⌉ never outgrows the
+   partial buffers). The kernels take it as an argument. Results cannot depend on it (A4).
+2. The ranking limit L is the instance's. With ranking, on CUDA and OpenCL, for
+   1 024 < N_init: both rankings are loaded and timed in the constructor at
+   n = 2 048, 4 096, 8 192, each capped at N_init, ascending (host clock, median of 3 after 1
+   warm-up, each with a synchronisation, over a scratch buffer of zeros); L is the largest n
+   at which counting is not slower, before the first n at which it is, and 1 024 when it is
+   slower at the first. N_init ≤ 1 024: L = 1 024, nothing timed. The CPU accelerator is not
+   timed (the CI's; its time is the host's thread pool): L = 2 048, as CI has run since wave B.
+   The order is the same whichever ranks (S9), so the timing changes speed, never a result.
+3. Timing checks read device time (ILGPU profiling markers) from a context opened with
+   profiling, through an internal `DeviceSelector.OpenForTiming`; the package never profiles.
+
 <a id="audit-fixes-decided-2026-10-10"></a>
 ## 2026-10-10 — the two audits of 1.1.0, and every fix in 1.1.0
 

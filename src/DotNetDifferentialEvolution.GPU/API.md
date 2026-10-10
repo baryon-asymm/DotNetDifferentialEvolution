@@ -276,6 +276,11 @@ Designed 2026-10-10 ([HISTORY.md](HISTORY.md#audit-fixes-decided-2026-10-10)), c
   `ArgumentOutOfRangeException` from `WithPopulationSize`; N·D or N·P above the limits when
   `Build` runs (a stage reused after `WithBounds`) → `InvalidOperationException` from
   `Build`; JADE, SHADE or L-SHADE with N above 2³⁰ → `InvalidOperationException` from `Build`.
+- **`Build` times the ranking once** (A3 ⚠, 2026-10-10): on CUDA and OpenCL, a
+  configuration that ranks (JADE, SHADE, L-SHADE) with N above 1 024 times both rankings
+  at up to three sizes in `Build`, a few milliseconds (about 12 ms on the RTX 5070 Ti at
+  N ≥ 8 192, estimated from the measured per-call times), and ranks by the faster below the
+  size where counting stops being faster. Which ranking runs never changes a result.
 - **Side effects** (A10, A13, DOC-2). `Build` compiles every kernel the configuration uses;
   `RunAsync` compiles none. A pointwise run allocates `N·P` point results and `2·N`
   doubles besides the population. With a stagnation limit the control block is copied
