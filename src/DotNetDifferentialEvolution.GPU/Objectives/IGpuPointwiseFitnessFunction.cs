@@ -8,7 +8,9 @@ namespace DotNetDifferentialEvolution.GPU.Objectives;
 /// <remarks>
 /// <para>
 /// A pointwise objective whose <see cref="EvaluatePoint"/> and <see cref="Combine"/> perform the arithmetic of an
-/// <see cref="IGpuFitnessFunction"/>, operation for operation and in the same order, gives the same run bit for bit.
+/// <see cref="IGpuFitnessFunction"/>, operation for operation and in the same order, gives the same run bit for bit on the
+/// CPU accelerator. On a GPU the last bits may differ: the device compiler may fuse a multiply and an add of the monolithic
+/// form into one operation, which the pointwise form, storing the product as a point result, cannot.
 /// </para>
 /// <para>
 /// Data, body and visibility are those of <see cref="IGpuFitnessFunction"/>: value types and ILGPU <c>ArrayView</c>s as
