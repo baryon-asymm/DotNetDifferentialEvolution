@@ -148,13 +148,19 @@ A seam a check needs is internal to the assembly and named in its test node's `A
 - [ ] **A11, the thread's binding restored** (MEM-5). After `Build` and `Dispose` on one
       thread (`OnDevice(Cpu)`), that thread's `Accelerator.Current` is what it was before
       `Build` (none in the test). Red: the binding left in place.
-- [ ] **A12, the CI filter opens no device** (TEST-1). On the owner's machine (CUDA and
+- [x] **A12, the CI filter opens no device** (TEST-1). On the owner's machine (CUDA and
       OpenCL present) a run of `Category!=Gpu&Category!=Slow` over the solution shows no
       test process in `nvidia-smi --query-compute-apps`, sampled every 0.2 s through the
       run; tests that select a device run on the CPU accelerator or carry `Category=Gpu`
       (the README's quick start runs verbatim under **Gpu**, and on `GpuDevice.Cpu` in CI).
       **Gpu**, run by hand. Red: `DocumentedExampleTests` tagged `Integration` again (an
       N = 10 000 run on CUDA, 2026-10-09).
+      2026-10-10, local, RTX 5070 Ti: at `3d798c0` the filter over the solution (246, 38, 72,
+      338 green, 43 s, 122 samples of `nvidia-smi --query-compute-apps`) brought up no
+      compute process; with the red applied, `testhost.exe` of GPU.Test appeared. D1's
+      no-GPU cases run on injected absence (`DeviceSelector.Open(…, isPresent)`,
+      `GpuBuilder.WithDevicePresence`), the device branches under **Gpu** (61 of 61 on the
+      device). OpenCL is held by the code only (no device-side measure).
 - [ ] **A13, the stop word without a synchronisation** (PERF-5). With a stagnation limit,
       the control block is copied to page-locked host memory every 16 generations without
       synchronising the accelerator, and the copy is read at the next interval; only the
