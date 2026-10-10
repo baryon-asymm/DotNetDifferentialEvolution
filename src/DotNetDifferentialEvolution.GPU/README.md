@@ -188,7 +188,8 @@ using var optimizer = GpuDifferentialEvolutionBuilder
   once per observer call if you register one with `WithPopulationUpdateHandler(handler,
   everyNGenerations)`.
 - **Reproducible:** the same seed on the same device, with the same package and ILGPU
-  versions, gives a bit-identical result. The random numbers (Philox4x32-10, a
+  versions, gives a bit-identical result; on the CPU accelerator, also on the same operating
+  system, whose math library .NET calls. The random numbers (Philox4x32-10, a
   counter-based generator) are identical on every backend, but results across backends
   may differ, because floating-point code generation is the backend's. 1.1.0 reproduces
   1.0.1's seeded runs bit for bit: measured 2026-10-10 on 48 runs (six schemes, two

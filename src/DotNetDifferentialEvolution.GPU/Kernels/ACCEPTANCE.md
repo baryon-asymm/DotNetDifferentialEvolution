@@ -20,6 +20,14 @@ unless marked **Gpu**). P2 holds the package root's builder, whose file is full.
       2026-10-09, local, Release: `EndToEnd/SingleKernelPathTests`, hash `CF28D8AE…ECF91`
       measured at the test-only commit 0d26bc8, green there, after the extraction and at
       a5bbd8d; red under the named mutation (orchestrator's rerun).
+      ⚠ 2026-10-11, one hash per operating system: the CPU accelerator runs .NET's `Math`,
+      which calls the platform's C library, so the adaptive schemes' draws (`Log`, `Exp`,
+      `Tan`) differ in their last bits between Windows and Linux. PR #21's CI (Linux) went
+      red on P0 alone, and so did a Linux run (WSL Ubuntu 24.04, glibc; .NET runtime 10.0.12
+      by roll-forward). The Windows hash stays `CF28D8AE…ECF91`. The Linux hash,
+      `2689C63F…0619F`, was measured on Linux at the same test-only commit 0d26bc8, before
+      the refactoring, and is equal at `5f427a7`. Any other system fails, naming itself; it
+      is not skipped. The red is unchanged.
 - [x] **P1, the same run as a monolithic objective.** A pointwise objective and its
       monolithic twin, the same arithmetic in the same order, give the same run for each
       of the nine configurations: the best genes, the fitness, the generations, the
