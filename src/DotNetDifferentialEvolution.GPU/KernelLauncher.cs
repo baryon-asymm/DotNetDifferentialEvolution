@@ -4,6 +4,7 @@ using DotNetDifferentialEvolution.GPU.Kernels;
 using DotNetDifferentialEvolution.GPU.Objectives;
 using ILGPU;
 using ILGPU.Runtime;
+using ILGPU.Util;
 
 namespace DotNetDifferentialEvolution.GPU;
 
@@ -21,7 +22,11 @@ internal abstract class KernelLauncher : IDisposable
     /// <param name="strategy">The device state of the scheme and the parameter rule.</param>
     public abstract void Generation(StepParameters parameters, PopulationViews views, StrategyViews strategy);
 
-    /// <summary>Releases the kernels and any buffers the launcher owns.</summary>
+    /// <summary>Gets the kernels and buffers the launcher allocated: for the tests of check A7, which read their <c>IsDisposed</c>.</summary>
+    internal abstract IReadOnlyList<DisposeBase> Allocated { get; }
+
+    /// <summary>Releases the kernels and any buffers the launcher owns, whatever one release throws.</summary>
+    /// <exception cref="AggregateException">One or more releases failed; every other release has run.</exception>
     public abstract void Dispose();
 
     /// <summary>The type of the parameter rule a generation or build kernel is compiled for.</summary>
@@ -75,15 +80,36 @@ internal sealed class KernelLauncher<TFunction> : KernelLauncher
                 _initialize = _initializeKernel.CreateLauncherDelegate<Action<AcceleratorStream, Index1D, TFunction, StepParameters, PopulationViews>>();
                 _generation = _generationKernel.CreateLauncherDelegate<Action<AcceleratorStream, Index1D, TFunction, StepParameters, PopulationViews, StrategyViews>>();
             }
-            catch
+            catch (Exception original)
             {
-                _generationKernel.Dispose();
+                // A release that fails here must not replace the exception that made it necessary (ACCEPTANCE.md, A6).
+                var failures = new List<Exception>();
+                try
+                {
+                    _generationKernel.Dispose();
+                }
+                catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+                {
+                    // Collected by the filter.
+                }
+
+                ReleaseFailures.Attach(original, failures);
                 throw;
             }
         }
-        catch
+        catch (Exception original)
         {
-            _initializeKernel.Dispose();
+            var failures = new List<Exception>();
+            try
+            {
+                _initializeKernel.Dispose();
+            }
+            catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+            {
+                // Collected by the filter.
+            }
+
+            ReleaseFailures.Attach(original, failures);
             throw;
         }
     }
@@ -99,9 +125,30 @@ internal sealed class KernelLauncher<TFunction> : KernelLauncher
     /// <inheritdoc />
     public override void Dispose()
     {
-        _initializeKernel.Dispose();
-        _generationKernel.Dispose();
+        var failures = new List<Exception>();
+        try
+        {
+            _initializeKernel.Dispose();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter; the generation kernel is released all the same.
+        }
+
+        try
+        {
+            _generationKernel.Dispose();
+        }
+        catch (Exception failure) when (ReleaseFailures.Collect(failure, failures))
+        {
+            // Collected by the filter.
+        }
+
+        ReleaseFailures.ThrowIfAny(failures);
     }
+
+    /// <inheritdoc />
+    internal override IReadOnlyList<DisposeBase> Allocated => [_initializeKernel, _generationKernel];
 
     private static MethodInfo Entry(string name, params Type[] typeArguments) =>
         typeof(GpuKernels).GetMethod(name, BindingFlags.Public | BindingFlags.Static)!.MakeGenericMethod(typeArguments);

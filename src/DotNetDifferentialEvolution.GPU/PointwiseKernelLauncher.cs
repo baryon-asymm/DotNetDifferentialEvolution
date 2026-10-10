@@ -4,6 +4,7 @@ using DotNetDifferentialEvolution.GPU.Kernels;
 using DotNetDifferentialEvolution.GPU.Objectives;
 using ILGPU;
 using ILGPU.Runtime;
+using ILGPU.Util;
 
 namespace DotNetDifferentialEvolution.GPU;
 
@@ -66,9 +67,10 @@ internal sealed class PointwiseKernelLauncher<TFunction, TPoint> : KernelLaunche
             _select = Load<Action<AcceleratorStream, Index1D, TFunction, StepParameters, PopulationViews, StrategyViews, PointwiseViews<TPoint>>>(
                 accelerator, populationSize, nameof(PointwiseKernels.Select), typeof(TFunction), typeof(TPoint));
         }
-        catch
+        catch (Exception original)
         {
-            Dispose();
+            // A release that fails here must not replace the exception that made it necessary (ACCEPTANCE.md, A6).
+            ReleaseFailures.Attach(original, ReleaseOwned());
             throw;
         }
     }
@@ -92,14 +94,17 @@ internal sealed class PointwiseKernelLauncher<TFunction, TPoint> : KernelLaunche
     }
 
     /// <inheritdoc />
-    public override void Dispose()
-    {
-        foreach (var owned in _owned)
-        {
-            owned.Dispose();
-        }
+    public override void Dispose() => ReleaseFailures.ThrowIfAny(ReleaseOwned());
 
+    /// <inheritdoc />
+    internal override IReadOnlyList<DisposeBase> Allocated => [.. _owned.OfType<DisposeBase>()];
+
+    private List<Exception> ReleaseOwned()
+    {
+        var failures = new List<Exception>();
+        ReleaseFailures.Run(_owned, failures);
         _owned.Clear();
+        return failures;
     }
 
     private MemoryBuffer1D<T, Stride1D.Dense> Allocate<T>(Accelerator accelerator, long length)
