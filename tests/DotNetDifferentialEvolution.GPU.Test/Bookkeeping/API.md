@@ -12,6 +12,7 @@ Nothing outward. What this node proves about the GPU package's work between gene
 | L-SHADE's sizes are the known answers and the CPU package's; the reduction keeps the ranking's first N (S11) | `LShadeReductionTests` | ✅ |
 | The stop rule is the CPU package's; a run stops where it says, whatever the read interval (S12) | `StagnationTests` | ✅ |
 | `OrderKey` orders −∞, −`double.MaxValue`, −1, −ε, −0, +0, ε, 1, `double.MaxValue`, +∞, NaN non-decreasingly with −0 = +0 and +∞ = NaN, as `KeyOf` orders any two doubles; `Precedes` is (key, index) (A3, CI) | `FitnessOrderTests` | ✅ |
+| `Gpu`, CUDA: ranking by counting at N = 2 048 is not slower than the bitonic network at 2 048 (A3); the best index at N = 1 024 takes at most 25 µs per call (A4); medians of 20 calls after 2 warm-ups, printed | `BookkeepingTimingTests` | ⏳ the orchestrator's run |
 
 ## Tests ✅
 
@@ -22,11 +23,14 @@ Nothing outward. What this node proves about the GPU package's work between gene
 [Trait("Category", "Integration")] public class LShadeReductionTests;
 [Trait("Category", "Integration")] public class StagnationTests;
 [Trait("Category", "Unit")] public class FitnessOrderTests;
+[Trait("Category", "Gpu")] public class BookkeepingTimingTests;
 ```
 
 `RankingTests` builds its bookkeeping with an L-SHADE-shaped plan, which loads both rankings, since
 the plan decides which kernels are loaded (A10); its arrays straddle the counting limit of 2 048
-and its best-index ties straddle the chunk boundaries of 32 and of 1 024.
+and its best-index ties straddle the chunk boundaries of 32 and of 1 024. `BookkeepingTimingTests`
+opens CUDA through `DeviceSelector` and builds a plan for twice the limit, so that both rankings
+are loaded.
 
 Helpers, internal to the node: `CpuGeneration` (the CPU contexts, records and a scripted
 provider), `HostArchive` (the archive's rule on the host).
