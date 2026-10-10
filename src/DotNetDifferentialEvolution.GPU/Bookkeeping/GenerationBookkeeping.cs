@@ -4,6 +4,7 @@ using DotNetDifferentialEvolution.GPU.Devices;
 using DotNetDifferentialEvolution.GPU.Kernels;
 using ILGPU;
 using ILGPU.Runtime;
+using ILGPU.Util;
 
 namespace DotNetDifferentialEvolution.GPU.Bookkeeping;
 
@@ -138,9 +139,10 @@ internal sealed class GenerationBookkeeping : IDisposable
                 RankingLimit = CalibrateRankingLimit();
             }
         }
-        catch
+        catch (Exception original)
         {
-            Dispose();
+            // A release that fails here must not replace the exception that made it necessary (ACCEPTANCE.md, A6).
+            ReleaseFailures.Attach(original, ReleaseOwned());
             throw;
         }
     }
@@ -231,22 +233,12 @@ internal sealed class GenerationBookkeeping : IDisposable
         }
     }
 
-    /// <summary>Frees the buffers and the kernels.</summary>
-    public void Dispose()
-    {
-        foreach (var kernel in _kernels)
-        {
-            kernel.Dispose();
-        }
+    /// <summary>Gets the kernels and buffers allocated so far: for the tests of check A7, which read their <c>IsDisposed</c>.</summary>
+    internal IReadOnlyList<DisposeBase> Allocated => [.. _kernels, .. _buffers];
 
-        foreach (var buffer in _buffers)
-        {
-            buffer.Dispose();
-        }
-
-        _kernels.Clear();
-        _buffers.Clear();
-    }
+    /// <summary>Frees the kernels and the buffers, each release in its own <c>try</c>.</summary>
+    /// <exception cref="AggregateException">One or more releases failed; every other release has run.</exception>
+    public void Dispose() => ReleaseFailures.ThrowIfAny(ReleaseOwned());
 
     /// <summary>The length the bitonic network sorts for <paramref name="populationSize"/>: the next power of two.</summary>
     /// <param name="populationSize">N.</param>
@@ -379,6 +371,16 @@ internal sealed class GenerationBookkeeping : IDisposable
 
     private void FillDoubles(ArrayView<double> target, double value) =>
         Required(_fillDoubles)(_stream, target.IntLength, target, value);
+
+    private List<Exception> ReleaseOwned()
+    {
+        var failures = new List<Exception>();
+        ReleaseFailures.Run(_kernels, failures);
+        ReleaseFailures.Run(_buffers, failures);
+        _kernels.Clear();
+        _buffers.Clear();
+        return failures;
+    }
 
     private ArrayView<int> Ints(long length)
     {

@@ -20,6 +20,16 @@ internal sealed class AcceleratorLease : IDisposable
     public void Dispose();
 }
 
+internal static class ReleaseFailures   // in AcceleratorLease.cs: shared by every owner of device objects
+{
+    public const string DataKey = "DotNetDifferentialEvolution.GPU.ReleaseFailures";
+    public static void Attempt(Action release, List<Exception> failures);
+    public static void Run(IEnumerable<IDisposable> items, List<Exception> failures);
+    public static void ThrowIfAny(IReadOnlyCollection<Exception> failures);
+    public static void Attach(Exception original, IReadOnlyCollection<Exception> failures);
+    public static bool Collect(Exception failure, List<Exception> failures);
+}
+
 internal static class DeviceSelector
 {
     public static AcceleratorLease Open(Backend? requested);
@@ -80,13 +90,15 @@ internal static class MathProbe
 - `Probe`: thread i writes `Exp(x)`, `Log(x)`, `Pow(x, 1.37)`, `Sqrt(x)` of input i to
   outputs `4i … 4i+3` (after APT's `src/Execution/MathProbe.cs`).
 
-## Audit fixes ⏳
-
-Designed 2026-10-10 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-2026-10-10)), check A6;
-checks A1, A2 and A10 are built, above.
-
-- `AcceleratorLease.Dispose` disposes the owned context in a `finally`; when the accelerator's
-  `Dispose` throws, that exception propagates after the context is released.
+- `AcceleratorLease.Dispose` disposes the owned context in a `finally`: when the accelerator's
+  `Dispose` throws, that exception propagates after the context is released (check A6, built).
+- `ReleaseFailures` is how the package releases device objects (check A6): `Attempt` runs a
+  release and keeps its failure instead of propagating it; `Run` does so for every item in turn;
+  `ThrowIfAny` throws the collected failures as one flattened `AggregateException`; `Attach`
+  records them on an exception that is already propagating, under `DataKey`, merging with what
+  an inner owner attached; `Collect` is the exception filter that does the keeping (the catch
+  has to take every exception type, so it is a filter, which the analyzers accept). The
+  optimizer, both launchers and the bookkeeping release through it.
 
 ## Timing seam ✅
 

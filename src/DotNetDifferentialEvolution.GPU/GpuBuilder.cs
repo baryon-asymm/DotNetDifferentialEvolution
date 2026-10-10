@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using DotNetDifferentialEvolution.GPU.Devices;
 using DotNetDifferentialEvolution.GPU.Devices.LibDevice;
@@ -48,6 +49,7 @@ internal sealed class GpuBuilder<TFunction>(
     private int _everyNGenerations = 1;
     private int _stopReadInterval = RunSettings.DefaultStopReadInterval;
     private Func<Backend, bool>? _isPresent;
+    private Func<Accelerator, IDisposable>? _plantedRelease;
 
     /// <inheritdoc />
     public IGpuPopulationSizeRequired<TFunction> WithBounds(ReadOnlyMemory<double> lowerBound, ReadOnlyMemory<double> upperBound)
@@ -281,10 +283,17 @@ internal sealed class GpuBuilder<TFunction>(
         var populationSize = _populationSize;
         KernelLauncher Compile(Accelerator accelerator) => launcherFor(accelerator, function, strategy.Rule, populationSize);
 
-        // The lease goes straight into the constructor, which owns it from then on.
-        return _accelerator is { } callersAccelerator
-            ? new GpuDifferentialEvolution(AcceleratorLease.Borrowed(callersAccelerator), settings, Compile)
-            : new GpuDifferentialEvolution(DeviceSelector.Open(BackendOf(_device), LibDeviceLocator.Locate, _isPresent), settings, Compile);
+        // The lease goes straight into the constructor, which owns it from then on. ILGPU binds every accelerator it creates, and
+        // the binding of a thread can be given back only by disposing the accelerator, so the device is opened on a thread of
+        // its own: the caller's thread keeps the binding it had (ACCEPTANCE.md, A11).
+        var callersAccelerator = _accelerator;
+        var backend = BackendOf(_device);
+        var isPresent = _isPresent;
+        var plantedRelease = _plantedRelease;
+        return OnAThreadOfItsOwn(
+            () => callersAccelerator is not null
+                ? new GpuDifferentialEvolution(AcceleratorLease.Borrowed(callersAccelerator), settings, Compile, plantedRelease)
+                : new GpuDifferentialEvolution(DeviceSelector.Open(backend, LibDeviceLocator.Locate, isPresent), settings, Compile, plantedRelease));
     }
 
     /// <summary>
@@ -321,6 +330,51 @@ internal sealed class GpuBuilder<TFunction>(
         ArgumentNullException.ThrowIfNull(isPresent);
         _isPresent = isPresent;
         return this;
+    }
+
+    /// <summary>
+    /// Makes the optimizer, as <see cref="Build"/> does, add to its own releases the one <paramref name="plant"/> creates on its
+    /// accelerator, first of them all: for the tests of check A6, whose subject is a release that throws (ACCEPTANCE.md, A6).
+    /// </summary>
+    /// <param name="plant">Creates the release on the accelerator; its disposal is what throws.</param>
+    /// <returns>This builder.</returns>
+    internal GpuBuilder<TFunction> WithPlantedRelease(Func<Accelerator, IDisposable> plant)
+    {
+        ArgumentNullException.ThrowIfNull(plant);
+        _plantedRelease = plant;
+        return this;
+    }
+
+    /// <summary>Runs <paramref name="build"/> on a new thread and waits for it; its exception is rethrown unchanged, with its stack.</summary>
+    private static GpuDifferentialEvolution OnAThreadOfItsOwn(Func<GpuDifferentialEvolution> build)
+    {
+        GpuDifferentialEvolution? built = null;
+        ExceptionDispatchInfo? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                built = build();
+            }
+            catch (Exception exception) when (Capture(exception, out failure))
+            {
+                // Captured by the filter, to be rethrown on the caller's thread.
+            }
+        })
+        {
+            Name = nameof(GpuDifferentialEvolution) + " build",
+            IsBackground = true,
+        };
+        thread.Start();
+        thread.Join();
+        failure?.Throw();
+        return built!;
+    }
+
+    private static bool Capture(Exception exception, out ExceptionDispatchInfo captured)
+    {
+        captured = ExceptionDispatchInfo.Capture(exception);
+        return true;
     }
 
     private static void RequireMutationForce(double mutationForce, string name)
