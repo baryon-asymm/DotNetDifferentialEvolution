@@ -111,3 +111,37 @@ internal sealed class ThrowingObserver(Exception failure, int throwAtGeneration)
         }
     }
 }
+
+/// <summary>
+/// Disposes the optimizer it is given at one generation, from the run's thread, and keeps what the call threw. When
+/// <paramref name="holdUntil"/> is given, it then waits for it, so that the run stays inside the observer after the call.
+/// </summary>
+/// <param name="disposeAtGeneration">The generation to dispose at.</param>
+/// <param name="holdUntil">Opened by the test to let the observer return, or <see langword="null"/> to return at once.</param>
+internal sealed class DisposingObserver(int disposeAtGeneration, ManualResetEventSlim? holdUntil = null) : IGpuPopulationUpdatedHandler
+{
+    /// <summary>Gets or sets the optimizer to dispose.</summary>
+    public GpuDifferentialEvolution? Optimizer { get; set; }
+
+    /// <summary>Gets what <c>Dispose</c> threw on the run's thread, or <see langword="null"/>.</summary>
+    public Exception? DisposeFailure { get; private set; }
+
+    /// <summary>Gets a value indicating whether the hold's hang guard expired before the test opened it.</summary>
+    public bool HoldTimedOut { get; private set; }
+
+    /// <inheritdoc />
+    public void Handle(GpuPopulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Generation != disposeAtGeneration)
+        {
+            return;
+        }
+
+        DisposeFailure = Record.Exception(Optimizer!.Dispose);
+        if (holdUntil is not null)
+        {
+            HoldTimedOut = !holdUntil.Wait(HangGuard.Limit);
+        }
+    }
+}
