@@ -19,13 +19,13 @@ transcendental functions against `System.Math`.
   context. Held by check 7b.
 - **Every kernel of the package is loaded through `KernelLoader`**: on CUDA compiled,
   completed by the post-link and loaded; elsewhere compiled and loaded the same way, never
-  through ILGPU's kernel cache, which hands two loads of one method the same `Kernel` ⏳
-  (2026-10-10, A1; until then: "elsewhere loaded as ILGPU loads it"). Held by checks D2,
-  L5 and A1.
-- **A launch is spread over the device** ⏳ (2026-10-10, A2): on CUDA and OpenCL a kernel is
+  through ILGPU's kernel cache, which hands two loads of one method the same `Kernel`
+  (2026-10-10, A1; was: "elsewhere loaded as ILGPU loads it"). Held by checks D2, L5 and
+  A1.
+- **A launch is spread over the device** (2026-10-10, A2): on CUDA and OpenCL a kernel is
   loaded with the group size `GroupSize` gives for the largest extent it is launched with
   in the run; the CPU accelerator keeps ILGPU's grouping.
-- **A lease's release always reaches its context** ⏳ (2026-10-10, A6): the owned context is
+- **A lease's release always reaches its context** (2026-10-10, A6): the owned context is
   disposed in a `finally` after the accelerator, whose `Dispose` ILGPU 1.5.3 can throw.
 - **CUDA counts as opened only after a kernel has loaded on it**: the math probe, through
   `KernelLoader`, released at once. Held by check L5.

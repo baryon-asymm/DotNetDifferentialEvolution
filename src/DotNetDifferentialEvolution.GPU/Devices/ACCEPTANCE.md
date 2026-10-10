@@ -29,7 +29,7 @@ From the audits of 2026-10-09 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-20
       Reds (orchestrator's reruns): the cache branch restored — two loads return one object
       (CI); on OpenCL the second optimizer's run throws `CLException`. `KernelLoader` compiles
       through `Accelerator.CompileKernel` on every backend.
-- [ ] **A2, the launch is spread over the device** (PERF-1). `KernelLoader.GroupSize` gives,
+- [x] **A2, the launch is spread over the device** (PERF-1). `KernelLoader.GroupSize` gives,
       for warp 32, 70 multiprocessors and a limit of 640: extent 1 → 32, 1 024 → 32,
       16 384 → 256, 44 800 → 640, 10⁶ → 640; for warp 64, 12 multiprocessors and a limit of
       256: 1 024 → 128. Every kernel is loaded for the largest extent it is launched with in
@@ -41,7 +41,9 @@ From the audits of 2026-10-09 ([HISTORY.md](../HISTORY.md#audit-fixes-decided-20
       2026-10-10, CI half only: `KernelLoaderTests`, the known answers green; red (orchestrator's
       rerun) without the upper clamp, 2 of 12 (14 304 and 30 678 368 against 640). The **Gpu**
       half waits for the single-kernel launcher to receive N_init (wave C): until then its two
-      kernels load for an extent of 1.
+      kernels load for an extent of 1. 2026-10-10, **Gpu** half after `8118d57` (N_init
+      wired): P4's monolithic objective at N = 1 024 3.79 and 3.95 ms per generation (two
+      runs); red with ILGPU's own group size on CUDA, 27.9 ms. The Gpu category 68/68.
 
 ## Timing — check A14, frozen 2026-10-10, before code
 

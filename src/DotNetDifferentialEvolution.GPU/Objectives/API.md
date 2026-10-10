@@ -82,7 +82,7 @@ public readonly struct PointView<TPoint> : IEquatable<PointView<TPoint>> where T
 - **`EvaluatePoint`** is called once per individual and point, each call in its own GPU
   thread, in no particular order. `genes` is the individual's genes and
   `0 ≤ point < P`. It returns the point's result: an unmanaged struct (a value; several
-  values; a value and a flag). ⏳ 2026-10-10 (A5): of sequential layout, with fields of
+  values; a value and a flag). Since 2026-10-10 (A5): of sequential layout, with fields of
   primitive numeric types (not `bool` or `char`), their enums or such structs, and no
   packing below its natural size; `ForPointwiseFunction` refuses any other.
 - **`Combine`** is called once per individual, in one thread, after all its points:

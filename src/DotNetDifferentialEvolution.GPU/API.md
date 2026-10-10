@@ -101,7 +101,12 @@ public static class GpuDifferentialEvolutionBuilder
   (Kernels `BOOT.md`); everything between generations (best index, ranking, archive,
   adaptation, reduction, stop rule, observer) is the same. Results equal a monolithic
   objective's with the same arithmetic, bit for bit on the CPU accelerator (Kernels
-  `ACCEPTANCE.md`, P1; ⚠ 2026-10-10: was on every device, see `## Audit fixes ⏳`).
+  `ACCEPTANCE.md`, P1; ⚠ 2026-10-10: was on every device). On a GPU the device compiler
+  may fuse a multiply and an add of the monolithic form that the pointwise form stores, so
+  values can differ in the last bits (HISTORY.md#audit-fixes-decided-2026-10-10).
+- **The point type** (A5): `TPoint` of sequential layout, with fields of primitive numeric
+  types (not `bool` or `char`), their enums or such structs, and no packing below its
+  natural size; `ForPointwiseFunction` refuses any other (`## Errors`).
 - **Not in the CPU package.** On the host an objective computes its parts itself; the
   split exists because on the device one thread per individual is one thread for all
   its parts.
@@ -204,7 +209,12 @@ public sealed class GpuPopulationSnapshot
   the caller opts into it.
 - **`Dispose`** stops a run in progress between generations and waits for it, then frees
   the device buffers, and the device unless it was the caller's. Called from the
-  observer, it stops the run and the run's thread frees everything as it ends.
+  observer, it stops the run and returns; the run's thread frees everything before the task
+  completes. Every release runs even when one throws; the failures are then thrown together
+  (`## Errors`). A second call, also a concurrent one, returns once the first has stopped
+  the run and released everything, and throws nothing (Kernels `ACCEPTANCE.md`, A6–A8).
+- **Any exception on the run's thread**, `OutOfMemoryException` included, faults the task
+  with it; the process lives (A8).
 
 ## Errors
 
@@ -225,17 +235,38 @@ public sealed class GpuPopulationSnapshot
 | `null` handler or accelerator | `ArgumentNullException` |
 | An accelerator other than CUDA, OpenCL or CPU | `ArgumentException` from `OnAccelerator` |
 | An explicit device that is not present, or `Cuda` without a CUDA Toolkit | `InvalidOperationException` from `Build`, naming the device and the reason |
-| The objective cannot be compiled by ILGPU | ILGPU's exception from `Build` |
+| The objective cannot be compiled by ILGPU | ILGPU's exception from `Build`; the failures of the releases that followed, if any, in its `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]` (an `AggregateException`; A6) |
+| An unsupported `TPoint` (A5) | `ArgumentException` from `ForPointwiseFunction`, ParamName `TPoint`, naming the type and the field |
+| N, or for a pointwise objective N·P, above `int.MaxValue − 1 023` (A9) | `ArgumentOutOfRangeException` from `WithPopulationSize` |
+| N·D or N·P above its limit when `Build` runs (a stage reused after `WithBounds`; A9) | `InvalidOperationException` from `Build`, naming the product and the limit |
+| JADE, SHADE or L-SHADE with N above 2³⁰ (A9) | `InvalidOperationException` from `Build`, naming the ranking's limit |
+| A release fails in `Dispose` (A6) | `AggregateException` of the failures, flattened, once everything else is released |
 | `RunAsync` while a run is in progress | `InvalidOperationException` |
 | `RunAsync` after `Dispose` | `ObjectDisposedException` |
 | The observer throws | the task faults with that exception |
+| Any other exception on the run's thread (A8) | the task faults with it; with release failures after an observer's `Dispose`, with an `AggregateException` of it and them, it first |
 
 ## Side effects
 
 `Build` opens a device context unless one is passed, allocates `3·N·D + 2·N + 2·D`
 doubles on the device and compiles two kernels; a configuration that needs bookkeeping
 allocates its buffers and compiles its kernels too ([Bookkeeping](Bookkeeping/API.md)). A run copies the population to the host
-once at the end, and once per observer call. No `GC.Collect`.
+once at the end, and once per observer call. No `GC.Collect`. Since 2026-10-10
+(HISTORY.md#audit-fixes-decided-2026-10-10):
+
+- `Build` compiles every kernel the configuration uses, each for the largest extent it is
+  launched with; `RunAsync` compiles none (A2, A10). A pointwise run allocates `N·P` point
+  results and `2·N` doubles besides the population.
+- `Build` opens the device on a thread of its own and leaves its caller's
+  `Accelerator.Current` as it found it; `Dispose` binds back what its thread had (A11).
+- On CUDA and OpenCL, a configuration that ranks (JADE, SHADE, L-SHADE) with N above 1 024
+  times both rankings in `Build` at up to three sizes, about 12 ms on the RTX 5070 Ti at
+  N ≥ 8 192 (estimated from the measured per-call times), and ranks by counting up to the
+  last size where it was not slower (A3 ⚠). Which ranking runs never changes a result.
+- With a stagnation limit, the stop word is copied every 16 generations to page-locked host
+  memory without synchronising and looked at one interval later; only the observer and the
+  end synchronise. A run may enqueue up to two intervals of generations past its stop,
+  which do nothing; the result is the stopping generation's (A13).
 
 ## Children
 
@@ -253,35 +284,3 @@ once at the end, and once per observer call. No `GC.Collect`.
   search or initial sampling.
 - An objective on the host or through `IFitnessFunctionEvaluator`: a `ReadOnlySpan`
   cannot cross into an ILGPU kernel.
-
-## Audit fixes ⏳
-
-Designed 2026-10-10 ([HISTORY.md](HISTORY.md#audit-fixes-decided-2026-10-10)), checks A1–A13
-(Devices, Bookkeeping and Kernels `ACCEPTANCE.md`). No public signature changes.
-
-- **The point type** (A5). `ForPointwiseFunction` throws `ArgumentException` (ParamName
-  `TPoint`) unless `TPoint` has sequential layout, fields of primitive numeric types (not
-  `bool`, not `char`), their enums or such structs, and no packing below its natural size.
-- **Pointwise and monolithic** (P1 ⚠). The same arithmetic gives the same run bit for bit on
-  the CPU accelerator; on a GPU the device compiler may fuse a multiply and an add that the
-  pointwise form stores, so values can differ in the last bits.
-- **`Dispose`** (A6–A8) releases everything even when a release throws, then throws an
-  `AggregateException` of the failures; a second call, also a concurrent one, returns once
-  the release is done. A `Build` that fails throws its own exception, with any release
-  failures in `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]`. After `Dispose` from
-  the observer, release failures fault the task. Any exception on the run's thread faults
-  the task.
-- **New rows of the error table** (A5, A9): an unsupported `TPoint` → `ArgumentException`
-  from `ForPointwiseFunction`; N or N·P above `int.MaxValue − 1 023` →
-  `ArgumentOutOfRangeException` from `WithPopulationSize`; N·D or N·P above the limits when
-  `Build` runs (a stage reused after `WithBounds`) → `InvalidOperationException` from
-  `Build`; JADE, SHADE or L-SHADE with N above 2³⁰ → `InvalidOperationException` from `Build`.
-- **`Build` times the ranking once** (A3 ⚠, 2026-10-10): on CUDA and OpenCL, a
-  configuration that ranks (JADE, SHADE, L-SHADE) with N above 1 024 times both rankings
-  at up to three sizes in `Build`, a few milliseconds (about 12 ms on the RTX 5070 Ti at
-  N ≥ 8 192, estimated from the measured per-call times), and ranks by the faster below the
-  size where counting stops being faster. Which ranking runs never changes a result.
-- **Side effects** (A10, A13, DOC-2). `Build` compiles every kernel the configuration uses;
-  `RunAsync` compiles none. A pointwise run allocates `N·P` point results and `2·N`
-  doubles besides the population. With a stagnation limit the control block is copied
-  without synchronising and read one interval later.

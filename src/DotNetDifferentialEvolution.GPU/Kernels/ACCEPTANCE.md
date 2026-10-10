@@ -113,7 +113,7 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       first in `ForPointwiseFunction`; also refused: `nint`, `Size` padding, a nested packed
       struct; P1's and P3's shapes by same-shaped types). Red (orchestrator's rerun): the
       check removed, 11 of 20 red — every refused case.
-- [ ] **A6, a failing release stops nothing** (MEM-2). With a release that throws planted on
+- [x] **A6, a failing release stops nothing** (MEM-2). With a release that throws planted on
       the optimizer's accelerator (`OnDevice(Cpu)`; a child whose release throws, as ILGPU's
       half-built `CudaKernel` does): (a) `Dispose` still releases every other buffer and
       kernel and the owned context, then throws `AggregateException` holding the failure; a
@@ -124,7 +124,11 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       each alone: a release loop without its per-item `try`; `AcceleratorLease.Dispose`
       without its `finally`; the constructor's `catch` letting the release failure replace
       the original; the run thread's `finally` letting it escape (the process dies).
-- [ ] **A7, `Dispose` frees and stops** (TEST-2). On the CPU accelerator, every buffer and
+      2026-10-10, `2ea9f9a`..`2d5122e` (coder), `ReleaseFailureTests`; the orchestrator's
+      reruns: the per-item `try` removed, 2 red and the host killed by the observer case;
+      the constructor's failure replaced, 1 red. The lease's `finally` and the run
+      thread's escape: the coder's runs (red; the process died).
+- [x] **A7, `Dispose` frees and stops** (TEST-2). On the CPU accelerator, every buffer and
       kernel the optimizer allocated is disposed (`IsDisposed`): (a) after `Dispose` while an
       observer holds the run at generation 3 — the task ends canceled; (b) after `Dispose`
       called from the observer, once the task has ended; (c) after a normal run and
@@ -132,12 +136,19 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       not freeing the buffers; `Dispose` not canceling the run (the gate's wait ends under
       `HangGuard`); nothing released after an observer's `Dispose` (2026-10-09: the three
       together left 228 of 228 tests green).
-- [ ] **A8, the run thread and a second `Dispose`** (MEM-7, MEM-8). An exception of any type
+      2026-10-10, `DisposeTests`; the orchestrator's rerun with the buffers not freed: 7 red.
+      Canceling and the observer's case: the coder's runs (red, under `HangGuard`; an
+      unbounded wait hung a run for hours, so every case that holds a run disposes within
+      `HangGuard.Limit` since `2d5122e`).
+- [x] **A8, the run thread and a second `Dispose`** (MEM-7, MEM-8). An exception of any type
       thrown on the run's thread, an `OutOfMemoryException` from the observer included,
       faults the task with it and the process lives. Two threads calling `Dispose` during a
       run: neither returns before the run has stopped and A7's buffers are disposed. Red:
       the run thread catching only what it catches at `c40868e`; the second `Dispose`
       returning at once.
+      2026-10-10, `RunThreadTests`; the orchestrator's reruns: the run thread not catching
+      `OutOfMemoryException`, the host dies ("Out of memory."); the second `Dispose`
+      returning at once, 2 red (the task done before the first's release).
 - [x] **A9, sizes a kernel can index** (PERF-4, MEM-6). `WithPopulationSize` refuses
       N > `int.MaxValue − 1 023`, and for a pointwise objective N·P above it, with the
       exception it throws for N·D: N = 4, P = 536 870 911 refused; N·P = 2³¹ − 2¹⁰ accepted
@@ -157,9 +168,12 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       2026-10-10, local, Release: `EndToEnd/KernelLoadCountTests` — 14 (JADE), 15 (SHADE),
       16 (L-SHADE) and 15 (pointwise SHADE) loads in `Build`, none in `RunAsync`, in a
       collection that runs alone. Red (orchestrator's rerun): `Stagnate` lazy again, 3 of 5.
-- [ ] **A11, the thread's binding restored** (MEM-5). After `Build` and `Dispose` on one
+- [x] **A11, the thread's binding restored** (MEM-5). After `Build` and `Dispose` on one
       thread (`OnDevice(Cpu)`), that thread's `Accelerator.Current` is what it was before
       `Build` (none in the test). Red: the binding left in place.
+      2026-10-10, `ThreadBindingTests`: `Build` opens the device on a thread of its own and
+      the release binds back what the thread had; the orchestrator's rerun with `Build` on
+      the caller's thread: 2 red.
 - [x] **A12, the CI filter opens no device** (TEST-1). On the owner's machine (CUDA and
       OpenCL present) a run of `Category!=Gpu&Category!=Slow` over the solution shows no
       test process in `nvidia-smi --query-compute-apps`, sampled every 0.2 s through the
@@ -173,9 +187,15 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       no-GPU cases run on injected absence (`DeviceSelector.Open(…, isPresent)`,
       `GpuBuilder.WithDevicePresence`), the device branches under **Gpu** (61 of 61 on the
       device). OpenCL is held by the code only (no device-side measure).
-- [ ] **A13, the stop word without a synchronisation** (PERF-5). With a stagnation limit,
+- [x] **A13, the stop word without a synchronisation** (PERF-5). With a stagnation limit,
       the control block is copied to page-locked host memory every 16 generations without
       synchronising the accelerator, and the copy is read at the next interval; only the
       observer and the end synchronise: `PopulationTransfers` counts observer calls + 1
       synchronising reads in a run. S12, S17 and S18 stay green. Red: the synchronous read
       restored (⌈G/16⌉ more).
+      2026-10-10, `StopWordCopyTests`, S12, S17, S18 green; the orchestrator's rerun with the
+      synchronous read restored: 2 red (1 → 4, 6–7 → 10). On devices (the orchestrator's
+      scratch probe, public API): SHADE N 50, JADE N 1 024, L-SHADE N 200, seeds 1–4, with
+      no observer (the copy) against an observer every generation (a synchronised read each)
+      on CUDA, OpenCL and the CPU accelerator: 36 of 36 equal in generation, evaluations,
+      fitness and genes bit for bit. The Gpu category 68/68.
