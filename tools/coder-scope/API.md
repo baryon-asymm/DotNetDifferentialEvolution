@@ -1,6 +1,6 @@
 # API.md — tools/coder-scope
 
-## Command line ⏳
+## Command line ✅
 
 ```
 python -X utf8 tools/coder-scope/coder_scope.py [--repo <dir>] [--coder-types <type>[,<type>...]]
@@ -15,7 +15,7 @@ python -X utf8 tools/coder-scope/coder_scope.py [--repo <dir>] [--coder-types <t
   `sonnet-coder`).
 - Every refusal reason starts with `coder-scope:`.
 
-## Scope file ⏳
+## Scope file ✅
 
 `<repo>/.claude/scopes/agent-<agent_id>.json` (ignored by git):
 
@@ -31,6 +31,13 @@ python -X utf8 tools/coder-scope/coder_scope.py [--repo <dir>] [--coder-types <t
 
 `nodes` are worktree-relative directories (not the root, no `..`); `write` are regular
 expressions over worktree-relative paths with `/`; `read` are extra files or directories.
+
+`<agent_id>` is the hook input's `agent_id`: letters, digits, `_`, `.` and `-`, starting with a
+letter or digit; any other (or none) is refused, so no id leaves the scope directory.
+`worktree` is required: an absolute path to an existing directory, the only place the coder
+reaches besides the `read` paths; the hook input's `cwd` is only where shell commands start and
+what relative paths resolve against. A relative or missing `worktree`, or one that no longer
+exists, is a refusal "scope file unreadable" that tells the coder to hand back its report.
 
 ## Registration (the owner's) ⏳
 
@@ -58,7 +65,7 @@ In the settings of the project the orchestrating session runs from. For the sess
 `general-purpose` is the bridge until the `sonnet-coder` agent type is picked up by the
 session; with it, every general-purpose agent of that project needs a scope file.
 
-## Python module ⏳
+## Python module ✅
 
 `coder_scope.decide(hook: dict, repo: str, coder_types: tuple) -> str | None` returns the
 refusal reason or `None`; `coder_scope.main(argv, stdin_bytes, stdout, stderr) -> int`. The
