@@ -5,7 +5,8 @@
 The work between generations of the GPU package's
 [Bookkeeping](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/API.md), held to the
 CPU package's classes: checks **S7** (adaptation), **S8** (archive), **S9**
-(ranking), **S10** (best index), **S11** (L-SHADE's reduction) and **S12** (stagnation) of
+(ranking), **S10** (best index), **S11** (L-SHADE's reduction), **S12** (stagnation), **A3**
+(ranking by integer keys) and **A4** (the wide passes) of
 [Bookkeeping/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/ACCEPTANCE.md).
 The checks are frozen; their numbers are copied, never chosen here.
 
@@ -16,6 +17,8 @@ The checks are frozen; their numbers are copied, never chosen here.
 | S9, S10 | `RankingTests` | both rankings and the best-index passes against host orders and `BestPick` |
 | S11 | `LShadeReductionTests` | the schedule's known answers; a CPU-package and a GPU run side by side; the reduction pass |
 | S12 | `StagnationTests` | the rule against `StagnationStreakTerminationStrategy`; runs that stop |
+| A3 (CI) | `FitnessOrderTests` | `OrderKey`'s known answers, every NaN, 20 000 random pairs against `KeyOf` |
+| A3, A4 (**Gpu**) | `BookkeepingTimingTests` | medians of 20 calls on CUDA: counting against the bitonic network at 2 048; `FindBest` at 1 024 |
 
 ## Invariants
 
@@ -34,6 +37,7 @@ The checks are frozen; their numbers are copied, never chosen here.
 ## Dependencies
 
 - [Bookkeeping](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/API.md) — the rules, `GenerationBookkeeping`, `BookkeepingPlan`, `SuccessSums` (internal).
+- [Devices](../../../src/DotNetDifferentialEvolution.GPU/Devices/API.md) — `DeviceSelector`, `Backend`, `AcceleratorLease` (internal): CUDA for the **Gpu** timings of A3 and A4.
 - [Kernels](../../../src/DotNetDifferentialEvolution.GPU/Kernels/API.md) — `PopulationViews`, `StrategyViews`, `ParameterRule`, `SchemeKind`, `Selection` (internal).
 - [Random](../../../src/DotNetDifferentialEvolution.GPU/Random/API.md) — `PhiloxDraws` on the archive's stream, `IDrawSource` (internal).
 - [Objectives](../../../src/DotNetDifferentialEvolution.GPU/Objectives/API.md) — `IGpuFitnessFunction`, `GeneView`.
@@ -61,7 +65,8 @@ Outside the tree: ILGPU 1.5.3 (the CPU accelerator), xUnit 2.9.3.
 
 Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
-- Every case carries a category; none needs a GPU, so all run in CI.
+- Every case carries a category. Only `BookkeepingTimingTests` needs a GPU (category `Gpu`,
+  CUDA, run by hand); every other case runs in CI on the CPU accelerator.
 
 ## Acceptance criteria
 
