@@ -4,13 +4,12 @@ using Xunit.Abstractions;
 namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 
 /// <summary>
-/// Check D1 of the GPU package's ACCEPTANCE.md, and B1's row "an explicit device that is not
-/// present". The no-device cases ask ILGPU first (<see cref="DevicePresence"/>) and assert the
-/// branch that matches the machine: on a hosted runner, with no GPU, the frozen D1 assertions;
-/// on a machine with the device, that the explicit request is honoured without a fallback. The
-/// <c>Gpu</c> cases name the two devices of the owner's machine, RTX 5070 Ti through CUDA and
-/// <c>gfx1036</c> through OpenCL: they are machine-specific by the check's own wording and fail
-/// elsewhere.
+/// Check D1 of the GPU package's ACCEPTANCE.md and B1's row "an explicit device that is not present", on the
+/// machine's own devices: every case carries <c>Gpu</c>. The cases ask the machine
+/// (<see cref="DevicePresence"/>) and assert the branch that matches it, and name the two devices of the owner's
+/// machine, RTX 5070 Ti through CUDA and <c>gfx1036</c> through OpenCL: they are machine-specific by the check's own
+/// wording and fail elsewhere. The same checks with the devices injected as absent, which run everywhere and open no
+/// device, are <see cref="DeviceAbsenceTests"/>.
 /// </summary>
 /// <param name="output">Receives the device each case got.</param>
 public class DeviceSelectionTests(ITestOutputHelper output)
@@ -18,13 +17,10 @@ public class DeviceSelectionTests(ITestOutputHelper output)
     private static readonly double[] Lower = [-1.0, -1.0];
     private static readonly double[] Upper = [1.0, 1.0];
 
-    /// <summary>
-    /// D1: with no CUDA and no OpenCL device, <c>Auto</c> gives the CPU accelerator with a
-    /// non-<see langword="null"/> <c>FallbackReason</c>. Where a GPU is present, <c>Auto</c> takes
-    /// CUDA with no reason, or OpenCL with the reason CUDA was skipped.
-    /// </summary>
+    /// <summary>D1, under <c>Gpu</c>: <c>Auto</c> takes CUDA with no reason, or OpenCL with the reason CUDA was skipped, or the CPU with both reasons.</summary>
     [Fact]
-    public void AutoFallsBackToTheCpuWithAReasonWhenNoGpuIsPresent()
+    [Trait("Category", "Gpu")]
+    public void AutoTakesTheBestDeviceThisMachineHas()
     {
         var hasCuda = DevicePresence.HasCuda;
         var hasOpenCL = DevicePresence.HasOpenCL;
@@ -51,41 +47,16 @@ public class DeviceSelectionTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// D1: with no CUDA device, an explicit <c>Cuda</c> makes <c>Build</c> throw an
-    /// <see cref="InvalidOperationException"/> naming CUDA. Where CUDA is present, it is used, with
-    /// no fallback reason.
-    /// </summary>
-    [Fact]
-    public void AnExplicitCudaWithoutACudaDeviceThrowsNamingCuda()
-    {
-        var stage = Stage().OnDevice(GpuDevice.Cuda).WithSeed(1);
-
-        if (!DevicePresence.HasCuda)
-        {
-            var failure = Assert.Throws<InvalidOperationException>(stage.Build);
-            output.WriteLine(failure.Message);
-            Assert.Contains("CUDA", failure.Message, StringComparison.Ordinal);
-        }
-        else
-        {
-            using var optimizer = stage.Build();
-            output.WriteLine($"CUDA present; got {optimizer.Device}");
-            Assert.Equal(GpuDevice.Cuda, optimizer.Device.Kind);
-            Assert.Null(optimizer.Device.FallbackReason);
-        }
-    }
-
-    /// <summary>
-    /// B1, "an explicit device that is not present": <c>Build</c> throws an
-    /// <see cref="InvalidOperationException"/> naming the device, never falling back. Where the
-    /// device is present, it is used, with no fallback reason.
+    /// B1, under <c>Gpu</c>: an explicit device is used with no fallback reason where this machine has it, and refused
+    /// naming it where it does not.
     /// </summary>
     /// <param name="device">The device asked for.</param>
     /// <param name="name">The name the message must carry.</param>
     [Theory]
+    [Trait("Category", "Gpu")]
     [InlineData(GpuDevice.Cuda, "CUDA")]
     [InlineData(GpuDevice.OpenCL, "OpenCL")]
-    public void AnExplicitDeviceThatIsNotPresentFailsBuildNamingIt(GpuDevice device, string name)
+    public void AnExplicitDeviceIsUsedWhereThisMachineHasItAndRefusedWhereItDoesNot(GpuDevice device, string name)
     {
         var stage = Stage().OnDevice(device).WithSeed(1);
 
@@ -125,7 +96,9 @@ public class DeviceSelectionTests(ITestOutputHelper output)
         Assert.Null(optimizer.Device.FallbackReason);
     }
 
-    private static IGpuDeviceRequired<SumOfSquares> Stage() =>
+    /// <summary>A builder of the sum of squares in [−1, 1]², N = 8, one generation, to which only a device is left to say.</summary>
+    /// <returns>The builder at its device stage.</returns>
+    internal static IGpuDeviceRequired<SumOfSquares> Stage() =>
         GpuDifferentialEvolutionBuilder.ForFunction(default(SumOfSquares))
             .WithBounds(Lower, Upper)
             .WithPopulationSize(8)

@@ -11,8 +11,8 @@ namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 
 /// <summary>
 /// Checks L5, L6, L7 and the device half of L9 of the GPU package's Devices/LibDevice/ACCEPTANCE.md: the post-link on the device, CUDA
-/// without a toolkit, a bad library, and several CUDA contexts in one process. L6 runs everywhere and asserts the branch
-/// that matches the machine, as D1 does; the others are <c>Gpu</c> and name the owner's RTX 5070 Ti. After APThermo's
+/// without a toolkit, a bad library, and several CUDA contexts in one process. L6 is in
+/// <see cref="DeviceAbsenceTests"/>, which runs everywhere and opens no device; the others are <c>Gpu</c> and name the owner's RTX 5070 Ti. After APThermo's
 /// <c>BadLibraryTests</c> and <c>CudaWslDevicesTests</c> (commit <c>5fdd82c</c>).
 /// </summary>
 /// <param name="output">Receives the messages and the memory figures.</param>
@@ -53,28 +53,6 @@ public class CudaLibDeviceTests(ITestOutputHelper output)
         Assert.Equal(called, result.Compiled);
         Assert.Equal(called.ToHashSet(StringComparer.Ordinal), LibDevicePostLink.WrappersDefined(compiled.PTXAssembly).ToHashSet(StringComparer.Ordinal));
         using var kernel = cuda.LoadAutoGroupedKernel(compiled);
-    }
-
-    /// <summary>
-    /// L6: with the locator finding nothing, an explicit CUDA request throws naming CUDA and, on a machine with a CUDA
-    /// device, libnvvm and libdevice; Auto skips CUDA with that reason. Without a CUDA device the reason is the device.
-    /// </summary>
-    [Fact]
-    public void WithoutAToolkitCudaIsRefusedWithTheReason()
-    {
-        static LibDeviceLocation Nothing() => new(null, null, []);
-        var hasDevice = DevicePresence.HasCudaDevice;
-
-        var failure = Assert.Throws<InvalidOperationException>(() => DeviceSelector.Open(Backend.Cuda, Nothing));
-        output.WriteLine(failure.Message);
-        Assert.Contains("CUDA", failure.Message, StringComparison.Ordinal);
-        var expected = hasDevice ? $"libnvvm ({LibDeviceLocator.LibraryFileName}) and libdevice ({LibDeviceLocator.BitcodeName})" : "no such device";
-        Assert.Contains(expected, failure.Message, StringComparison.Ordinal);
-
-        using var auto = DeviceSelector.Open(null, Nothing);
-        output.WriteLine($"Auto: {auto.Backend}; {auto.FallbackReason}");
-        Assert.NotEqual(Backend.Cuda, auto.Backend);
-        Assert.Contains("CUDA: " + (hasDevice ? "libnvvm" : "no such device"), auto.FallbackReason, StringComparison.Ordinal);
     }
 
     /// <summary>

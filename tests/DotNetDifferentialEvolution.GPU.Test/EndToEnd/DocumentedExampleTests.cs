@@ -8,14 +8,17 @@ namespace DotNetDifferentialEvolution.GPU.Test.EndToEnd;
 /// the test project imposes and a caller is not bound by: <c>.ConfigureAwait(true)</c> after the
 /// <c>await</c> (CA2007, xUnit1030), the objective struct <c>internal</c> rather than
 /// <c>public</c> (CA1515; ILGPU sees it through <c>InternalsVisibleTo("ILGPURuntime")</c>), and
-/// the two <c>Console.WriteLine</c> lines replaced by assertions on the same values.
+/// the two <c>Console.WriteLine</c> lines replaced by assertions on the same values. The README's code runs
+/// as it is, under <c>Gpu</c>, on whatever device Auto finds (an N = 10 000 run: on a machine with CUDA, on CUDA). The
+/// same code on the CPU accelerator, which CI runs, is <see cref="DocumentedExampleOnTheCpuTests"/>: no test outside
+/// <c>Gpu</c> opens a device (ACCEPTANCE.md of Kernels, check A12).
 /// </summary>
-[Trait("Category", "Integration")]
 public class DocumentedExampleTests
 {
     /// <summary>The quick start builds on whatever device Auto finds, runs, and reaches Sphere's minimum.</summary>
     /// <returns>The test's task.</returns>
     [Fact]
+    [Trait("Category", "Gpu")]
     public async Task TheQuickStartBuildsRunsAndReachesTheMinimum()
     {
         double[] lowerBound = [-5.0, -5.0, -5.0, -5.0, -5.0];

@@ -7,9 +7,11 @@ math through libdevice, and its math probe.
 
 | Claim | Confirmed by | State |
 |---|---|---|
-| D1: with no GPU, `Auto` gives `Cpu` with a non-`null` `FallbackReason`; with CUDA, `Auto` gives CUDA and no reason; with OpenCL only, OpenCL and a reason naming CUDA | `AutoFallsBackToTheCpuWithAReasonWhenNoGpuIsPresent` | ✅ all three branches run locally, the GPUs hidden by environment |
-| D1: with no CUDA device, an explicit `Cuda` makes `Build` throw `InvalidOperationException` naming CUDA | `AnExplicitCudaWithoutACudaDeviceThrowsNamingCuda` | ✅ both branches run locally |
-| B1: an explicit CUDA or OpenCL device that is not present → `InvalidOperationException` from `Build`, naming it; never a fallback | `AnExplicitDeviceThatIsNotPresentFailsBuildNamingIt` | ✅ both branches run locally |
+| D1, on every machine, no device opened (A12): with CUDA and OpenCL injected as absent, `Auto` gives `Cpu` and the reason "CUDA: no such device is present.; OpenCL: no such device is present." | `DeviceAbsenceTests.AutoFallsBackToTheCpuWithTheReasonsWhenNoGpuIsPresent` | ✅ |
+| D1 and B1, the same: an explicit `Cuda` or `OpenCL` that is absent makes `Build` throw `InvalidOperationException` naming it and saying it was requested; never a fallback | `DeviceAbsenceTests.AnExplicitDeviceThatIsNotPresentFailsBuildNamingIt` | ✅ |
+| The injected presence is asked in Auto's order, CUDA, OpenCL, CPU, and a denied backend is skipped | `DeviceAbsenceTests.TheInjectedPresenceIsAskedInAutosOrderUntilABackendOpens` | ✅ |
+| D1 (`Gpu`): on this machine, `Auto` gives CUDA and no reason, or OpenCL and a reason naming CUDA, or the CPU with a reason | `DeviceSelectionTests.AutoTakesTheBestDeviceThisMachineHas` | ✅ local, owner's machine |
+| B1 (`Gpu`): an explicit CUDA or OpenCL device is used with no reason where this machine has it, refused naming it where it does not | `DeviceSelectionTests.AnExplicitDeviceIsUsedWhereThisMachineHasItAndRefusedWhereItDoesNot` | ✅ local |
 | D1 (`Gpu`): explicit `Cuda` is the RTX 5070 Ti, explicit `OpenCL` is `gfx1036`, no fallback reason | `AnExplicitDeviceIsTheOwnersGpu` | ✅ local, owner's machine only |
 | D2 (`Gpu`): on CUDA, `Exp`, `Log`, `Pow(x, 1.37)`, `Sqrt` within 4 ULP of `System.Math` on 10⁴ arguments | `OnCudaTheFourFunctionsAreWithinFourUlpOfSystemMath` | ✅ local: 1, 1, 1, 0 ULP |
 | The same probe on OpenCL runs; its distances are reported, not held to a tolerance | `OnOpenClTheProbeRunsAndItsDistancesAreReported` | ✅ informative |
@@ -21,19 +23,30 @@ math through libdevice, and its math probe.
 | L3: the post-link's definition check and its libnvvm and driver failures name what they must | `PostLinkGuardTests` | ✅ |
 | L4: the ILGPU pin and the WSL reflection fail loudly, by name | `IlgpuPinTests` (first three facts) | ✅ |
 | L5 (`Gpu`): on the RTX 5070 Ti the post-link compiles exactly the missing wrappers and the result loads | `CudaLibDeviceTests.OnTheRtx5070TiThePostLinkCompletesExactlyTheMissingWrappers` | ✅ local |
-| L6: without a toolkit, explicit CUDA throws naming libnvvm and libdevice, Auto skips CUDA with that reason; without a CUDA device, the device is the reason | `CudaLibDeviceTests.WithoutAToolkitCudaIsRefusedWithTheReason` | ✅ both branches run locally, the GPUs hidden by environment |
+| L6, on every machine, no device opened (A12): with a CUDA device injected as present and no toolkit, explicit CUDA throws naming libnvvm and libdevice and Auto skips CUDA with that reason | `DeviceAbsenceTests.WithoutAToolkitCudaIsRefusedWithTheReason` | ✅ |
+| L6, the same with the CUDA device injected as absent: the device, not the toolkit, is the reason | `DeviceAbsenceTests.WithoutACudaDeviceTheDeviceIsTheReason` | ✅ |
 | L7 (`Gpu`): a bad libnvvm is named and costs no device memory | `CudaLibDeviceTests.ABadLibraryIsNamedAndNeverReachesTheDevice` | ✅ local |
 | L9: the WSL resolver failure is recognised by where it was thrown; (`Gpu`) three CUDA optimizers of one process each bind | `IlgpuPinTests.TheResolverFailureIsRecognisedByWhereItWasThrownNotByItsMessage`, `CudaLibDeviceTests.EveryCudaOptimizerOfTheProcessBinds` | ✅ on Windows; not run under WSL |
 
 ## Tests ✅
 
 ```csharp
+public class DeviceAbsenceTests
+{
+    public DeviceAbsenceTests(ITestOutputHelper output);
+    public void AutoFallsBackToTheCpuWithTheReasonsWhenNoGpuIsPresent();
+    public void AnExplicitDeviceThatIsNotPresentFailsBuildNamingIt(GpuDevice device, string name);
+    public void TheInjectedPresenceIsAskedInAutosOrderUntilABackendOpens();
+    public void WithoutAToolkitCudaIsRefusedWithTheReason();
+    public void WithoutACudaDeviceTheDeviceIsTheReason();
+}
 public class DeviceSelectionTests
 {
     public DeviceSelectionTests(ITestOutputHelper output);
-    public void AutoFallsBackToTheCpuWithAReasonWhenNoGpuIsPresent();
-    public void AnExplicitCudaWithoutACudaDeviceThrowsNamingCuda();
-    public void AnExplicitDeviceThatIsNotPresentFailsBuildNamingIt(GpuDevice device, string name);
+    [Trait("Category", "Gpu")]
+    public void AutoTakesTheBestDeviceThisMachineHas();
+    [Trait("Category", "Gpu")]
+    public void AnExplicitDeviceIsUsedWhereThisMachineHasItAndRefusedWhereItDoesNot(GpuDevice device, string name);
     [Trait("Category", "Gpu")]
     public void AnExplicitDeviceIsTheOwnersGpu(GpuDevice device, string expectedName);
 }
@@ -110,7 +123,6 @@ public class CudaLibDeviceTests
     public CudaLibDeviceTests(ITestOutputHelper output);
     [Trait("Category", "Gpu")]
     public void OnTheRtx5070TiThePostLinkCompletesExactlyTheMissingWrappers();
-    public void WithoutAToolkitCudaIsRefusedWithTheReason();
     [Trait("Category", "Gpu")]
     public void ABadLibraryIsNamedAndNeverReachesTheDevice();
     [Trait("Category", "Gpu")]
@@ -119,5 +131,6 @@ public class CudaLibDeviceTests
 ```
 
 Internal helpers: `DevicePresence` (whether ILGPU sees a CUDA device, whether CUDA can be
-opened with a toolkit, whether ILGPU sees an OpenCL device), `PtxFixtures` (the three PTX
+opened with a toolkit, whether ILGPU sees an OpenCL device; it creates their contexts, so
+only a `Gpu` test uses it), `DeviceSelectionTests.Stage()` (the builder at its device stage), `PtxFixtures` (the three PTX
 texts of L2), `Ulp` (distance on the ordered bit patterns), `SumOfSquares`.

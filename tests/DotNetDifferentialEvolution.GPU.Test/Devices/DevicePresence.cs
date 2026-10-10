@@ -7,8 +7,9 @@ namespace DotNetDifferentialEvolution.GPU.Test.Devices;
 
 /// <summary>
 /// Whether the machine running the tests can run CUDA or OpenCL, asked of ILGPU and of the package's libdevice locator
-/// directly, so the conditional cases of D1, B1 and L6 take the branch that matches the machine: on a hosted runner, the
-/// no-device branch.
+/// directly, so the conditional <c>Gpu</c> cases of D1 and B1 take the branch that matches the machine. It creates a CUDA
+/// and an OpenCL context: only a test carrying <c>Category=Gpu</c> may use it (check A12); the cases that run everywhere inject
+/// presence instead.
 /// </summary>
 internal static class DevicePresence
 {

@@ -35,11 +35,27 @@ internal static class DeviceSelector
     /// <param name="locate">Finds libnvvm and libdevice; asked only when CUDA is tried.</param>
     /// <returns>A lease that owns the context and the accelerator.</returns>
     /// <exception cref="InvalidOperationException">The requested backend, or under Auto every backend, failed to open.</exception>
-    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate)
+    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate) =>
+        Open(requested, locate, null);
+
+    /// <summary>
+    /// The same, with the presence of a backend's devices decided by <paramref name="isPresent"/> instead of asked of ILGPU:
+    /// the seam of check D1 on a machine that has the devices, and of check A12 (no test outside <c>Gpu</c> opens a device).
+    /// </summary>
+    /// <param name="requested">The backend, or <see langword="null"/> for Auto.</param>
+    /// <param name="locate">Finds libnvvm and libdevice; asked only when CUDA is tried.</param>
+    /// <param name="isPresent">
+    /// Whether a backend has a device, or <see langword="null"/> to ask ILGPU. A backend it denies is skipped with "no such
+    /// device is present." before any context for it exists, so no driver is loaded; a backend it affirms is opened as
+    /// usual.
+    /// </param>
+    /// <returns>A lease that owns the context and the accelerator.</returns>
+    /// <exception cref="InvalidOperationException">The requested backend, or under Auto every backend, failed to open.</exception>
+    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate, Func<Backend, bool>? isPresent)
     {
         if (requested is { } backend)
         {
-            return TryOpen(backend, null, locate, out var lease, out var reason)
+            return TryOpen(backend, null, locate, isPresent, out var lease, out var reason)
                 ? lease
                 : throw new InvalidOperationException($"The {NameOf(backend)} device was requested and cannot be used: {reason}");
         }
@@ -48,7 +64,7 @@ internal static class DeviceSelector
         foreach (var candidate in AutoOrder)
         {
             var fallbackReason = skipped.Count == 0 ? null : string.Join("; ", skipped);
-            if (TryOpen(candidate, fallbackReason, locate, out var lease, out var reason))
+            if (TryOpen(candidate, fallbackReason, locate, isPresent, out var lease, out var reason))
             {
                 return lease;
             }
@@ -74,6 +90,7 @@ internal static class DeviceSelector
         Backend backend,
         string? fallbackReason,
         Func<LibDeviceLocation> locate,
+        Func<Backend, bool>? isPresent,
         [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out AcceleratorLease? lease,
         out string reason)
     {
@@ -88,18 +105,19 @@ internal static class DeviceSelector
                 location = locate();
             }
 
-            context = Context.Create(builder => Configure(builder, backend, location));
-            if (DeviceCount(context, backend) == 0)
+            if (isPresent is not null && Refusal(isPresent(backend), location) is { } injected)
             {
+                // Decided before a context exists: an absent backend's driver is never loaded.
                 lease = null;
-                reason = "no such device is present.";
+                reason = injected;
                 return false;
             }
 
-            if (location is { Found: false })
+            context = Context.Create(builder => Configure(builder, backend, location));
+            if (Refusal(DeviceCount(context, backend) > 0, location) is { } refusal)
             {
                 lease = null;
-                reason = NotFound(location);
+                reason = refusal;
                 return false;
             }
 
@@ -194,6 +212,10 @@ internal static class DeviceSelector
                 throw Undefined(backend);
         }
     }
+
+    /// <summary>Why a backend cannot be used before any library is loaded: no device first, then no toolkit; or <see langword="null"/>.</summary>
+    private static string? Refusal(bool present, LibDeviceLocation? location) =>
+        !present ? "no such device is present." : location is { Found: false } ? NotFound(location) : null;
 
     private static string NotFound(LibDeviceLocation location) =>
         $"libnvvm ({LibDeviceLocator.LibraryFileName}) and libdevice ({LibDeviceLocator.BitcodeName}) of a CUDA Toolkit were not found"

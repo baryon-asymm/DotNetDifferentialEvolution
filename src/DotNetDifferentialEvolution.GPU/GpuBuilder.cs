@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using DotNetDifferentialEvolution.GPU.Devices;
+using DotNetDifferentialEvolution.GPU.Devices.LibDevice;
 using DotNetDifferentialEvolution.GPU.Kernels;
 using ILGPU.Runtime;
 
@@ -40,6 +41,7 @@ internal sealed class GpuBuilder<TFunction>(
     private IGpuPopulationUpdatedHandler? _handler;
     private int _everyNGenerations = 1;
     private int _stopReadInterval = RunSettings.DefaultStopReadInterval;
+    private Func<Backend, bool>? _isPresent;
 
     /// <inheritdoc />
     public IGpuPopulationSizeRequired<TFunction> WithBounds(ReadOnlyMemory<double> lowerBound, ReadOnlyMemory<double> upperBound)
@@ -287,7 +289,7 @@ internal sealed class GpuBuilder<TFunction>(
         // The lease goes straight into the constructor, which owns it from then on.
         return _accelerator is { } callersAccelerator
             ? new GpuDifferentialEvolution(AcceleratorLease.Borrowed(callersAccelerator), settings, Compile)
-            : new GpuDifferentialEvolution(DeviceSelector.Open(BackendOf(_device)), settings, Compile);
+            : new GpuDifferentialEvolution(DeviceSelector.Open(BackendOf(_device), LibDeviceLocator.Locate, _isPresent), settings, Compile);
     }
 
     /// <summary>
@@ -301,6 +303,21 @@ internal sealed class GpuBuilder<TFunction>(
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(interval, 1);
         _stopReadInterval = interval;
+        return this;
+    }
+
+    /// <summary>
+    /// Decides by <paramref name="isPresent"/> whether a backend has a device, instead of asking ILGPU: for the tests of
+    /// check D1 that must run on a machine with CUDA and OpenCL without opening either (ACCEPTANCE.md, A12). A backend it
+    /// denies is skipped, or refused when explicit, before any context for it exists. Ignored when the caller's accelerator
+    /// is used.
+    /// </summary>
+    /// <param name="isPresent">Whether the backend has a device.</param>
+    /// <returns>This builder.</returns>
+    internal GpuBuilder<TFunction> WithDevicePresence(Func<Backend, bool> isPresent)
+    {
+        ArgumentNullException.ThrowIfNull(isPresent);
+        _isPresent = isPresent;
         return this;
     }
 

@@ -27,12 +27,18 @@ accelerator, and the run errors of the v1 contract.
 | P2: `ForPointwiseFunction` refuses `P` of 0 and −1; `WithPopulationSize` refuses N = 2²⁰, P = 2¹² (N·P > `int.MaxValue`) with the exception it throws for N·D | `PointwiseBuilderTests` | ✅ |
 | P3: a pointwise objective with an `ArrayView<double>` field and `Exp`, `Pow` in `EvaluatePoint`, a result of two `double`s and an `int`, equals its twin on CUDA (L-SHADE, N_init 1 024, P = 50, seed 1, 50 generations); the CPU accelerator runs the same pair as a control | `PointwiseCudaMathTests`; CUDA under `Gpu` | ✅ |
 | P4: P = 50 points of 40 rounds of `Exp` and `Pow`, DE/rand/1/bin on CUDA: the median of three batches of 50 generations after a warm-up batch, at N = 1 024 and 16 384, pointwise against monolithic; at N = 1 024 at least 4× faster; the four figures printed | `PointwiseLatencyTests`, `Gpu` | ✅ |
-| The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 | `DocumentedExampleTests` | ✅ |
+| The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 (`Gpu`); the same code with `GpuDevice.Cpu` in place of `Auto` does on the CPU accelerator in CI, so that no test outside `Gpu` opens a device (A12) | `DocumentedExampleTests`, `Gpu`; `DocumentedExampleOnTheCpuTests` | ✅ |
 
 ## Tests ✅
 
 ```csharp
 public class DocumentedExampleTests
+{
+    [Trait("Category", "Gpu")]
+    public Task TheQuickStartBuildsRunsAndReachesTheMinimum();
+}
+[Trait("Category", "Integration")]
+public class DocumentedExampleOnTheCpuTests
 {
     public Task TheQuickStartBuildsRunsAndReachesTheMinimum();
 }

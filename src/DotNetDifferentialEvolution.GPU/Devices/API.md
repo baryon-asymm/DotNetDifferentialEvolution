@@ -24,6 +24,8 @@ internal static class DeviceSelector
 {
     public static AcceleratorLease Open(Backend? requested);
     internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate);
+    internal static AcceleratorLease Open(Backend? requested, Func<LibDeviceLocation> locate,
+        Func<Backend, bool>? isPresent);
     public static string NameOf(Backend backend);
 }
 
@@ -48,7 +50,14 @@ internal static class MathProbe
   used: …"). CUDA opens only with libnvvm and libdevice found and the probe kernel loaded
   (`BOOT.md`, Constraints); without a toolkit the reason is "libnvvm (nvvm64_40_0.dll) and
   libdevice (libdevice.10.bc) of a CUDA Toolkit were not found; …". The overload with
-  `locate` is the seam of checks L6 and L7.
+  `locate` is the seam of checks L6 and L7. The overload with `isPresent` (check A12) decides
+  whether a backend has a device instead of asking ILGPU, and `null` asks ILGPU, as the
+  shorter overloads do: a backend it denies is skipped, or refused when explicit, with "no
+  such device is present." before any context for it exists, so no driver is loaded; for CUDA
+  the toolkit is checked next, still before a context, with the reason above; a backend it
+  affirms opens as usual. The package root's `GpuBuilder` passes it from its internal
+  `WithDevicePresence(Func<Backend, bool>)`, beside `WithStopReadInterval`, which tests reach by
+  casting the builder; no public member changes.
 - `Borrowed` throws `ArgumentException` for an accelerator other than CUDA, OpenCL or
   CPU; its lease never disposes the accelerator.
 - `Load` returns the kernel, implicitly grouped, for a closed kernel method; the caller
