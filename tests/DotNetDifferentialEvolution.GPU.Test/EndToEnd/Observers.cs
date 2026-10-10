@@ -166,3 +166,62 @@ internal sealed class BoundedDisposal(GpuDifferentialEvolution optimizer) : IDis
         }
     }
 }
+
+/// <summary>The best individual of one snapshot, by the result's rule, kept by <see cref="KeepingObserver"/>.</summary>
+/// <param name="Generation">The snapshot's generation.</param>
+/// <param name="EvaluationCount">The snapshot's evaluations.</param>
+/// <param name="Genes">The genes of the best individual.</param>
+/// <param name="Fitness">The fitness of the best individual.</param>
+internal sealed record KeptBest(int Generation, long EvaluationCount, double[] Genes, double Fitness)
+{
+    /// <summary>
+    /// Picks the best individual of a snapshot as the package's result does: the lowest fitness, a <c>NaN</c> the worst, a
+    /// tie to the lowest index. Written here from that rule, not taken from the package.
+    /// </summary>
+    /// <param name="snapshot">The snapshot.</param>
+    /// <returns>The best individual with the snapshot's counts.</returns>
+    public static KeptBest Of(GpuPopulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var fitness = snapshot.FitnessFunctionValues.Span;
+        var best = 0;
+        for (var i = 1; i < fitness.Length; i++)
+        {
+            if ((double.IsNaN(fitness[best]) && !double.IsNaN(fitness[i])) || fitness[i] < fitness[best])
+            {
+                best = i;
+            }
+        }
+
+        var genomeSize = snapshot.GenomeSize;
+        return new KeptBest(
+            snapshot.Generation,
+            snapshot.EvaluationCount,
+            snapshot.Genes.Span.Slice(best * genomeSize, genomeSize).ToArray(),
+            fitness[best]);
+    }
+}
+
+/// <summary>
+/// Keeps the best individual of the snapshot at one generation (<see cref="KeptBest"/>), then hands every call, that one
+/// included, to the observer it wraps, if any.
+/// </summary>
+/// <param name="keepAtGeneration">The generation to keep.</param>
+/// <param name="inner">The observer to call after, or <see langword="null"/>.</param>
+internal sealed class KeepingObserver(int keepAtGeneration, IGpuPopulationUpdatedHandler? inner = null) : IGpuPopulationUpdatedHandler
+{
+    /// <summary>Gets what was kept, or <see langword="null"/> before the generation was reached.</summary>
+    public KeptBest? Kept { get; private set; }
+
+    /// <inheritdoc />
+    public void Handle(GpuPopulationSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.Generation == keepAtGeneration)
+        {
+            Kept = KeptBest.Of(snapshot);
+        }
+
+        inner?.Handle(snapshot);
+    }
+}
