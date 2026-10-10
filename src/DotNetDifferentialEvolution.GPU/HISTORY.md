@@ -2,6 +2,23 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="last-result-decided-2026-10-11"></a>
+## 2026-10-11 — the best individual of a cancelled run, in 1.1.0
+
+The consumer's wish of [the review](#consumer-review-2026-10-10): every long run of theirs ends
+by cancelling the token, and the package then gives nothing, so they keep the best individual
+of their last snapshot themselves. The owner, 2026-10-11, asked why not in 1.1.0 and chose a
+property ("Свойство") over an exception carrying the result (it would fault the task, which
+the review asked to keep canceled) and over deferring.
+
+**Decision** (check A16, Kernels `ACCEPTANCE.md`): `GpuDifferentialEvolution.LastResult`,
+`GpuOptimizationResult?`. `null` until a run ends. A run that completes sets it to the task's
+result (the same object). A run that ends canceled, by the token or by `Dispose`, sets it to
+the best individual of the population at the generation it stopped at (the result's rule:
+`NaN` worst, ties to the lowest index; one synchronised download), before the task completes
+and before anything is released. A run that faults leaves it `null`. A sealed class gains a
+member: additive, a minor version's change.
+
 <a id="consumer-review-2026-10-10"></a>
 ## 2026-10-10 — a consumer's review of 1.1.0
 

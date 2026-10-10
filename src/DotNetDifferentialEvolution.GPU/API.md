@@ -160,6 +160,12 @@ public interface IGpuTerminationConditionRequired<TFunction> where TFunction : s
 
 ## Optimizer and result ✅
 
+⏳ 2026-10-11 (Kernels `ACCEPTANCE.md`, A16; HISTORY.md#last-result-decided-2026-10-11):
+`public GpuOptimizationResult? LastResult { get; }` on `GpuDifferentialEvolution` — `null`
+until a run ends; a completed run's result; after a cancel (token or `Dispose`), the best
+individual of the generation the run stopped at, set before the task completes; `null` after
+a fault.
+
 ```csharp
 public sealed class GpuDifferentialEvolution : IDisposable
 {
