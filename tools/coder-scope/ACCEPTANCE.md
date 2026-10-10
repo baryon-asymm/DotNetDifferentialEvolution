@@ -28,12 +28,19 @@ scratch copy and never committed.
       `test_a_missing_scope_file_is_refused_as_not_yet_published` and
       `test_a_scope_is_found_by_agent_id_not_by_directory` red. Linux CI unproven until a
       push.
-- [ ] **H2, the live probe** (by hand, after the owner's registration). A probe coder
+- [x] **H2, the live probe** (by hand, after the owner's registration). A probe coder
       (general-purpose, Sonnet) with a scope on one node of a scratch worktree: a Read of a
       neighbour's `.cs`, `cat` of it through Bash and a Write outside its node are refused
       with the hook's reason, which the coder quotes; its own node, a neighbour's `API.md`
       and `AGENTS.md` are read and its node written. Red: the same probe before the
       registration reads the neighbour's `.cs` (as coder 2 did on 2026-10-09).
+      2026-10-10, registered by the owner in this session's project settings: a probe coder
+      (general-purpose, Sonnet) on node `Random`, read from its transcript — `Devices/KernelLoader.cs`
+      by Read and by `cat` refused ("read set"), a Write to `Devices/` refused ("write set"),
+      the file absent on disk; its own `.cs`, `Devices/API.md` and `AGENTS.md` read, its
+      node written; one "scope not yet published" before the scope file was written, passed
+      on retry. The hook's `agent_id` is the Agent tool's agent id. Red: 2026-10-09's coder,
+      unregistered, read `Devices/*.cs` and `Bookkeeping/*.cs`.
 - [x] **H3, the cost** (by hand): the median time of one hook call over 50 inputs on the
       owner's machine, recorded as a figure, not a threshold.
       2026-10-10, Windows 11, Python 3.13, 50 runs each as a subprocess: a coder's allowed
