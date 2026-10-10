@@ -124,10 +124,11 @@ public sealed class GpuDifferentialEvolution : IDisposable
     /// Gets what the run left: <see langword="null"/> until a run ends. A run that completes leaves its result, the same object
     /// the task returns. A run that ends canceled, by the token or by <see cref="Dispose"/>, leaves the best individual of the
     /// population at the generation it stopped at, with that generation's counts: the lowest fitness, a <c>NaN</c> worst, a tie
-    /// to the lowest index, as the result's rule; one synchronised download on the run's thread. A run that faults leaves
-    /// <see langword="null"/>, also when the download of a canceled run fails. It is set before the task completes and before
-    /// anything is released, so that any thread that observes the task's completion, or the end of <see cref="Dispose"/>, sees
-    /// it.
+    /// to the lowest index, as the result's rule; one synchronised download on the run's thread. A failure on the run's thread leaves
+    /// <see langword="null"/>, including a failed download of a canceled run's best individual. When the run ended canceled and
+    /// a release then fails, the task faults with the release failures and <see cref="LastResult"/> keeps the canceled run's
+    /// best individual. It is set before the task completes and before anything is released, so that any thread that observes
+    /// the task's completion, or the end of <see cref="Dispose"/>, sees it.
     /// </summary>
     /// <value>The result of the run that ended, or <see langword="null"/>.</value>
     public GpuOptimizationResult? LastResult => Volatile.Read(ref _lastResult);
