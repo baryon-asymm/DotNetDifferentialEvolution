@@ -34,6 +34,7 @@ public sealed class GpuDifferentialEvolution : IDisposable
     private bool _releaseWhenTheRunEnds;
     private bool _stopCopyPending;
     private int _stopCopyGeneration;
+    private GpuOptimizationResult? _lastResult;
 
     /// <summary>
     /// Builds the optimizer on an open lease, which it owns from this call on: it is disposed with
@@ -118,6 +119,19 @@ public sealed class GpuDifferentialEvolution : IDisposable
 
     /// <summary>Gets the device the run is on, and why Auto skipped the devices before it.</summary>
     public GpuDeviceInfo Device { get; }
+
+    /// <summary>
+    /// Gets what the run left: <see langword="null"/> until a run ends. A run that completes leaves its result, the same object
+    /// the task returns. A run that ends canceled, by the token or by <see cref="Dispose"/>, leaves the best individual of the
+    /// population at the generation it stopped at, with that generation's counts: the lowest fitness, a <c>NaN</c> worst, a tie
+    /// to the lowest index, as the result's rule; one synchronised download on the run's thread. A failure on the run's thread leaves
+    /// <see langword="null"/>, including a failed download of a canceled run's best individual. When the run ended canceled and
+    /// a release then fails, the task faults with the release failures and <see cref="LastResult"/> keeps the canceled run's
+    /// best individual. It is set before the task completes and before anything is released, so that any thread that observes
+    /// the task's completion, or the end of <see cref="Dispose"/>, sees it.
+    /// </summary>
+    /// <value>The result of the run that ended, or <see langword="null"/>.</value>
+    public GpuOptimizationResult? LastResult => Volatile.Read(ref _lastResult);
 
     /// <summary>Gets the number of population downloads so far (ACCEPTANCE.md, check 5b).</summary>
     internal int PopulationDownloadCount => _transfers.DownloadCount;
@@ -327,6 +341,9 @@ public sealed class GpuDifferentialEvolution : IDisposable
                         break;
                     }
 
+                    // The best individual of the generation the run stops at is kept before the task is completed and before
+                    // anything is released (ACCEPTANCE.md, A16); a download that fails faults the run below.
+                    Volatile.Write(ref _lastResult, Result());
                     return RunOutcome.Canceled(cancellationToken.IsCancellationRequested ? cancellationToken : _disposal.Token);
                 }
 
@@ -374,7 +391,9 @@ public sealed class GpuDifferentialEvolution : IDisposable
                 _ = ReadStop();
             }
 
-            return RunOutcome.Completed(Result());
+            var result = Result();
+            Volatile.Write(ref _lastResult, result);
+            return RunOutcome.Completed(result);
         }
         catch (Exception failure) when (IsAFailureOfTheRun(failure))
         {

@@ -35,6 +35,7 @@ accelerator, and the run errors of the v1 contract.
 | A8: an exception of any type thrown by the observer (`OutOfMemoryException`, `AccessViolationException`, `InsufficientMemoryException`, `NotSupportedException`, `AggregateException`) faults the task with that same instance; a second `Dispose` from another thread, while the first waits for a held run or while the observer's own `Dispose` waits for the run's thread, returns only when the run has stopped and everything is disposed | `RunThreadTests` | ✅ |
 | A11: on a thread of its own, `Accelerator.Current` after `Build` and after `Dispose` is what it was before: none; the caller's accelerator; another accelerator while `OnAccelerator` uses the caller's; none after a `Build` that fails | `ThreadBindingTests` | ✅ |
 | A13: with a stagnation limit (SHADE, N = 50, streak 40) and no observer one synchronising stop-word read (the end) and a copy every 16 generations; with an observer every 10 generations the reads are its calls plus at most one; the result is bit for bit the same for read intervals 1, 2, 7, 16 and 1 000 | `StopWordCopyTests` | ✅ |
+| A16: `LastResult` is `null` before `RunAsync` and while an observer holds the run; a token cancelled by an observer due every 10 generations at generation 100 ends the task canceled with `LastResult` of 100 generations, that snapshot's evaluations, and its best individual's genes and fitness bit for bit (the pick written in the test from the rule: lowest fitness, `NaN` worst, ties to the lowest index); a `Dispose` while an observer holds the run at generation 3 does the same for generation 3 and A7's buffers are disposed after; a completed run's `LastResult` is the awaited result, the same object; an observer that throws leaves the task faulted and `LastResult` `null`; (b) also on CUDA under `Gpu` | `LastResultTests`; (b) on CUDA under `Gpu` | ✅ CPU; `Gpu` by the orchestrator |
 | The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 (`Gpu`); the same code with `GpuDevice.Cpu` in place of `Auto` does on the CPU accelerator in CI, so that no test outside `Gpu` opens a device (A12) | `DocumentedExampleTests`, `Gpu`; `DocumentedExampleOnTheCpuTests` | ✅ |
 
 ## Tests ✅
@@ -187,6 +188,16 @@ public class ThreadBindingTests
     public Task AThreadBoundToAnotherAcceleratorStaysBoundToItWhenTheCallersIsUsed();
     public Task AFailingBuildLeavesTheThreadBoundToNothing();
 }
+public class LastResultTests
+{
+    public async Task LastResultIsNullBeforeTheRunAndWhileTheObserverHoldsIt();
+    public Task ACancelledTokenLeavesTheBestIndividualOfTheSnapshotOnTheCpuAccelerator();
+    [Trait("Category", "Gpu")]
+    public Task ACancelledTokenLeavesTheBestIndividualOfTheSnapshotOnCuda();
+    public async Task DisposeWhileTheObserverHoldsTheRunLeavesTheBestIndividualOfThatGeneration();
+    public async Task ACompletedRunLeavesTheResultTheTaskReturned();
+    public async Task AFaultedRunLeavesNothing();
+}
 public class StopWordCopyTests
 {
     public async Task ARunWithoutAnObserverReadsTheStopWordOnceAndCopiesItEverySixteenGenerations();
@@ -241,7 +252,9 @@ public class PointwiseLatencyTests
 ```
 
 Internal helpers: the objectives `Sphere`, `Rosenbrock`, `Rastrigin`; the observers
-`RecordingObserver`, `GateObserver`, `CancellingObserver`, `ThrowingObserver`; and
+`RecordingObserver`, `GateObserver`, `CancellingObserver`, `ThrowingObserver`, `KeepingObserver` (keeps the
+best individual of the snapshot at one generation as a `KeptBest`, A16, and passes every call on to an observer it
+wraps); and
 `HangGuard`, the bound on every wait. For the pointwise checks: the pairs `PairPointwise` /
 `PairMonolithic` and `SteppedPairPointwise` / `SteppedPairMonolithic` over the one arithmetic
 `PairArithmetic` (P1), `MathPointwise` / `MathMonolithic` over `MathArithmetic` (P3),
