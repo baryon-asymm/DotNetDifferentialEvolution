@@ -58,7 +58,7 @@ public class ObjectiveVisibilityTests
     {
         var inside = DynamicTypes.PublicStructInAnInternalClass();
 
-        AssertInvisible(inside, inside.DeclaringType!);
+        AssertInvisible(inside, inside.DeclaringType);
     }
 
     /// <summary>A public struct nested in an internal class with the attribute is visible.</summary>
@@ -84,7 +84,7 @@ public class ObjectiveVisibilityTests
     {
         var inside = DynamicTypes.PublicStructInAPrivateClass();
 
-        AssertInvisible(inside, inside.DeclaringType!);
+        AssertInvisible(inside, inside.DeclaringType);
     }
 
     /// <summary>A public generic struct over a private one is not visible: every generic argument must be, and the argument is the part named.</summary>
