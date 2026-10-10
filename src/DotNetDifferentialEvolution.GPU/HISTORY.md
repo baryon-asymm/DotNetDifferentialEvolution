@@ -2,6 +2,32 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="consumer-review-2026-10-10"></a>
+## 2026-10-10 — a consumer's review of 1.1.0
+
+PastyPropellant, which uses the package (`ForFunction`, `OnAccelerator` with its own
+accelerator, N = 16 384, an observer every 100 generations, a stop by cancelling the token
+from the observer, no stagnation limit), reviewed the 1.1.0 changes at the owner's request,
+from its own code and without running 1.1.0. Its points, and the orchestrator's answers from
+the code:
+
+- **Cancellation must stay a canceled task** (its every long run ends so). It does: the run
+  thread completes the task with `TrySetCanceled` as 1.0.1 did; A8's catch-all sees no
+  exception on a cancel. `Dispose` after a cancel throws only when a release fails, as
+  1.0.1's did with the first failure.
+- **Snapshots** are unchanged: a synchronised download of `snapshot.Generation`'s population
+  on the run thread; A13's copy exists only with a stagnation limit.
+- **`OnAccelerator`**: the caller's accelerator is used as it is (a borrowed lease, no
+  second context); A11's test covers that case.
+- **Seeded runs against 1.0.1 and the monolithic objective's compilation**: to be measured.
+- **Wishes**: behaviour changes stated in the CHANGELOG; the pointwise `Combine` documented
+  (one thread per individual, the order of `points`, the buffer); a hint in the package's
+  own error for ILGPU's "Access is denied"; a local package to run its card tests before
+  the tag; the best individual so far on cancel (later, not 1.1.0).
+
+The owner, 2026-10-10, chose all four for 1.1.0: the comparison with 1.0.1, the behaviour
+section, the hint (check A15, Kernels `ACCEPTANCE.md`), and a local release candidate.
+
 <a id="ranking-calibrated-2026-10-10"></a>
 ## 2026-10-10 — wave B measured: the ranking limit calibrated, the wide chunk √N
 

@@ -235,6 +235,7 @@ public sealed class GpuPopulationSnapshot
 | `null` handler or accelerator | `ArgumentNullException` |
 | An accelerator other than CUDA, OpenCL or CPU | `ArgumentException` from `OnAccelerator` |
 | An explicit device that is not present, or `Cuda` without a CUDA Toolkit | `InvalidOperationException` from `Build`, naming the device and the reason |
+| The objective's type (or `TPoint`) is not visible to ILGPU's dynamic assembly (A15) | `InvalidOperationException` from `Build`, naming the type and the remedies (public, or `[assembly: InternalsVisibleTo("ILGPURuntime")]`), ILGPU's `TypeLoadException` inner |
 | The objective cannot be compiled by ILGPU | ILGPU's exception from `Build`; the failures of the releases that followed, if any, in its `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]` (an `AggregateException`; A6) |
 | An unsupported `TPoint` (A5) | `ArgumentException` from `ForPointwiseFunction`, ParamName `TPoint`, naming the type and the field |
 | N, or for a pointwise objective N·P, above `int.MaxValue − 1 023` (A9) | `ArgumentOutOfRangeException` from `WithPopulationSize` |

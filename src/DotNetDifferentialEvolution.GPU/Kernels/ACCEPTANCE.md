@@ -199,3 +199,23 @@ A seam a check needs is internal to the assembly and named in its test node's `A
       no observer (the copy) against an observer every generation (a synchronised read each)
       on CUDA, OpenCL and the CPU accelerator: 36 of 36 equal in generation, evaluations,
       fitness and genes bit for bit. The Gpu category 68/68.
+
+## Consumer review — check A15, frozen 2026-10-10, before code
+
+From [HISTORY.md](../HISTORY.md#consumer-review-2026-10-10).
+
+- [ ] **A15, an objective ILGPU cannot see is named.** ILGPU's launchers live in its dynamic
+      assembly `ILGPURuntime`, which sees a type only when it, every type it is nested in and
+      every generic argument is public, or internal (not private or protected) in an
+      assembly that declares `[assembly: InternalsVisibleTo("ILGPURuntime")]`. When loading
+      the kernels in `Build` throws `TypeLoadException` and the objective type (or `TPoint`)
+      is not visible by that rule, `Build` throws `InvalidOperationException` naming the type
+      and both remedies (make it public; or declare the attribute, with a private or
+      protected nested type never usable), ILGPU's exception as `InnerException`; release
+      failures ride on it as A6 says. A visible type's `TypeLoadException`, and every other
+      exception, propagates unchanged. CI: the rule on known answers (a public struct, a
+      public nested in a public class, an internal struct with and without the attribute, a
+      private nested struct, a public generic over a private one); the wrapping, through a
+      seam that throws `TypeLoadException` from the load. **Gpu**, CUDA: a private nested
+      objective builds into that `InvalidOperationException`. Red: the wrapping removed
+      (ILGPU's `TypeLoadException` escapes).
