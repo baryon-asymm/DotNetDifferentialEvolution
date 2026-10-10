@@ -61,14 +61,15 @@ internal sealed class KernelLauncher<TFunction> : KernelLauncher
     /// <summary>Compiles and loads both kernels; ILGPU's compile errors and the post-link's surface here.</summary>
     /// <param name="accelerator">The accelerator.</param>
     /// <param name="function">The objective, passed to every launch.</param>
-    /// <param name="rule">The parameter rule the generation kernel is compiled for.</param>
     /// <param name="populationSize">
-    /// <c>N_init</c>, the largest population of the run: the extent both kernels are loaded for. The builder's call site
-    /// is to pass it; until it does, 1 loads them in groups of one warp.
+    /// <c>N_init</c>, the largest population of the run: the extent both kernels are loaded for.
     /// </param>
-    public KernelLauncher(Accelerator accelerator, TFunction function, ParameterRule rule = ParameterRule.Fixed, int populationSize = 1)
+    /// <param name="rule">The parameter rule the generation kernel is compiled for.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="populationSize"/> is less than 1.</exception>
+    public KernelLauncher(Accelerator accelerator, TFunction function, int populationSize, ParameterRule rule = ParameterRule.Fixed)
     {
         ArgumentNullException.ThrowIfNull(accelerator);
+        ArgumentOutOfRangeException.ThrowIfLessThan(populationSize, 1);
         _stream = accelerator.DefaultStream;
         _function = function;
         _initializeKernel = KernelLoader.Load(accelerator, Entry(nameof(GpuKernels.Initialize), typeof(TFunction)), populationSize);

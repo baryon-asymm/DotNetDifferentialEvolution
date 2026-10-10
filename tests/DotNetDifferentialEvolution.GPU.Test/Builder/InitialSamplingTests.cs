@@ -100,7 +100,7 @@ public class InitialSamplingTests(ITestOutputHelper output)
         var views = new PopulationViews(current.View, currentFitness.View, next.View, nextFitness.View, trial.View, lower.View, upper.View);
         var parameters = new StepParameters(Seed, 0, PopulationSize, GenomeSize, 0.5, DeStep.CrossoverThreshold(0.9));
 
-        using var launcher = new KernelLauncher<Sphere>(accelerator, default);
+        using var launcher = new KernelLauncher<Sphere>(accelerator, default, PopulationSize);
         launcher.Initialize(parameters, views);
         accelerator.Synchronize();
 
