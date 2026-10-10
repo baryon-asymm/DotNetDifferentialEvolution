@@ -30,11 +30,18 @@ public static class GpuDifferentialEvolutionBuilder
     /// <param name="pointCount"><c>P</c>, the number of points of an individual; at least 1.</param>
     /// <returns>The first stage.</returns>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="pointCount"/> is below 1.</exception>
+    /// <exception cref="ArgumentException">
+    /// <typeparamref name="TPoint"/> is not of sequential layout, has a field that is not a <see cref="byte"/>,
+    /// <see cref="sbyte"/>, <see cref="short"/>, <see cref="ushort"/>, <see cref="int"/>, <see cref="uint"/>,
+    /// <see cref="long"/>, <see cref="ulong"/>, <see cref="float"/> or <see cref="double"/>, an enum of them or a struct
+    /// that follows the same rule, or is packed or padded so that its size is not its natural one.
+    /// </exception>
     public static IGpuBoundsRequired<TFunction> ForPointwiseFunction<TFunction, TPoint>(TFunction function, int pointCount)
         where TFunction : struct, IGpuPointwiseFitnessFunction<TPoint>
         where TPoint : unmanaged
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pointCount, 1);
+        PointLayout.Require<TPoint>();
         return new GpuBuilder<TFunction>(
             function,
             pointCount,
