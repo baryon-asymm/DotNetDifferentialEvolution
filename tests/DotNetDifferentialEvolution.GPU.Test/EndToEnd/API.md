@@ -27,6 +27,9 @@ accelerator, and the run errors of the v1 contract.
 | P2: `ForPointwiseFunction` refuses `P` of 0 and −1; `WithPopulationSize` refuses N = 2²⁰, P = 2¹² (N·P > `int.MaxValue`) with the exception it throws for N·D | `PointwiseBuilderTests` | ✅ |
 | P3: a pointwise objective with an `ArrayView<double>` field and `Exp`, `Pow` in `EvaluatePoint`, a result of two `double`s and an `int`, equals its twin on CUDA (L-SHADE, N_init 1 024, P = 50, seed 1, 50 generations); the CPU accelerator runs the same pair as a control | `PointwiseCudaMathTests`; CUDA under `Gpu` | ✅ |
 | P4: P = 50 points of 40 rounds of `Exp` and `Pow`, DE/rand/1/bin on CUDA: the median of three batches of 50 generations after a warm-up batch, at N = 1 024 and 16 384, pointwise against monolithic; at N = 1 024 at least 4× faster; the four figures printed | `PointwiseLatencyTests`, `Gpu` | ✅ |
+| A1: two JADE optimizers built with `OnAccelerator` on one CPU accelerator (Sphere D = 3, N = 32, 20 generations, seeds 1 and 2): after the first's `Dispose` the second runs and equals its run alone bit for bit, and a third built afterwards (seed 3) does too; on OpenCL (`Gpu`) the same, and four optimizers running at once (D = 10, N = 64, 200 generations, observer every 10, seeds 1 to 4), ten repeats, each equal to its run alone, result and every snapshot | `SharedKernelTests`; OpenCL under `Gpu` | ✅ CPU; `Gpu` by the orchestrator |
+| A2 (`Gpu`): P4's monolithic objective at N = 1 024 on CUDA takes at most 8 ms per generation (median of three batches of 50 after a warm-up batch); the figure is printed | `PointwiseLatencyTests.TheMonolithicGenerationTakesAtMostEightMillisecondsAtOneThousandAndTwentyFourIndividuals` | `Gpu`, by the orchestrator |
+| A10: for JADE, SHADE and L-SHADE with a stagnation limit and for a pointwise SHADE run on the CPU accelerator, `KernelLoader.LoadCount` after `Build` has grown by the number of distinct kernels of the configuration (14, 15, 16 and 15) and `RunAsync` adds none; the tests run alone in the `KernelLoadCount` collection, the count being a number of the process | `KernelLoadCountTests` | ✅ |
 | The package README's quick start compiles and, on whatever device Auto finds, reaches Sphere's minimum below 1e-12 (`Gpu`); the same code with `GpuDevice.Cpu` in place of `Auto` does on the CPU accelerator in CI, so that no test outside `Gpu` opens a device (A12) | `DocumentedExampleTests`, `Gpu`; `DocumentedExampleOnTheCpuTests` | ✅ |
 
 ## Tests ✅
@@ -126,6 +129,34 @@ public class SymmetryRunTests
     [Trait("Category", "Integration")]
     public async Task TheStopWordIsReadOnlyEverySixteenGenerationsAndForTheObserver();
 }
+public class SharedKernelTests
+{
+    [Trait("Category", "Integration")]
+    public async Task ASecondOptimizerSurvivesTheFirstsDisposalOnTheCpuAccelerator();
+    [Trait("Category", "Gpu")]
+    public async Task ASecondOptimizerSurvivesTheFirstsDisposalOnOpenCl();
+    [Trait("Category", "Gpu")]
+    public async Task FourOptimizersRunningAtOnceOnOpenClEachEqualItsRunAlone();
+}
+[CollectionDefinition("KernelLoadCount", DisableParallelization = true), Collection("KernelLoadCount")]
+public sealed class KernelLoadCounting
+{
+    [Trait("Category", "Integration")]
+    public void EveryLoadCountsOnce();
+}
+[Collection("KernelLoadCount")]
+public class KernelLoadCountTests
+{
+    public KernelLoadCountTests(ITestOutputHelper output);
+    [Trait("Category", "Integration")]
+    public Task JadeWithAStagnationLimitLoadsItsKernelsInBuild();
+    [Trait("Category", "Integration")]
+    public Task ShadeWithAStagnationLimitLoadsItsKernelsInBuild();
+    [Trait("Category", "Integration")]
+    public Task LShadeWithAStagnationLimitLoadsItsKernelsInBuild();
+    [Trait("Category", "Integration")]
+    public Task APointwiseShadeRunLoadsItsKernelsInBuild();
+}
 public class SingleKernelPathTests
 {
     [Trait("Category", "Integration")]
@@ -168,6 +199,8 @@ public class PointwiseLatencyTests
     public PointwiseLatencyTests(ITestOutputHelper output);
     [Trait("Category", "Gpu")]
     public Task ThePointwiseGenerationIsAtLeastFourTimesFasterAtOneThousandAndTwentyFourIndividuals();
+    [Trait("Category", "Gpu")]
+    public Task TheMonolithicGenerationTakesAtMostEightMillisecondsAtOneThousandAndTwentyFourIndividuals();
 }
 ```
 

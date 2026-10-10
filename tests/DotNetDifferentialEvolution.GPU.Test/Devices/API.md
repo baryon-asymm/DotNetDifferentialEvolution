@@ -26,6 +26,8 @@ math through libdevice, and its math probe.
 | L6, on every machine, no device opened (A12): with a CUDA device injected as present and no toolkit, explicit CUDA throws naming libnvvm and libdevice and Auto skips CUDA with that reason | `DeviceAbsenceTests.WithoutAToolkitCudaIsRefusedWithTheReason` | ✅ |
 | L6, the same with the CUDA device injected as absent: the device, not the toolkit, is the reason | `DeviceAbsenceTests.WithoutACudaDeviceTheDeviceIsTheReason` | ✅ |
 | L7 (`Gpu`): a bad libnvvm is named and costs no device memory | `CudaLibDeviceTests.ABadLibraryIsNamedAndNeverReachesTheDevice` | ✅ local |
+| A1, on the CPU accelerator: two `KernelLoader.Load` calls for one kernel method give two `Kernel` objects; disposing the first leaves the second undisposed and launchable (the whole-run half is in [EndToEnd](../EndToEnd/API.md), `SharedKernelTests`) | `KernelLoaderTests.TwoLoadsOfOneMethodAreTwoKernelsDisposedIndependently` | ✅ |
+| A2: `KernelLoader.GroupSize` gives, for warp 32, 70 multiprocessors and a limit of 640, 32 for extents 1 and 1 024, 256 for 16 384, 640 for 44 800 and 10⁶; for warp 64, 12 multiprocessors and a limit of 256, 128 for 1 024; it does not overflow at `int.MaxValue` and refuses an argument below 1 | `KernelLoaderTests` (the theories) | ✅ |
 | L9: the WSL resolver failure is recognised by where it was thrown; (`Gpu`) three CUDA optimizers of one process each bind | `IlgpuPinTests.TheResolverFailureIsRecognisedByWhereItWasThrownNotByItsMessage`, `CudaLibDeviceTests.EveryCudaOptimizerOfTheProcessBinds` | ✅ on Windows; not run under WSL |
 
 ## Tests ✅
@@ -111,6 +113,14 @@ public class PostLinkGuardTests
     public static TheoryData<NvvmResult> NonSuccessNvvmResults();
     public static TheoryData<CudaError> NonSuccessCudaErrors();
 }
+[Trait("Category", "Integration")]
+public class KernelLoaderTests
+{
+    public void TheGroupSizeSpreadsTheExtentOverTheMultiprocessors(int extent, int warpSize, int multiprocessors, int occupancyLimit, int expected);
+    public void TheLargestExtentDoesNotOverflow();
+    public void AnArgumentBelowOneIsRefused(int extent, int warpSize, int multiprocessors, int occupancyLimit, string parameter);
+    public void TwoLoadsOfOneMethodAreTwoKernelsDisposedIndependently();
+}
 public class IlgpuPinTests
 {
     public void TheReferencedIlgpuPassesTheAssertion();
@@ -130,7 +140,7 @@ public class CudaLibDeviceTests
 }
 ```
 
-Internal helpers: `DevicePresence` (whether ILGPU sees a CUDA device, whether CUDA can be
+Internal helpers: `KernelLoaderTests.Square` (the kernel the loads are of), `DevicePresence` (whether ILGPU sees a CUDA device, whether CUDA can be
 opened with a toolkit, whether ILGPU sees an OpenCL device; it creates their contexts, so
 only a `Gpu` test uses it), `DeviceSelectionTests.Stage()` (the builder at its device stage), `PtxFixtures` (the three PTX
 texts of L2), `Ulp` (distance on the ordered bit patterns), `SumOfSquares`.
