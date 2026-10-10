@@ -177,7 +177,8 @@ using var optimizer = GpuDifferentialEvolutionBuilder
 - **Asynchronous:** `RunAsync` returns at once and runs the generations on a thread of its
   own. A cancellation token is observed between generations and ends the task as
   canceled (an `OperationCanceledException` when awaited), whether the token is cancelled
-  from the observer or elsewhere. After a run, calling `RunAsync` again returns the same
+  from the observer or elsewhere; `optimizer.LastResult` then holds the best individual of
+  the generation the run stopped at. After a run, calling `RunAsync` again returns the same
   task.
 - **`Dispose`** stops a run in progress and frees the device buffers, and the device unless
   it was yours. Every release runs even when one fails; the failures are then thrown

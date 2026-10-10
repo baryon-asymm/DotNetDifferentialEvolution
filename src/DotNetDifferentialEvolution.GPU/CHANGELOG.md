@@ -17,6 +17,11 @@ A new form of objective, and the fixes of two audits; code written for 1.0 compi
   builder (schemes, variants, stop rules, devices, observer) is shared.
 - The builder's stage interfaces now constrain `TFunction` to `struct` only, so both
   entry points use them; code written for 1.0 compiles and runs unchanged.
+- **`GpuDifferentialEvolution.LastResult`**: what the last run left. After a run stopped by
+  its token or by `Dispose`, it holds the best individual of the generation the run stopped
+  at, so a run that ends by cancellation no longer loses its answer; the task is still
+  canceled. After a completed run it is the task's result; before a run ends, or after a
+  failure on the run's thread, `null`.
 
 Behaviour changes a caller can see (nothing else changes; reviewed by a consumer, 2026-10-10):
 
