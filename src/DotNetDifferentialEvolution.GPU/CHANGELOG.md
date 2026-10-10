@@ -6,7 +6,7 @@ from its `## <version>` section below.
 
 ## 1.1.0
 
-A new form of objective; nothing existing changes.
+A new form of objective, and the fixes of two audits; code written for 1.0 compiles unchanged.
 
 - **`IGpuPointwiseFitnessFunction<TPoint>`**, built with
   `GpuDifferentialEvolutionBuilder.ForPointwiseFunction(function, pointCount)`: an
@@ -17,6 +17,35 @@ A new form of objective; nothing existing changes.
   builder (schemes, variants, stop rules, devices, observer) is shared.
 - The builder's stage interfaces now constrain `TFunction` to `struct` only, so both
   entry points use them; code written for 1.0 compiles and runs unchanged.
+
+Fixes and speed-ups from two audits of the package, no other public signature change:
+
+- **Kernels fill the device.** Each kernel is loaded with a group size fitted to how many
+  threads it launches, instead of ILGPU's default: a costly objective at N = 1 024 went from
+  29.4 to about 3.8 ms per generation on an RTX 5070 Ti.
+- **Two optimizers on one accelerator no longer share a kernel.** Every kernel is compiled for
+  its own optimizer; on OpenCL, disposing one optimizer used to break or crash another one
+  running on the same accelerator.
+- **Faster work between generations.** Ranking (JADE, SHADE, L-SHADE) compares integer keys,
+  and `Build` times ranking by counting against the bitonic network once on CUDA and OpenCL,
+  since where one overtakes the other depends on the device (a few milliseconds, only above
+  N = 1 024). The best-index and archive passes run in chunks of about √N (at N = 46 080 the
+  best index went from 144 to 80 µs). With a stagnation limit the stop word is copied
+  without stopping the device and read 16 generations later; the run still ends at the
+  generation the rule fired. Results are unchanged.
+- **`Dispose` is exception-safe.** Every release runs even when one throws, then the failures
+  are thrown together as an `AggregateException`. A second `Dispose`, also a concurrent one,
+  waits for the first. A failed `Build` throws its own exception, with any release failures in
+  its `Data["DotNetDifferentialEvolution.GPU.ReleaseFailures"]`. Any exception on the run's
+  thread, `OutOfMemoryException` included, faults the task instead of ending the process.
+- **`Build` leaves the calling thread's `Accelerator.Current` as it found it.**
+- **New argument checks:** a point type with fields other than numeric primitives, their
+  enums or such structs, or packed below its natural size (`ArgumentException`); N, or N·P,
+  above `int.MaxValue − 1 023` (`ArgumentOutOfRangeException`); JADE, SHADE or L-SHADE above
+  N = 2³⁰ (`InvalidOperationException` from `Build`). Such sizes could not run correctly before.
+- **A pointwise objective and its monolithic twin** give the same run bit for bit on the CPU
+  accelerator; on a GPU the device compiler may fuse a multiply and an add of the monolithic
+  form, so values can differ in the last bits.
 
 ## 1.0.1
 

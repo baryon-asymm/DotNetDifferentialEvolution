@@ -137,11 +137,11 @@ using var optimizer = GpuDifferentialEvolutionBuilder
   for bit, on the CPU accelerator. On a GPU the device compiler may fuse a multiply and an
   add of the monolithic form that the pointwise form stores, so values can differ in the
   last bits.
-- What it buys, measured 2026-10-09 on an RTX 5070 Ti (P = 50 parts of 40 `Exp`/`Pow`
-  rounds, DE/rand/1/bin, ms per generation, monolithic / pointwise): N = 1 024 —
-  28.5 / 0.75 (38×); N = 16 384 — 28.5 / 11.2 (2.6×). The gain shrinks as `N` alone fills
-  the device; with cheap parts the two extra launches may cost more than they save (an
-  expectation, not measured).
+- What it buys, measured 2026-10-10 on an RTX 5070 Ti (P = 50 parts of 40 `Exp`/`Pow`
+  rounds, DE/rand/1/bin, ms per generation, monolithic / pointwise, the median of three
+  runs): N = 1 024 — 3.76 / 0.69 (5.5×); N = 16 384 — 11.6 / 10.8 (1.07×). The gain
+  shrinks as `N` alone fills the device; with cheap parts the two extra launches may cost
+  more than they save (an expectation, not measured).
 
 ## Devices
 
