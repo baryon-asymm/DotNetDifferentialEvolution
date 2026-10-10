@@ -443,6 +443,7 @@ sealed class (record) DotNetDifferentialEvolution.GPU.GpuDeviceInfo : IEquatable
 
 sealed class DotNetDifferentialEvolution.GPU.GpuDifferentialEvolution : IDisposable
     GpuDeviceInfo Device { get; }
+    GpuOptimizationResult? LastResult { get; }
     Task<GpuOptimizationResult> RunAsync(CancellationToken cancellationToken = null)
     Void Dispose()
 
