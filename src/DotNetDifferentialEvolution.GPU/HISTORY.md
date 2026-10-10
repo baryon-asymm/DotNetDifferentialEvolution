@@ -2,6 +2,23 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="consumer-confirmation-2026-10-11"></a>
+## 2026-10-11 — a consumer ran 1.1.0-rc.1
+
+PastyPropellant ran `1.1.0-rc.1` (`7270aa0`, a local package, not published) in a scratch
+worktree of its own code, changing only the package reference, on the RTX 5070 Ti, as it
+reported:
+
+- **Its tests:** 53/53 card tests, among them a bit-for-bit check of the package-compiled
+  objective against its own fused kernel in fp64 and fp32; 75/75 device tests, among them
+  "every strategy repeats a seeded search bit for bit"; its full fast suite green.
+- **Its monolithic objective** (50 points, Classic, 90 s): N = 1 024 19 → 55 generations per
+  second (2.9×, from the group sizes alone); N = 16 384 18 → 19 (the device already full).
+  At N = 16 384 every snapshot's best from generation 200 to 1 600 equal to 1.0.1's.
+
+It has not tried the pointwise form; adopting 1.1.0 is its owner's decision. A15 and A16 came
+after `rc.1`.
+
 <a id="last-result-decided-2026-10-11"></a>
 ## 2026-10-11 — the best individual of a cancelled run, in 1.1.0
 

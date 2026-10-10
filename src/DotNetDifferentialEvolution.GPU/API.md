@@ -164,6 +164,7 @@ public interface IGpuTerminationConditionRequired<TFunction> where TFunction : s
 public sealed class GpuDifferentialEvolution : IDisposable
 {
     public GpuDeviceInfo Device { get; }
+    public GpuOptimizationResult? LastResult { get; }   // since 1.1.0 (A16)
     public Task<GpuOptimizationResult> RunAsync(CancellationToken cancellationToken = default);
     public void Dispose();
 }
@@ -215,21 +216,13 @@ public sealed class GpuPopulationSnapshot
   the run and released everything, and throws nothing (Kernels `ACCEPTANCE.md`, A6–A8).
 - **Any exception on the run's thread**, `OutOfMemoryException` included, faults the task
   with it; the process lives (A8).
-
-## Last result ⏳
-
-Designed 2026-10-11 (Kernels `ACCEPTANCE.md`, A16; HISTORY.md#last-result-decided-2026-10-11).
-
-```csharp
-public sealed class GpuDifferentialEvolution
-{
-    public GpuOptimizationResult? LastResult { get; }
-}
-```
-
-- `null` until a run ends; a completed run's result (the same object); after a cancel (the
-  token or `Dispose`), the best individual of the generation the run stopped at, with that
-  generation's counts, set before the task completes; `null` after a fault.
+- **`LastResult`** (A16, since 1.1.0): `null` until a run ends. A completed run leaves its
+  result, the same object the task returns. A run that ends canceled, by the token or by
+  `Dispose`, leaves the best individual of the generation it stopped at, with that
+  generation's counts (one synchronised download; `NaN` worst, ties to the lowest index),
+  written before the task completes and before anything is released. A failure on the run's
+  thread, that download's included, leaves it `null`; a release failure after a cancel
+  faults the task and keeps it.
 
 ## Errors
 

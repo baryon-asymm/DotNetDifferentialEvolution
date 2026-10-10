@@ -204,7 +204,7 @@ A seam a check needs is internal to the assembly and named in its test node's `A
 
 From [HISTORY.md](../HISTORY.md#consumer-review-2026-10-10).
 
-- [ ] **A15, an objective ILGPU cannot see is named.** ILGPU's launchers live in its dynamic
+- [x] **A15, an objective ILGPU cannot see is named.** ILGPU's launchers live in its dynamic
       assembly `ILGPURuntime`, which sees a type only when it, every type it is nested in and
       every generic argument is public, or internal (not private or protected) in an
       assembly that declares `[assembly: InternalsVisibleTo("ILGPURuntime")]`. When loading
@@ -222,12 +222,16 @@ From [HISTORY.md](../HISTORY.md#consumer-review-2026-10-10).
       seam that throws `TypeLoadException` from the load. **Gpu**, CUDA: a private nested
       objective builds into that `InvalidOperationException`. Red: the wrapping removed
       (ILGPU's `TypeLoadException` escapes).
+      2026-10-11, `80d3087` (coder): `ObjectiveVisibilityTests` (22 known answers),
+      `InvisibleObjectiveTests` (10 CI and the CUDA case); the orchestrator's reruns with the
+      wrapping off: 7 of 32 red in CI, and on CUDA ILGPU's bare `TypeLoadException` escapes.
+      The Gpu category 70/70.
 
 ## The last result — check A16, frozen 2026-10-11, before code
 
 From [HISTORY.md](../HISTORY.md#last-result-decided-2026-10-11).
 
-- [ ] **A16, a cancelled run keeps its best individual.** On the CPU accelerator (CI):
+- [x] **A16, a cancelled run keeps its best individual.** On the CPU accelerator (CI):
       (a) before `RunAsync`, and while a run is held by an observer, `LastResult` is `null`;
       (b) the token cancelled by an observer due every 10 generations at generation 100: the
       task is canceled (`IsCanceled`), and `LastResult` has 100 generations, that
@@ -238,3 +242,7 @@ From [HISTORY.md](../HISTORY.md#last-result-decided-2026-10-11).
       the same object; (e) an observer that throws: faulted, `LastResult` `null`.
       **Gpu**, CUDA: (b) on the device, the result equal to the snapshot's best bit for bit.
       Red: nothing kept on cancel (`null`); the result taken one generation late (b fails).
+      2026-10-11, `231be86`, `41d21ea` (coder), `LastResultTests`; the orchestrator's reruns:
+      nothing kept, 2 red (`null`); a generation late, 2 red (100 → 101, 3 → 4), and on CUDA
+      100 → 101. A release failure after a cancel faults the task and keeps `LastResult`
+      (the coder's decision, accepted). The Gpu category 70/70.
