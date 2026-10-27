@@ -25,9 +25,16 @@ internal sealed class MultiWorkerHarness : IDisposable
 {
     public MultiWorkerHarness(ProblemContext context, AlgorithmExecutor executor, int workersCount);
     public OrchestratorWorkerHandler Handler { get; }
+    public WorkerController Master { get; }
     public void StartAll();
-    public bool AnyRunning { get; }
+    public bool AnySlaveRunning { get; }
     public void Dispose();
+}
+
+internal static class WorkerStopAssert
+{
+    public static readonly TimeSpan Deadline;   // 10 s
+    public static Task LeavesItsLoopAsync(WorkerController worker);
 }
 
 internal static class BuilderOptimizer
@@ -51,40 +58,18 @@ internal static class ConvergenceAssert
   `workersCount == 1`.
 - `MultiWorkerHarness` wires `W − 1` slaves and a master around one orchestrator handler
   and starts them in the production order: slaves first, the master last
-  (`DifferentialEvolution.RunAsync`).
+  (`DifferentialEvolution.RunAsync`). `Master` is the worker carrying the handler;
+  `AnySlaveRunning` is `true` while any slave's `IsRunning` is. There is no
+  "any worker running" member: the only thing it could be asserted against at once is not
+  promised (the parent's invariant "After the result", [BOOT.md](../BOOT.md)).
 - `BuilderOptimizer.RunOnceAsync` builds and runs once and moves the cursor to the best
   individual. Callers seed the builder with `BuilderOptimizer.Seed`, so each convergence
   test is one reproducible run.
-- `ConvergenceAssert.ReachedOptimum` compares the cursor's value (two-sided) and,
-  optionally, each gene with the evaluator's declared optimum.
-
-## Stop assertion ⏳
-
-Designed 2026-10-27 (the rule is the parent's invariant "After the result",
-[BOOT.md](../BOOT.md)). On implementation this block moves into the one above, and
-`MultiWorkerHarness.AnyRunning` is deleted from it.
-
-```csharp
-internal sealed class MultiWorkerHarness : IDisposable
-{
-    public WorkerController Master { get; }
-    public bool AnySlaveRunning { get; }
-    // AnyRunning: removed.
-}
-
-internal static class WorkerStopAssert
-{
-    public static readonly TimeSpan Deadline;   // 10 s
-    public static Task LeavesItsLoopAsync(WorkerController worker);
-}
-```
-
-- `Master` is the worker carrying the handler; `AnySlaveRunning` is `true` while any
-  slave's `IsRunning` is. `AnyRunning` goes because the only thing it can be asserted
-  against at once is not promised.
 - `WorkerStopAssert.LeavesItsLoopAsync` polls `worker.IsRunning` (`await Task.Delay(1)`
   between reads, a `Stopwatch` against `Deadline`) and returns as soon as it reads
   `false`; at the deadline it fails with `Assert.False(worker.IsRunning, message)`, the
   message naming the worker id and the deadline. It never calls `Stop` or `Dispose`:
   the worker must leave by itself. Ten seconds is a hang bound, not a measurement: the
   worker has only to return from `Handle`.
+- `ConvergenceAssert.ReachedOptimum` compares the cursor's value (two-sided) and,
+  optionally, each gene with the evaluator's declared optimum.
