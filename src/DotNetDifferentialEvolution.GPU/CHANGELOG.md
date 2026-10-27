@@ -4,6 +4,27 @@ Notable changes to the GPU package, released from `gpu-v*` tags. Versions follow
 [semantic versioning](https://semver.org/). The release workflow takes the notes of a version
 from its `## <version>` section below.
 
+## 1.2.0
+
+Where the first population comes from; without the new calls every run is 1.1.0's, bit for bit.
+
+- **`WithInitialBounds(initialLowerBound, initialUpperBound)`**: the first population is
+  sampled in a smaller box inside the search box, while mutation, crossover, the repair of
+  out-of-box genes, every scheme and the stop rules keep the whole search box. For a search
+  box that must stay wide but where most of it is hopeless to start from.
+- **`WithInitialPopulation(genes)`**: the first population is given, `N·D` values,
+  individual-major (under L-SHADE, N is the initial size), and evaluated in `Build`; nothing
+  is sampled. For a second stage that continues from a first stage's population, for
+  continuing a finished or cancelled run, or for seeding known good vectors among random
+  ones. A seeded run is deterministic.
+- Both are optional and sit on the last stage, next to `WithSeed`; values are in gene space
+  and copied at the call. `Build` refuses the two together. A wrong length, a value that is
+  not finite, an initial lower bound above its upper bound, or a value outside the search
+  box (its edges included) is refused at the call with `ArgumentException`.
+- An initial box equal to the search box gives the same run as no box, bit for bit.
+  Measured 2026-10-27 against 1.1.0 without the new calls: 40 seeded runs (five schemes, two
+  objective forms) equal bit for bit on the CPU accelerator and on CUDA.
+
 ## 1.1.0
 
 A new form of objective, and the fixes of two audits; code written for 1.0 compiles unchanged.

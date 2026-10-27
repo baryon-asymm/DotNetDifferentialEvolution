@@ -158,10 +158,10 @@ public interface IGpuTerminationConditionRequired<TFunction> where TFunction : s
   stagnation limit it runs, and its population reaches 4 at the budget.
 - **The observer** sees the current population size: under L-SHADE it shrinks.
 
-## Initial population ⏳
+## Initial population ✅
 
-Designed 2026-10-27 for 1.2.0 (HISTORY.md#initial-population-decided-2026-10-27), checks
-I1–I7 (Kernels `ACCEPTANCE.md`); not built yet.
+Designed 2026-10-27 for 1.2.0 (HISTORY.md#initial-population-decided-2026-10-27), built the
+same day, checks I1–I7 (Kernels `ACCEPTANCE.md`).
 
 ```csharp
 public interface IGpuDifferentialEvolutionBuilder<TFunction> where TFunction : struct
@@ -280,10 +280,10 @@ public sealed class GpuPopulationSnapshot
 | N, or for a pointwise objective N·P, above `int.MaxValue − 1 023` (A9) | `ArgumentOutOfRangeException` from `WithPopulationSize` |
 | N·D or N·P above its limit when `Build` runs (a stage reused after `WithBounds`; A9) | `InvalidOperationException` from `Build`, naming the product and the limit |
 | JADE, SHADE or L-SHADE with N above 2³⁰ (A9) | `InvalidOperationException` from `Build`, naming the ranking's limit |
-| ⏳ 1.2.0: initial bounds of a length other than D, not finite, initial lower > upper, or outside the search box | `ArgumentException` from `WithInitialBounds`, naming the gene |
-| ⏳ 1.2.0: initial genes of a length other than N·D, not finite, or outside the search box | `ArgumentException` from `WithInitialPopulation`, naming the individual and the gene |
-| ⏳ 1.2.0: the initial box or genes no longer fit when `Build` runs (a stage reused after `WithBounds` or `WithPopulationSize`) | `InvalidOperationException` from `Build`, naming what no longer fits |
-| ⏳ 1.2.0: both `WithInitialBounds` and `WithInitialPopulation` | `InvalidOperationException` from `Build` |
+| Since 1.2.0: initial bounds of a length other than D, not finite, initial lower > upper, or outside the search box | `ArgumentException` from `WithInitialBounds`, naming the gene |
+| Since 1.2.0: initial genes of a length other than N·D, not finite, or outside the search box | `ArgumentException` from `WithInitialPopulation`, naming the individual and the gene |
+| Since 1.2.0: the initial box or genes no longer fit when `Build` runs (a stage reused after `WithBounds` or `WithPopulationSize`) | `InvalidOperationException` from `Build`, naming what no longer fits |
+| Since 1.2.0: both `WithInitialBounds` and `WithInitialPopulation` | `InvalidOperationException` from `Build` |
 | A release fails in `Dispose` (A6) | `AggregateException` of the failures, flattened, once everything else is released |
 | `RunAsync` while a run is in progress | `InvalidOperationException` |
 | `RunAsync` after `Dispose` | `ObjectDisposedException` |
@@ -311,7 +311,7 @@ once at the end, and once per observer call. No `GC.Collect`. Since 2026-10-10
   memory without synchronising and looked at one interval later; only the observer and the
   end synchronise. A run may enqueue up to two intervals of generations past its stop,
   which do nothing; the result is the stopping generation's (A13).
-- ⏳ 1.2.0: an initial box adds `2·D` doubles on the device; given genes are copied to the
+- Since 1.2.0: an initial box adds `2·D` doubles on the device; given genes are copied to the
   device once, in `Build`, through `PopulationTransfers`.
 
 ## Children

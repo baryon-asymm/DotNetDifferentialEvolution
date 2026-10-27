@@ -14,7 +14,8 @@ internal readonly record struct StepParameters(int Seed, int Generation,
 
 internal readonly record struct PopulationViews(ArrayView<double> Current,
     ArrayView<double> CurrentFitness, ArrayView<double> Next, ArrayView<double> NextFitness,
-    ArrayView<double> Trial, ArrayView<double> LowerBound, ArrayView<double> UpperBound)
+    ArrayView<double> Trial, ArrayView<double> LowerBound, ArrayView<double> UpperBound,
+    ArrayView<double> InitialLowerBound = default, ArrayView<double> InitialUpperBound = default)
 {
     public PopulationViews Swapped();
 }
@@ -42,6 +43,9 @@ internal static class DeStep
 internal static class GpuKernels
 {
     public static void Initialize<TFunction>(Index1D index, TFunction function,
+        StepParameters parameters, PopulationViews views)
+        where TFunction : struct, IGpuFitnessFunction;
+    public static void EvaluateInitial<TFunction>(Index1D index, TFunction function,
         StepParameters parameters, PopulationViews views)
         where TFunction : struct, IGpuFitnessFunction;
     public static void SampleIndividual(int individual, StepParameters parameters,
@@ -73,7 +77,11 @@ internal static class GpuKernels
   generation-0 draws, then evaluates. `Generation`: thread i builds its trial, evaluates
   it and writes the survivor and its fitness into slot i of `Next`.
 - `SampleIndividual` is `Initialize`'s sampling, one draw per gene in gene order, into
-  slot i of `Current`; `SelectAndRecord` is `Generation`'s selection and records (the
+  slot i of `Current`; since 1.2.0 it samples in the initial box when `InitialLowerBound`
+  is not empty, the only reader of the two initial views, which are empty without a box
+  (I1–I3). `EvaluateInitial` (1.2.0) evaluates slot i of `Current` as it stands, for a run
+  whose generation 0 is the caller's genes: compiled instead of `Initialize`; a pointwise
+  run then skips `Sample` (I5); `SelectAndRecord` is `Generation`'s selection and records (the
   survivor and its fitness into slot i of `Next`; jDE's F and CR handed to the individual
   where the trial replaced its parent; JADE's and SHADE's F, CR and outcome). Each is one
   function that the single-kernel and the pointwise kernels both call (P0, P1).
