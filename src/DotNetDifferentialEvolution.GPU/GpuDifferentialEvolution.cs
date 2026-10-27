@@ -79,6 +79,23 @@ public sealed class GpuDifferentialEvolution : IDisposable
             var upperBound = Allocate(accelerator, settings.GenomeSize);
             PopulationTransfers.Upload(lowerBound, settings.LowerBound);
             PopulationTransfers.Upload(upperBound, settings.UpperBound);
+            ArrayView<double> initialLowerView = default;
+            ArrayView<double> initialUpperView = default;
+            if (settings.InitialLowerBound is { } initialLower && settings.InitialUpperBound is { } initialUpper)
+            {
+                var initialLowerBuffer = Allocate(accelerator, settings.GenomeSize);
+                var initialUpperBuffer = Allocate(accelerator, settings.GenomeSize);
+                PopulationTransfers.Upload(initialLowerBuffer, initialLower);
+                PopulationTransfers.Upload(initialUpperBuffer, initialUpper);
+                initialLowerView = initialLowerBuffer.View;
+                initialUpperView = initialUpperBuffer.View;
+            }
+
+            if (settings.InitialGenes is { } initialGenes)
+            {
+                PopulationTransfers.Upload(currentGenes, initialGenes);
+            }
+
             if (settings.Stagnation is not null)
             {
                 _stopCopy = accelerator.AllocatePageLocked1D<int>(BookkeepingKernels.StopLength);
@@ -102,7 +119,15 @@ public sealed class GpuDifferentialEvolution : IDisposable
                 settings.Seed);
             _launcher = compile(accelerator);
             var views = new PopulationViews(
-                currentGenes.View, currentFitness.View, nextGenes.View, nextFitness.View, trial.View, lowerBound.View, upperBound.View);
+                currentGenes.View,
+                currentFitness.View,
+                nextGenes.View,
+                nextFitness.View,
+                trial.View,
+                lowerBound.View,
+                upperBound.View,
+                initialLowerView,
+                initialUpperView);
             _launcher.Initialize(Parameters(0, settings.PopulationSize), views);
             _bookkeeping.AfterInitialization(views);
             accelerator.Synchronize();
@@ -144,6 +169,18 @@ public sealed class GpuDifferentialEvolution : IDisposable
 
     /// <summary>Gets the number of evaluations so far: N after <c>Build</c> (ACCEPTANCE.md, check 1a).</summary>
     internal long EvaluationCount => _state.Evaluations;
+
+    /// <summary>
+    /// Downloads the current population and its fitness values, synchronised: generation 0 after <c>Build</c>, the final
+    /// population after a run. For the tests of checks I2–I7, which read generation 0 through this; call it only while no run is
+    /// in progress.
+    /// </summary>
+    /// <returns>The genes, <c>N·D</c> individual-major, and the fitness values, <c>N</c>, of the population the run stands at.</returns>
+    internal (double[] Genes, double[] Fitness) CurrentPopulation()
+    {
+        using var binding = Lease.Accelerator.BindScoped();
+        return DownloadCurrent();
+    }
 
     /// <summary>Gets the lease: for the tests of check A6, which look at the context it owns.</summary>
     internal AcceleratorLease Lease { get; }
