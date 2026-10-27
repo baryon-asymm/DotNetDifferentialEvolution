@@ -27,7 +27,7 @@ internal sealed class PointwiseKernelLauncher<TFunction, TPoint> : KernelLaunche
     private readonly List<IDisposable> _owned = [];
     private readonly PointwiseViews<TPoint> _points;
     private readonly ArrayView<int> _noStop;
-    private readonly Action<AcceleratorStream, Index1D, StepParameters, PopulationViews> _sample;
+    private readonly Action<AcceleratorStream, Index1D, StepParameters, PopulationViews>? _sample;
     private readonly Action<AcceleratorStream, Index1D, TFunction, StepParameters, ArrayView<double>, PointwiseViews<TPoint>, ArrayView<int>> _evaluatePoints;
     private readonly Action<AcceleratorStream, Index1D, TFunction, StepParameters, PopulationViews, PointwiseViews<TPoint>> _combineInitial;
     private readonly Action<AcceleratorStream, Index1D, StepParameters, PopulationViews, StrategyViews, ArrayView<double>, ArrayView<double>> _buildTrials;
@@ -39,7 +39,14 @@ internal sealed class PointwiseKernelLauncher<TFunction, TPoint> : KernelLaunche
     /// <param name="pointCount"><c>P</c>, the number of points of an individual.</param>
     /// <param name="populationSize"><c>N_init</c>, the largest population of the run.</param>
     /// <param name="rule">The parameter rule the build kernel is compiled for.</param>
-    public PointwiseKernelLauncher(Accelerator accelerator, TFunction function, int pointCount, int populationSize, ParameterRule rule = ParameterRule.Fixed)
+    /// <param name="initialSource">Whether generation 0 is sampled (the sampling kernel is compiled) or given (it is not).</param>
+    public PointwiseKernelLauncher(
+        Accelerator accelerator,
+        TFunction function,
+        int pointCount,
+        int populationSize,
+        ParameterRule rule = ParameterRule.Fixed,
+        InitialSource initialSource = InitialSource.Sampled)
     {
         ArgumentNullException.ThrowIfNull(accelerator);
         _stream = accelerator.DefaultStream;
@@ -56,8 +63,12 @@ internal sealed class PointwiseKernelLauncher<TFunction, TPoint> : KernelLaunche
             _noStop = noStop.View;
 
             var pointExtent = populationSize * pointCount;
-            _sample = Load<Action<AcceleratorStream, Index1D, StepParameters, PopulationViews>>(
-                accelerator, populationSize, nameof(PointwiseKernels.Sample));
+            if (initialSource == InitialSource.Sampled)
+            {
+                _sample = Load<Action<AcceleratorStream, Index1D, StepParameters, PopulationViews>>(
+                    accelerator, populationSize, nameof(PointwiseKernels.Sample));
+            }
+
             _evaluatePoints = Load<Action<AcceleratorStream, Index1D, TFunction, StepParameters, ArrayView<double>, PointwiseViews<TPoint>, ArrayView<int>>>(
                 accelerator, pointExtent, nameof(PointwiseKernels.EvaluatePoints), typeof(TFunction), typeof(TPoint));
             _combineInitial = Load<Action<AcceleratorStream, Index1D, TFunction, StepParameters, PopulationViews, PointwiseViews<TPoint>>>(
@@ -79,7 +90,7 @@ internal sealed class PointwiseKernelLauncher<TFunction, TPoint> : KernelLaunche
     public override void Initialize(StepParameters parameters, PopulationViews views)
     {
         var individuals = parameters.PopulationSize;
-        _sample(_stream, individuals, parameters, views);
+        _sample?.Invoke(_stream, individuals, parameters, views);
         _evaluatePoints(_stream, individuals * _pointCount, _function, parameters, views.Current, _points, _noStop);
         _combineInitial(_stream, individuals, _function, parameters, views, _points);
     }

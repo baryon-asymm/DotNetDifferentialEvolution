@@ -11,7 +11,10 @@ namespace DotNetDifferentialEvolution.GPU;
 /// <summary>The kernels of a run, compiled for one objective type, behind a non-generic face.</summary>
 internal abstract class KernelLauncher : IDisposable
 {
-    /// <summary>Samples and evaluates the initial population into <see cref="PopulationViews.Current"/>.</summary>
+    /// <summary>
+    /// Samples and evaluates the initial population into <see cref="PopulationViews.Current"/>; when the launcher was made
+    /// for <see cref="InitialSource.Given"/>, evaluates the genes already there and samples nothing.
+    /// </summary>
     /// <param name="parameters">The launch parameters.</param>
     /// <param name="views">The device memory.</param>
     public abstract void Initialize(StepParameters parameters, PopulationViews views);
@@ -65,14 +68,24 @@ internal sealed class KernelLauncher<TFunction> : KernelLauncher
     /// <c>N_init</c>, the largest population of the run: the extent both kernels are loaded for.
     /// </param>
     /// <param name="rule">The parameter rule the generation kernel is compiled for.</param>
+    /// <param name="initialSource">
+    /// Whether generation 0 is sampled (the kernel that samples and evaluates is compiled) or given (the one that only
+    /// evaluates is; the sampling kernel is not).
+    /// </param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="populationSize"/> is less than 1.</exception>
-    public KernelLauncher(Accelerator accelerator, TFunction function, int populationSize, ParameterRule rule = ParameterRule.Fixed)
+    public KernelLauncher(
+        Accelerator accelerator,
+        TFunction function,
+        int populationSize,
+        ParameterRule rule = ParameterRule.Fixed,
+        InitialSource initialSource = InitialSource.Sampled)
     {
         ArgumentNullException.ThrowIfNull(accelerator);
         ArgumentOutOfRangeException.ThrowIfLessThan(populationSize, 1);
         _stream = accelerator.DefaultStream;
         _function = function;
-        _initializeKernel = KernelLoader.Load(accelerator, Entry(nameof(GpuKernels.Initialize), typeof(TFunction)), populationSize);
+        var initialization = initialSource == InitialSource.Given ? nameof(GpuKernels.EvaluateInitial) : nameof(GpuKernels.Initialize);
+        _initializeKernel = KernelLoader.Load(accelerator, Entry(initialization, typeof(TFunction)), populationSize);
         try
         {
             _generationKernel = KernelLoader.Load(accelerator, Entry(nameof(GpuKernels.Generation), typeof(TFunction), RuleType(rule)), populationSize);

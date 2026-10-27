@@ -158,6 +158,37 @@ public interface IGpuTerminationConditionRequired<TFunction> where TFunction : s
   stagnation limit it runs, and its population reaches 4 at the budget.
 - **The observer** sees the current population size: under L-SHADE it shrinks.
 
+## Initial population ✅
+
+Designed 2026-10-27 for 1.2.0 (HISTORY.md#initial-population-decided-2026-10-27), built the
+same day, checks I1–I7 (Kernels `ACCEPTANCE.md`).
+
+```csharp
+public interface IGpuDifferentialEvolutionBuilder<TFunction> where TFunction : struct
+{
+    // … as above, and since 1.2.0:
+    IGpuDifferentialEvolutionBuilder<TFunction> WithInitialBounds(
+        ReadOnlyMemory<double> initialLowerBound, ReadOnlyMemory<double> initialUpperBound);
+    IGpuDifferentialEvolutionBuilder<TFunction> WithInitialPopulation(ReadOnlyMemory<double> genes);
+}
+```
+
+- **Both optional, in gene space, copied at the call;** a second call of the same method
+  replaces the first. Without either, every run is 1.1.0's bit for bit (I1).
+- **`WithInitialBounds`:** D values each, inside the search box (closed). Generation 0 is
+  sampled as now, `lower + u·(upper − lower)` from the same draws, with the initial box in
+  place of the search box; an initial box equal to the search box gives 1.1.0's run bit for
+  bit (I2). Everything after sampling uses the search box: repair, every scheme, L-SHADE's
+  reduction, the stagnation rule, the snapshots, the result (I4).
+- **`WithInitialPopulation`:** N·D values, individual-major, N the population size (under
+  L-SHADE the initial one), every value inside the search box (closed). Generation 0 is
+  these genes as given, evaluated in `Build` (N evaluations, the count starts at N as now);
+  no draw is spent on them, so a seeded run is deterministic (I3, I5).
+- **Both on one builder:** `Build` refuses (`## Errors`); neither wins.
+- **`Build` checks again** what a retained stage may have changed since the call
+  (`WithBounds`, `WithPopulationSize`; A9).
+
+
 ## Optimizer and result ✅
 
 ```csharp
@@ -249,6 +280,10 @@ public sealed class GpuPopulationSnapshot
 | N, or for a pointwise objective N·P, above `int.MaxValue − 1 023` (A9) | `ArgumentOutOfRangeException` from `WithPopulationSize` |
 | N·D or N·P above its limit when `Build` runs (a stage reused after `WithBounds`; A9) | `InvalidOperationException` from `Build`, naming the product and the limit |
 | JADE, SHADE or L-SHADE with N above 2³⁰ (A9) | `InvalidOperationException` from `Build`, naming the ranking's limit |
+| Since 1.2.0: initial bounds of a length other than D, not finite, initial lower > upper, or outside the search box | `ArgumentException` from `WithInitialBounds`, naming the gene |
+| Since 1.2.0: initial genes of a length other than N·D, not finite, or outside the search box | `ArgumentException` from `WithInitialPopulation`, naming the individual and the gene |
+| Since 1.2.0: the initial box or genes no longer fit when `Build` runs (a stage reused after `WithBounds` or `WithPopulationSize`) | `InvalidOperationException` from `Build`, naming what no longer fits |
+| Since 1.2.0: both `WithInitialBounds` and `WithInitialPopulation` | `InvalidOperationException` from `Build` |
 | A release fails in `Dispose` (A6) | `AggregateException` of the failures, flattened, once everything else is released |
 | `RunAsync` while a run is in progress | `InvalidOperationException` |
 | `RunAsync` after `Dispose` | `ObjectDisposedException` |
@@ -276,6 +311,8 @@ once at the end, and once per observer call. No `GC.Collect`. Since 2026-10-10
   memory without synchronising and looked at one interval later; only the observer and the
   end synchronise. A run may enqueue up to two intervals of generations past its stop,
   which do nothing; the result is the stopping generation's (A13).
+- Since 1.2.0: an initial box adds `2·D` doubles on the device; given genes are copied to the
+  device once, in `Build`, through `PopulationTransfers`.
 
 ## Children
 
@@ -290,6 +327,7 @@ once at the end, and once per observer call. No `GC.Collect`. Since 2026-10-10
 - `float`.
 - A caller's own scheme, variant, parameter provider (so the CPU package's dithered
   provider, reached only through its open interface), selection, stop rule, local
-  search or initial sampling.
+  search or initial sampling design (since 1.2.0 a caller gives a box or the genes,
+  "Initial population").
 - An objective on the host or through `IFitnessFunctionEvaluator`: a `ReadOnlySpan`
   cannot cross into an ILGPU kernel.

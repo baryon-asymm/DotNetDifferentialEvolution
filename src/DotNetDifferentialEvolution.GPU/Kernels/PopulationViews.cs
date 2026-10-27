@@ -13,6 +13,11 @@ namespace DotNetDifferentialEvolution.GPU.Kernels;
 /// <param name="Trial">The trial vectors, <c>N·D</c>; thread <c>i</c> writes slot <c>i</c> only.</param>
 /// <param name="LowerBound">The lower bound of each gene, <c>D</c>.</param>
 /// <param name="UpperBound">The upper bound of each gene, <c>D</c>.</param>
+/// <param name="InitialLowerBound">
+/// The lower bound of each gene of the initial sampling box, <c>D</c>, or an empty view when the run has none. Read by
+/// <see cref="GpuKernels.SampleIndividual"/> alone.
+/// </param>
+/// <param name="InitialUpperBound">The upper bound of each gene of the initial sampling box, <c>D</c>, or an empty view when the run has none.</param>
 internal readonly record struct PopulationViews(
     ArrayView<double> Current,
     ArrayView<double> CurrentFitness,
@@ -20,7 +25,9 @@ internal readonly record struct PopulationViews(
     ArrayView<double> NextFitness,
     ArrayView<double> Trial,
     ArrayView<double> LowerBound,
-    ArrayView<double> UpperBound)
+    ArrayView<double> UpperBound,
+    ArrayView<double> InitialLowerBound = default,
+    ArrayView<double> InitialUpperBound = default)
 {
     /// <summary>The same views with the current and next populations exchanged: the swap at the end of a generation.</summary>
     /// <returns>The swapped views.</returns>

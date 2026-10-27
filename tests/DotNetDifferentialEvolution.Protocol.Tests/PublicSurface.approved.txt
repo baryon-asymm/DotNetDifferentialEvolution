@@ -475,6 +475,8 @@ interface DotNetDifferentialEvolution.GPU.IGpuDeviceRequired`1
 
 interface DotNetDifferentialEvolution.GPU.IGpuDifferentialEvolutionBuilder`1
     GpuDifferentialEvolution Build()
+    IGpuDifferentialEvolutionBuilder<TFunction> WithInitialBounds(ReadOnlyMemory<Double> initialLowerBound, ReadOnlyMemory<Double> initialUpperBound)
+    IGpuDifferentialEvolutionBuilder<TFunction> WithInitialPopulation(ReadOnlyMemory<Double> genes)
     IGpuDifferentialEvolutionBuilder<TFunction> WithPopulationUpdateHandler(IGpuPopulationUpdatedHandler handler, Int32 everyNGenerations = 1)
     IGpuDifferentialEvolutionBuilder<TFunction> WithSeed(Int32 seed)
 

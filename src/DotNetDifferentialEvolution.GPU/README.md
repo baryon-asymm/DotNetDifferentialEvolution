@@ -199,6 +199,22 @@ using var optimizer = GpuDifferentialEvolutionBuilder
   `DotNetOptimization.Abstractions`), with the number of generations and evaluations and
   the device it ran on.
 
+## The initial population
+
+By default the first population is uniform in the search box. Two optional calls on the
+last stage, next to `WithSeed`, change that (since 1.2.0):
+
+- `WithInitialBounds(initialLower, initialUpper)` samples it in a box inside the search
+  box; everything after the first population keeps the whole search box, so the run can
+  leave the initial box. Useful when the search box must stay wide but most of it is
+  hopeless as a start.
+- `WithInitialPopulation(genes)` gives it: `N·D` values, individual-major, each inside the
+  search box; under L-SHADE, N is the initial size. It is evaluated in `Build`. Pass the
+  genes of a previous run's last snapshot to continue that run, or mix known good vectors
+  with random ones.
+
+The two cannot be combined (`Build` throws). Without them, runs are 1.1.0's bit for bit.
+
 ## Schemes and variants
 
 The same as the CPU builder's, with its semantics draw for draw:

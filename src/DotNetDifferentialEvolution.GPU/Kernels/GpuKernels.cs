@@ -12,8 +12,8 @@ namespace DotNetDifferentialEvolution.GPU.Kernels;
 internal static class GpuKernels
 {
     /// <summary>
-    /// Samples individual <paramref name="index"/> uniformly in the box from its generation-0 draws,
-    /// <c>lower + u·(upper − lower)</c> with <c>u</c> in <c>[0, 1)</c>, and evaluates it into the
+    /// Samples individual <paramref name="index"/> uniformly in the box (<see cref="SampleIndividual"/>) from its generation-0
+    /// draws, <c>lower + u·(upper − lower)</c> with <c>u</c> in <c>[0, 1)</c>, and evaluates it into the
     /// current population.
     /// </summary>
     /// <typeparam name="TFunction">The objective.</typeparam>
@@ -26,15 +26,30 @@ internal static class GpuKernels
     {
         int individual = index;
         SampleIndividual(individual, parameters, views);
-        var genomeSize = parameters.GenomeSize;
-        var offset = individual * genomeSize;
-        views.CurrentFitness[individual] = function.Evaluate(new GeneView(views.Current.SubView(offset, genomeSize)));
+        EvaluateCurrent(function, individual, parameters.GenomeSize, views);
     }
 
     /// <summary>
-    /// Samples individual <paramref name="individual"/> uniformly in the box from its generation-0 draws, one per gene in
-    /// gene order, <c>lower + u·(upper − lower)</c> with <c>u</c> in <c>[0, 1)</c>, into the current population. The one
-    /// sampling every initialisation kernel calls.
+    /// Evaluates individual <paramref name="index"/> of the current population, as it stands, into
+    /// <c>CurrentFitness</c>: the initialisation of a run whose generation 0 is the caller's genes, which are not sampled.
+    /// </summary>
+    /// <typeparam name="TFunction">The objective.</typeparam>
+    /// <param name="index">The individual.</param>
+    /// <param name="function">The objective.</param>
+    /// <param name="parameters">D.</param>
+    /// <param name="views">The device memory; reads <c>Current</c> and writes <c>CurrentFitness</c>.</param>
+    public static void EvaluateInitial<TFunction>(Index1D index, TFunction function, StepParameters parameters, PopulationViews views)
+        where TFunction : struct, IGpuFitnessFunction
+    {
+        int individual = index;
+        EvaluateCurrent(function, individual, parameters.GenomeSize, views);
+    }
+
+    /// <summary>
+    /// Samples individual <paramref name="individual"/> uniformly in the initial box, or in the search box when the run has
+    /// no initial box, from its generation-0 draws, one per gene in gene order, <c>lower + u·(upper − lower)</c> with
+    /// <c>u</c> in <c>[0, 1)</c>, into the current population. The one sampling every initialisation kernel calls, and the
+    /// only place the initial box is read.
     /// </summary>
     /// <param name="individual">The individual.</param>
     /// <param name="parameters">The seed and D.</param>
@@ -44,12 +59,18 @@ internal static class GpuKernels
         var draws = new PhiloxDraws(parameters.Seed, individual, 0);
         var genomeSize = parameters.GenomeSize;
         var offset = individual * genomeSize;
+        var hasInitialBox = views.InitialLowerBound.Length > 0;
         for (var j = 0; j < genomeSize; j++)
         {
-            var lower = views.LowerBound[j];
-            views.Current[offset + j] = lower + draws.NextUnitDouble() * (views.UpperBound[j] - lower);
+            var lower = hasInitialBox ? views.InitialLowerBound[j] : views.LowerBound[j];
+            var upper = hasInitialBox ? views.InitialUpperBound[j] : views.UpperBound[j];
+            views.Current[offset + j] = lower + draws.NextUnitDouble() * (upper - lower);
         }
     }
+
+    private static void EvaluateCurrent<TFunction>(TFunction function, int individual, int genomeSize, PopulationViews views)
+        where TFunction : struct, IGpuFitnessFunction =>
+        views.CurrentFitness[individual] = function.Evaluate(new GeneView(views.Current.SubView(individual * genomeSize, genomeSize)));
 
     /// <summary>
     /// One generation for individual <paramref name="index"/>, in the CPU executor's order: F and CR

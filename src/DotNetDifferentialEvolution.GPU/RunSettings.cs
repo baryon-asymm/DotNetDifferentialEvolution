@@ -29,6 +29,18 @@ internal sealed record RunSettings(
     /// <summary>Gets D, the number of genes per individual.</summary>
     public int GenomeSize => LowerBound.Length;
 
+    /// <summary>Gets the lower bound of the initial sampling box, <c>D</c> values, or <see langword="null"/> when the run has none.</summary>
+    public double[]? InitialLowerBound { get; init; }
+
+    /// <summary>Gets the upper bound of the initial sampling box, <c>D</c> values, or <see langword="null"/> when the run has none.</summary>
+    public double[]? InitialUpperBound { get; init; }
+
+    /// <summary>Gets the genes of generation 0, <c>N·D</c> individual-major, or <see langword="null"/> when it is sampled.</summary>
+    public double[]? InitialGenes { get; init; }
+
+    /// <summary>Gets where generation 0 comes from.</summary>
+    public InitialSource InitialSource => InitialGenes is null ? InitialSource.Sampled : InitialSource.Given;
+
     /// <summary>Gets the generations between two reads of the stop word; the tests also read it every generation (ACCEPTANCE.md, S12).</summary>
     public int StopReadInterval { get; init; } = DefaultStopReadInterval;
 
