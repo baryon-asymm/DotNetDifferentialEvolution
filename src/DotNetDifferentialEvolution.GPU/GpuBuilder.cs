@@ -17,11 +17,16 @@ namespace DotNetDifferentialEvolution.GPU;
 /// <param name="pointCount"><c>P</c> of a pointwise objective, or <see langword="null"/> for a single-kernel one.</param>
 /// <param name="launcherFor">Compiles the kernels for the objective: its accelerator, the objective, the parameter rule and N.</param>
 /// <param name="pointType"><c>TPoint</c> of a pointwise objective, or <see langword="null"/> for a single-kernel one: the second type ILGPU must see.</param>
+/// <param name="givenGenesLauncherFor">
+/// Compiles the kernels for a run whose generation 0 is the caller's genes (the evaluating kernels only), or
+/// <see langword="null"/> to compile with <paramref name="launcherFor"/> whatever the source of generation 0.
+/// </param>
 internal sealed class GpuBuilder<TFunction>(
     TFunction function,
     int? pointCount,
     Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> launcherFor,
-    Type? pointType = null)
+    Type? pointType = null,
+    Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher>? givenGenesLauncherFor = null)
     : IGpuBoundsRequired<TFunction>,
       IGpuPopulationSizeRequired<TFunction>,
       IGpuMutationStrategyRequired<TFunction>,
@@ -38,8 +43,12 @@ internal sealed class GpuBuilder<TFunction>(
 
     private readonly TFunction _function = function;
     private Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher> _launcherFor = launcherFor;
+    private Func<Accelerator, TFunction, ParameterRule, int, KernelLauncher>? _givenGenesLauncherFor = givenGenesLauncherFor;
     private double[] _lowerBound = [];
     private double[] _upperBound = [];
+    private double[]? _initialLowerBound;
+    private double[]? _initialUpperBound;
+    private double[]? _initialGenes;
     private int _populationSize;
     private StrategySettings? _strategy;
     private int? _maxGenerations;
@@ -260,6 +269,35 @@ internal sealed class GpuBuilder<TFunction>(
     }
 
     /// <inheritdoc />
+    public IGpuDifferentialEvolutionBuilder<TFunction> WithInitialBounds(
+        ReadOnlyMemory<double> initialLowerBound, ReadOnlyMemory<double> initialUpperBound)
+    {
+        var lower = initialLowerBound.ToArray();
+        var upper = initialUpperBound.ToArray();
+        if (InitialBoundsViolation(lower, upper) is { } violation)
+        {
+            throw new ArgumentException(violation.Message, violation.InUpper ? nameof(initialUpperBound) : nameof(initialLowerBound));
+        }
+
+        _initialLowerBound = lower;
+        _initialUpperBound = upper;
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IGpuDifferentialEvolutionBuilder<TFunction> WithInitialPopulation(ReadOnlyMemory<double> genes)
+    {
+        var copy = genes.ToArray();
+        if (InitialGenesViolation(copy) is { } violation)
+        {
+            throw new ArgumentException(violation, nameof(genes));
+        }
+
+        _initialGenes = copy;
+        return this;
+    }
+
+    /// <inheritdoc />
     public GpuDifferentialEvolution Build()
     {
         // The staged interfaces reach Build only through a scheme stage.
@@ -281,10 +319,13 @@ internal sealed class GpuBuilder<TFunction>(
             _everyNGenerations)
         {
             StopReadInterval = _stopReadInterval,
+            InitialLowerBound = _initialLowerBound,
+            InitialUpperBound = _initialUpperBound,
+            InitialGenes = _initialGenes,
         };
         var function = _function;
         var populationSize = _populationSize;
-        var launcherFactory = _launcherFor;
+        var launcherFactory = _initialGenes is not null ? _givenGenesLauncherFor ?? _launcherFor : _launcherFor;
         KernelLauncher Compile(Accelerator accelerator)
         {
             try
@@ -371,6 +412,7 @@ internal sealed class GpuBuilder<TFunction>(
     {
         ArgumentNullException.ThrowIfNull(launcherFor);
         _launcherFor = launcherFor;
+        _givenGenesLauncherFor = null;
         return this;
     }
 
@@ -504,6 +546,81 @@ internal sealed class GpuBuilder<TFunction>(
                     : null;
     }
 
+    /// <summary>
+    /// Why an initial box of <paramref name="lower"/> and <paramref name="upper"/> does not fit the genome and the search box as
+    /// they stand, or <see langword="null"/> when it does; and whether the fault is in the upper array (for the parameter name).
+    /// The search box is closed: an initial bound equal to its edge fits.
+    /// </summary>
+    private (string Message, bool InUpper)? InitialBoundsViolation(double[] lower, double[] upper)
+    {
+        var genomeSize = _lowerBound.Length;
+        if (lower.Length != genomeSize)
+        {
+            return ($"The initial lower bound has {lower.Length} values, but the genome has {genomeSize} genes.", false);
+        }
+
+        if (upper.Length != genomeSize)
+        {
+            return ($"The initial upper bound has {upper.Length} values, but the genome has {genomeSize} genes.", true);
+        }
+
+        for (var j = 0; j < genomeSize; j++)
+        {
+            if (!double.IsFinite(lower[j]) || !double.IsFinite(upper[j]))
+            {
+                return ($"The initial bounds of gene {j} are not finite: [{lower[j]}, {upper[j]}].", !double.IsFinite(upper[j]) && double.IsFinite(lower[j]));
+            }
+
+            if (lower[j] > upper[j])
+            {
+                return ($"The initial lower bound of gene {j}, {lower[j]}, exceeds its initial upper bound, {upper[j]}.", false);
+            }
+
+            if (lower[j] < _lowerBound[j])
+            {
+                return ($"The initial lower bound of gene {j}, {lower[j]}, is below the search box's lower bound, {_lowerBound[j]}.", false);
+            }
+
+            if (upper[j] > _upperBound[j])
+            {
+                return ($"The initial upper bound of gene {j}, {upper[j]}, is above the search box's upper bound, {_upperBound[j]}.", true);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Why <paramref name="genes"/> does not fit the population and the search box as they stand, or <see langword="null"/>
+    /// when it does. The search box is closed: a value equal to its edge fits.
+    /// </summary>
+    private string? InitialGenesViolation(double[] genes)
+    {
+        var genomeSize = _lowerBound.Length;
+        var expected = (long)_populationSize * genomeSize;
+        if (genes.Length != expected)
+        {
+            return $"The initial population has {genes.Length} values, but {_populationSize} individuals of {genomeSize} genes need {expected}.";
+        }
+
+        for (var k = 0; k < genes.Length; k++)
+        {
+            var individual = k / genomeSize;
+            var gene = k % genomeSize;
+            if (!double.IsFinite(genes[k]))
+            {
+                return $"In the initial population, individual {individual}, gene {gene} is not finite: {genes[k]}.";
+            }
+
+            if (genes[k] < _lowerBound[gene] || genes[k] > _upperBound[gene])
+            {
+                return $"In the initial population, individual {individual}, gene {gene} is {genes[k]}, outside the search box [{_lowerBound[gene]}, {_upperBound[gene]}].";
+            }
+        }
+
+        return null;
+    }
+
     private static Backend? BackendOf(GpuDevice device) => device switch
     {
         GpuDevice.Cuda => Backend.Cuda,
@@ -524,6 +641,13 @@ internal sealed class GpuBuilder<TFunction>(
     /// <summary>What the CPU builder refuses in its <c>Build</c>, refused here as there (API.md, errors).</summary>
     private void Validate(StrategySettings strategy)
     {
+        if (_initialLowerBound is not null && _initialGenes is not null)
+        {
+            throw new InvalidOperationException(
+                "Both WithInitialBounds and WithInitialPopulation were called; neither wins. " +
+                "The initial population is either sampled in a box or given, not both.");
+        }
+
         // The stages checked these as each was set; WithBounds may have been called again since (a retained stage).
         if (IndexRangeViolation(_populationSize, _lowerBound.Length, pointCount) is { } violation)
         {
@@ -558,6 +682,18 @@ internal sealed class GpuBuilder<TFunction>(
         {
             throw new InvalidOperationException(
                 $"The archive of {strategy.Name} would hold {archiveGenes} genes, more than {int.MaxValue}, the largest buffer a kernel can index.");
+        }
+
+        // The initial box and the genes were checked at their call against the stages as they were; WithBounds and
+        // WithPopulationSize may have been called again since.
+        if (_initialLowerBound is not null && InitialBoundsViolation(_initialLowerBound, _initialUpperBound!) is { } box)
+        {
+            throw new InvalidOperationException($"The initial bounds no longer fit the stages set since WithInitialBounds: {box.Message}");
+        }
+
+        if (_initialGenes is not null && InitialGenesViolation(_initialGenes) is { } genes)
+        {
+            throw new InvalidOperationException($"The initial population no longer fits the stages set since WithInitialPopulation: {genes}");
         }
     }
 }
