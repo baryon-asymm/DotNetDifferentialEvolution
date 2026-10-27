@@ -139,7 +139,15 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       - the new at-once check red on a slave left running: `StopAllWorkers` skipping the
         last slave (M1, `Span[..^1]`) turned `AllWorkersCooperateToConverge` red at the
         `AnySlaveRunning` line in 3 of 3 runs. The exception case stayed green in 13 of 13
-        runs (3 with the class, 10 alone): the last slave was not left running there;
+        runs (3 with the class, 10 alone), and must: `ExceptionRosenbrockEvaluator` throws
+        on evaluation `ThrowExceptionAt` and every one after, so every slave leaves
+        through its own `catch` and none is waiting to be stopped. The prediction "only
+        when the skipped slave is not the one that threw" was wrong for that reason
+        (corrected by the orchestrator, 2026-10-27). That case's at-once check is shown
+        red instead by M1 with M3 (the skipped slave spins in its `catch` until stopped):
+        both `WorkersOrchestratorTests` cases red at the `AnySlaveRunning` line (38 and
+        65) in 3 of 3 runs, scratch worktree at `bbb5385`. The unmutated pair of classes
+        then ran 25 more times in one loop there, 0 failures;
       - the new deadline red on a worker that does not leave its loop: `continue` in place
         of `break` on `shouldTerminate` (M2) turned both convergence cases red, each after
         10 s ("Worker 0" / "Worker 15 is still inside its loop 10 s after the result"), the
