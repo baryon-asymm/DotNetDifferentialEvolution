@@ -41,6 +41,8 @@ Each is checked by the item of the same number in [ACCEPTANCE.md](ACCEPTANCE.md)
 
 1. **The semantics are those of `docs/ALGORITHMS.md`, §§2–3 and §9.**
    - The initial population is uniform in the box, and the evaluation count starts at N.
+     ⏳ 1.2.0: or in a caller's initial box, or the caller's genes; everything after
+     generation 0 keeps the search box (Kernels `ACCEPTANCE.md`, I1–I7).
    - r1, r2 and r3 are mutually distinct and differ from i.
    - Crossover is binomial and includes `jrand`.
    - Out-of-box genes are repaired to the midpoint toward the parent.

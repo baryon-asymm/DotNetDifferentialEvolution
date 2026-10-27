@@ -254,3 +254,46 @@ From [HISTORY.md](../HISTORY.md#last-result-decided-2026-10-11).
       nothing kept, 2 red (`null`); a generation late, 2 red (100 → 101, 3 → 4), and on CUDA
       100 → 101. A release failure after a cancel faults the task and keeps `LastResult`
       (the coder's decision, accepted). The Gpu category 70/70.
+
+## Initial population — checks I1–I7, frozen 2026-10-27, before code
+
+From [HISTORY.md](../HISTORY.md#initial-population-decided-2026-10-27). "Every strategy"
+is Classic (rand/1), jDE, JADE, SHADE and L-SHADE (generation limit), each with a monolithic
+and a pointwise objective of the same arithmetic. Generation 0 is read after `Build`
+through the package's internal access.
+
+- [ ] **I1, without either call, 1.1.0 bit for bit.** P0's frozen hashes and every existing
+      seeded test stay green, unchanged. The orchestrator's scratch probe (public API,
+      outside the tree) against the published 1.1.0 package: every strategy, seeds 1–4, the
+      generation-20 snapshot and the result equal bit for bit, on the CPU accelerator and on
+      CUDA. Red: the sampling written `upper − u·(upper − lower)` (P0 fails).
+- [ ] **I2, an initial box equal to the search box is no box.** Every strategy, seeded: the
+      generation-0 population, the generation-20 population and fitness, and the result
+      equal bit for bit a run without the call. Red: the initial-box path draws from
+      another stream or generation (the populations differ).
+- [ ] **I3, generation 0 lies in the initial box.** N 256, D 5, an initial box narrower than
+      the search box on genes 0, 2 and 4 and equal on 1 and 3: every gene of generation 0
+      inside its initial interval. A zero-width box at a point c: every individual equals c
+      bit for bit and every fitness is the same value. Two seeded `Build`s with one initial
+      box: equal bit for bit at generation 0 and at 20, every strategy. Red: the sampling
+      reads the search box.
+- [ ] **I4, the box limits the start only.** Sphere with its optimum at 5 on every gene,
+      search box [−10, 10]⁴, initial box [−10, −9]⁴, N 64, 300 generations, seed 1, every
+      strategy: the best individual has every gene above −9 and fitness below 1e-6. Red:
+      repair toward the initial box (the run cannot leave it).
+- [ ] **I5, given genes are generation 0.** A seeded run S of every strategy: its generation-0
+      population passed to `WithInitialPopulation` of a run with S's configuration and seed
+      reproduces S bit for bit through generation 20 (genes, fitness, counts). The final
+      population of a seeded 30-generation run R passed to a run of the same configuration
+      and another seed: generation 0 equals R's final genes and fitness bit for bit, and no
+      snapshot of the next 10 generations, nor the result, has a best worse than R's. Red:
+      the genes ignored and sampled instead.
+- [ ] **I6, the refusals.** Each ⏳ 1.2.0 row of API.md `## Errors`: `WithInitialBounds` with
+      D − 1 values, a `NaN`, an infinity, lower > upper, a value below the search box and one
+      above it; `WithInitialPopulation` with N·D − 1 values, a `NaN`, a value outside the
+      search box; the box or the genes made unfit by a later `WithBounds` or
+      `WithPopulationSize` on a retained stage (`Build`); both calls on one builder
+      (`Build`). Each message names the gene, or the individual and the gene. A value on
+      the search box's edge is accepted. Red: each check removed in turn.
+- [ ] **I7, on the device.** **Gpu**, CUDA: I2, I3's zero-width box and seeded equality, and
+      I5's reproduction of S, for every strategy.

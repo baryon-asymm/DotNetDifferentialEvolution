@@ -2,6 +2,42 @@
 
 Append-only, newest first (AGENTS.md §15). Read by following a pointer, not at start.
 
+<a id="initial-population-decided-2026-10-27"></a>
+## 2026-10-27 — an initial box and a warm start, in 1.2.0
+
+PastyPropellant asked (2026-10-27, through the session «Git статус») for an initial sampling
+box. Its search box must stay maximal: energies on a log10 gene up to `double.MaxValue`,
+pre-exponentials from 1e-300. Sampled uniformly over that box, the population is blind:
+measured by them on the RTX 5070 Ti, N 4 096, Classic, 67 700 generations (277 303 296
+evaluations), not one individual converged; nearly every energy gene lands at 1e10 J/mol or
+more, every score is their non-converged sentinel, nothing to rank. Second, a warm start:
+a second stage on the full box from the first stage's population, a finished or interrupted
+run continued from its last population, known good vectors plus random ones. The owner
+chose, 2026-10-27, both in one release ("Коробку и тёплый старт").
+
+**Decision** (checks I1–I7, Kernels `ACCEPTANCE.md`; API.md, "Initial population"):
+
+- `WithInitialBounds(initialLowerBound, initialUpperBound)` and
+  `WithInitialPopulation(genes)` on the last stage, `IGpuDifferentialEvolutionBuilder`, in
+  gene space, copied at the call. Optional; without either, 1.1.0 bit for bit.
+- The initial box replaces the search box in the one sampling function and nowhere else:
+  the same draws, the same `lower + u·(upper − lower)`, so an initial box equal to the
+  search box is 1.1.0 bit for bit. Repair, L-SHADE, stagnation and snapshots keep the
+  search box.
+- The given genes, N·D individual-major with N the population size (L-SHADE: the
+  initial), replace sampling; generation 0 draws nothing and evaluates them, N evaluations,
+  as `Build` does now. The generations' draws are keyed by generation ≥ 1, so a seeded warm
+  start is deterministic.
+- Both given: refused (`InvalidOperationException` from `Build`); the orchestrator's choice,
+  the consumer left it open. One silently winning would hide a configuration error.
+- Refusals at the call (`ArgumentException`): wrong length, a non-finite value, initial
+  lower > upper, a value outside the search box (closed). Checked again by `Build`
+  (`InvalidOperationException`) when a retained stage changed the bounds or N since (A9).
+- Two members join a public builder interface. Only the package implements the stage
+  interfaces; a caller only calls them. Additive for every caller: a minor version.
+- The CPU package is not changed: its `WithPopulationSampling` already takes any
+  `IPopulationSamplingMaker`, a `UniformRandomSamplingMaker` over a smaller box among them.
+
 <a id="consumer-confirmation-2026-10-11"></a>
 ## 2026-10-11 — a consumer ran 1.1.0-rc.1
 
