@@ -14,7 +14,6 @@ namespace DotNetDifferentialEvolution.IntegrationTests.TestSupport;
 /// </summary>
 internal sealed class MultiWorkerHarness : IDisposable
 {
-    private readonly WorkerController _master;
     private readonly WorkerController[] _slaves;
 
     public MultiWorkerHarness(
@@ -30,10 +29,14 @@ internal sealed class MultiWorkerHarness : IDisposable
         }
 
         Handler = new OrchestratorWorkerHandler(_slaves.ToArray(), context);
-        _master = new WorkerController(workerId: workersCount - 1, executor, Handler);
+        Master = new WorkerController(workerId: workersCount - 1, executor, Handler);
     }
 
     public OrchestratorWorkerHandler Handler { get; }
+
+    /// <summary>Gets the worker that carries the handler. It completes the result task from
+    /// inside its own loop and leaves the loop only after the handler returns.</summary>
+    public WorkerController Master { get; }
 
     /// <summary>Starts every slave, then the master (the production order:
     /// <c>DifferentialEvolution.RunAsync</c> starts the workers in the order they were created,
@@ -45,15 +48,18 @@ internal sealed class MultiWorkerHarness : IDisposable
             slave.Start();
         }
 
-        _master.Start();
+        Master.Start();
     }
 
-    /// <summary>Gets whether any worker (master or slave) is still running.</summary>
-    public bool AnyRunning => _master.IsRunning || _slaves.Any(slave => slave.IsRunning);
+    /// <summary>Gets whether any slave is still running. The handler stops every slave before
+    /// the result task completes, so this is <see langword="false"/> as soon as a test resumes
+    /// from awaiting the result. The master is not covered: it is still inside its loop at that
+    /// moment (<see cref="WorkerStopAssert"/>).</summary>
+    public bool AnySlaveRunning => _slaves.Any(slave => slave.IsRunning);
 
     public void Dispose()
     {
-        _master.Dispose();
+        Master.Dispose();
         foreach (var slave in _slaves)
         {
             slave.Dispose();

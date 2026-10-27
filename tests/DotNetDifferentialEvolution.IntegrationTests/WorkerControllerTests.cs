@@ -21,7 +21,8 @@ public class WorkerControllerTests
 
     /// <summary>
     /// A single seeded worker drives the 2-D Rosenbrock problem to its optimum, completes the
-    /// result task when the termination strategy fires, and is no longer running afterwards.
+    /// result task when the termination strategy fires, and leaves its loop by itself within a
+    /// deadline (the result task completes from inside the worker's own loop).
     /// </summary>
     [Fact]
     public async Task ConvergesAndStopsOnTermination()
@@ -39,12 +40,13 @@ public class WorkerControllerTests
         var result = await handler.GetResultPopulationTask().WaitAsync(Timeout).ConfigureAwait(true);
 
         ConvergenceAssert.ReachedOptimum(evaluator, result, valueTolerance: 1e-6, geneTolerance: 1e-3);
-        Assert.False(worker.IsRunning);
+        await WorkerStopAssert.LeavesItsLoopAsync(worker).ConfigureAwait(true);
     }
 
     /// <summary>
     /// An exception thrown by the fitness function surfaces as the single inner exception of an
-    /// <see cref="AggregateException"/> on the result task, and the worker stops.
+    /// <see cref="AggregateException"/> on the result task, and the worker leaves its loop by itself
+    /// within a deadline.
     /// </summary>
     [Fact]
     public async Task PropagatesFitnessFunctionExceptionAndStops()
@@ -65,7 +67,7 @@ public class WorkerControllerTests
             () => handler.GetResultPopulationTask().WaitAsync(Timeout)).ConfigureAwait(true);
         _ = Assert.Single(aggregate.InnerExceptions);
         _ = Assert.IsType<RosenbrockException>(aggregate.InnerExceptions[0]);
-        Assert.False(worker.IsRunning);
+        await WorkerStopAssert.LeavesItsLoopAsync(worker).ConfigureAwait(true);
     }
 
     /// <summary>

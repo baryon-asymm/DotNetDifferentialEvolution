@@ -28,6 +28,25 @@ orchestrator, the builder end to end, and convergence on functions with known op
 - **Every wait is bounded** (`WaitAsync(timeout)`, 30–120 s), so a hang fails instead of
   stalling the suite.
 - **Optima come from the shared benchmark library**, never from a run.
+- **After the result, a test asserts only what the package promises about the workers**
+  (decided 2026-10-27). The result task is completed on the thread of the worker that
+  carries the handler (the master; a lone worker is its own), from inside that worker's
+  loop. By the [handlers' contract](../../src/DotNetDifferentialEvolution/Controllers/WorkerControllerEventHandlers/API.md)
+  (steps 2 and 7) every slave is stopped before the task completes, and `Stop` returns
+  only once the thread has left its loop
+  ([Controllers](../../src/DotNetDifferentialEvolution/Controllers/API.md)); the worker
+  carrying the handler leaves its loop only after `Handle` returns, so its `IsRunning`
+  may still be `true` when the awaiting test resumes. Hence:
+  - no slave running: asserted **at once**, the first thing after the await;
+  - the worker carrying the handler: asserted to have left its loop **within a
+    deadline** (`WorkerStopAssert`, [TestSupport](TestSupport/API.md)), never at once;
+    the deadline bounds a hang, it is no tolerance on a promise;
+  - after `Dispose` nothing runs: promised by the package root's `Dispose`, held where
+    a test needs it ([Concurrency](Concurrency/API.md) counts the workers).
+
+  The package does not promise "the result only after every worker has left its loop",
+  and a test here does not assume it. Making it a promise would be a contract change of
+  the CPU package, the owner's decision (AGENTS.md §11).
 
 ## Dependencies
 
@@ -87,11 +106,57 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - [ ] ⚠ `MultiWorkerHarness.StartAll` says it starts the master first "matching the
       production order"; `DifferentialEvolution.RunAsync` starts the slaves first and
       the master last. Tests driven through the harness run the other order.
-- [ ] ⚠ Stale comments in test code: `WorkersOrchestratorTests` says the runs "use the
-      thread-safe random provider" (the engine gives each worker its own seeded one);
-      [TestSupport](TestSupport/BOOT.md) has the `BuilderOptimizer` case.
+- [x] Stale comments in `WorkersOrchestratorTests`: 2026-10-27. It said the runs "use the
+      thread-safe random provider"; it now says they are unseeded (the engine gives each
+      worker its own seeded provider, the harness passes no seed).
+- [ ] ⚠ Stale comments in test code, the other part: [TestSupport](TestSupport/BOOT.md)
+      has the `BuilderOptimizer` case, not touched by the stop-assertion change.
 - [ ] ⚠ The orchestration tests through the harness are unseeded: a seed passed to
       `ExecutorFactory` is dropped when `workersCount > 1`.
+- [x] The stop assertions raced (found 2026-10-27, closed 2026-10-27).
+      `WorkersOrchestratorTests` (both cases) asserted `Assert.False(harness.AnyRunning)`
+      and `WorkerControllerTests` (`ConvergesAndStopsOnTermination`,
+      `PropagatesFitnessFunctionExceptionAndStops`) `Assert.False(worker.IsRunning)` the
+      moment the result task completed, which includes the worker carrying the handler,
+      still inside its loop at that moment (see the invariant above). Seen red in GitHub
+      Actions on Ubuntu, step "Tests (excluding slow and GPU)": run 38089616342 (`main`,
+      `cda6cf3`) and the release run 40489873217 (tag `gpu-v1.2.0`, `de6991f`), both
+      `AllWorkersCooperateToConverge`, `Assert.False()` at line 37; PR CI on the same trees
+      and every local run passed. All four cases now assert by the invariant above
+      (`AnySlaveRunning` at once, `WorkerStopAssert.LeavesItsLoopAsync` within 10 s).
+      Proof, local (Windows 11, 16 processors, Release), mutations applied to
+      `src/` in the working tree and reverted, none committed:
+      - green: each of the two classes run 200 times in a loop (one `dotnet test` per run,
+        `WorkerControllerTests` without `Slow`), 0 failures in 200 and 0 in 200
+        (`WorkersOrchestratorTests` 4 min 38 s, `WorkerControllerTests` 4 min 28 s,
+        process start-up included; the cases themselves take 20 to 100 ms);
+      - the old assertion red under a schedule the contract allows: a `Thread.Sleep(200)`
+        in `WorkerController.RunWorkerLoop` between `Handle` returning `shouldTerminate` and
+        the `break` (M0) turned the old `AllWorkersCooperateToConverge` red (line 37,
+        `Assert.False()`, `Actual: True`); the exception case stayed green, as that path
+        does not go through `shouldTerminate`. With the new tests under the same M0 all four
+        cases were green;
+      - the new at-once check red on a slave left running: `StopAllWorkers` skipping the
+        last slave (M1, `Span[..^1]`) turned `AllWorkersCooperateToConverge` red at the
+        `AnySlaveRunning` line in 3 of 3 runs. The exception case stayed green in 13 of 13
+        runs (3 with the class, 10 alone), and must: `ExceptionRosenbrockEvaluator` throws
+        on evaluation `ThrowExceptionAt` and every one after, so every slave leaves
+        through its own `catch` and none is waiting to be stopped. The prediction "only
+        when the skipped slave is not the one that threw" was wrong for that reason
+        (corrected by the orchestrator, 2026-10-27). That case's at-once check is shown
+        red instead by M1 with M3 (the skipped slave spins in its `catch` until stopped):
+        both `WorkersOrchestratorTests` cases red at the `AnySlaveRunning` line (38 and
+        65) in 3 of 3 runs, scratch worktree at `bbb5385`. The unmutated pair of classes
+        then ran 25 more times in one loop there, 0 failures;
+      - the new deadline red on a worker that does not leave its loop: `continue` in place
+        of `break` on `shouldTerminate` (M2) turned both convergence cases red, each after
+        10 s ("Worker 0" / "Worker 15 is still inside its loop 10 s after the result"), the
+        exception cases green; spinning in the failure path until the worker is asked to
+        stop (M3) turned both exception cases red at the deadline, that is
+        `PropagatesFitnessFunctionExceptionAndStops` as predicted and also
+        `FitnessFunctionExceptionPropagatesFromAnyWorkerAndStopsAll` (a case the criterion did
+        not predict; "Worker 15", the master, was the one left running), the convergence
+        cases green.
 
 ## Taboos
 

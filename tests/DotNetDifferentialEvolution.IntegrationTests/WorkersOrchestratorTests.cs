@@ -6,8 +6,9 @@ namespace DotNetDifferentialEvolution.IntegrationTests;
 
 /// <summary>
 /// Integration tests for multi-worker orchestration. These runs are genuinely parallel (one
-/// worker per processor) and therefore use the thread-safe random provider; convergence is
-/// asserted on tolerance rather than exact reproduction. Every wait is bounded by a timeout.
+/// worker per processor) and unseeded (the engine gives each worker its own seeded provider,
+/// but the harness passes no seed); convergence is asserted on tolerance rather than exact
+/// reproduction. Every wait is bounded by a timeout.
 /// </summary>
 [Trait("Category", "Integration")]
 public class WorkersOrchestratorTests
@@ -16,8 +17,9 @@ public class WorkersOrchestratorTests
     private static readonly int WorkersCount = Math.Max(2, Environment.ProcessorCount);
 
     /// <summary>
-    /// One worker per processor, sharing one population, together reach the 2-D Rosenbrock optimum,
-    /// and every worker is stopped once the result is in.
+    /// One worker per processor, sharing one population, together reach the 2-D Rosenbrock optimum.
+    /// Once the result is in, no slave is running (asserted at once, as the handler promises); the
+    /// master, which carries the handler, leaves its loop within a deadline.
     /// </summary>
     [Fact]
     public async Task AllWorkersCooperateToConverge()
@@ -33,13 +35,15 @@ public class WorkersOrchestratorTests
         harness.StartAll();
         var result = await harness.Handler.GetResultPopulationTask().WaitAsync(Timeout).ConfigureAwait(true);
 
+        Assert.False(harness.AnySlaveRunning);
         ConvergenceAssert.ReachedOptimum(evaluator, result, valueTolerance: 1e-5, geneTolerance: 1e-2);
-        Assert.False(harness.AnyRunning);
+        await WorkerStopAssert.LeavesItsLoopAsync(harness.Master).ConfigureAwait(true);
     }
 
     /// <summary>
     /// A fitness-function exception thrown in any worker fails the result task with one to
-    /// one-per-worker inner exceptions, all of the thrown type, and every worker stops.
+    /// one-per-worker inner exceptions, all of the thrown type. Once the failure is in, no slave is
+    /// running (asserted at once); the master leaves its loop within a deadline.
     /// </summary>
     [Fact]
     public async Task FitnessFunctionExceptionPropagatesFromAnyWorkerAndStopsAll()
@@ -58,9 +62,10 @@ public class WorkersOrchestratorTests
         var aggregate = await Assert.ThrowsAsync<AggregateException>(
             () => harness.Handler.GetResultPopulationTask().WaitAsync(Timeout)).ConfigureAwait(true);
 
+        Assert.False(harness.AnySlaveRunning);
         Assert.NotEmpty(aggregate.InnerExceptions);
         Assert.InRange(aggregate.InnerExceptions.Count, 1, WorkersCount);
         Assert.All(aggregate.InnerExceptions, ex => Assert.IsType<RosenbrockException>(ex));
-        Assert.False(harness.AnyRunning);
+        await WorkerStopAssert.LeavesItsLoopAsync(harness.Master).ConfigureAwait(true);
     }
 }
