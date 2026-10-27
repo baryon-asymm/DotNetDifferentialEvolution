@@ -28,6 +28,25 @@ orchestrator, the builder end to end, and convergence on functions with known op
 - **Every wait is bounded** (`WaitAsync(timeout)`, 30–120 s), so a hang fails instead of
   stalling the suite.
 - **Optima come from the shared benchmark library**, never from a run.
+- **After the result, a test asserts only what the package promises about the workers**
+  (decided 2026-10-27). The result task is completed on the thread of the worker that
+  carries the handler (the master; a lone worker is its own), from inside that worker's
+  loop. By the [handlers' contract](../../src/DotNetDifferentialEvolution/Controllers/WorkerControllerEventHandlers/API.md)
+  (steps 2 and 7) every slave is stopped before the task completes, and `Stop` returns
+  only once the thread has left its loop
+  ([Controllers](../../src/DotNetDifferentialEvolution/Controllers/API.md)); the worker
+  carrying the handler leaves its loop only after `Handle` returns, so its `IsRunning`
+  may still be `true` when the awaiting test resumes. Hence:
+  - no slave running: asserted **at once**, the first thing after the await;
+  - the worker carrying the handler: asserted to have left its loop **within a
+    deadline** (`WorkerStopAssert`, [TestSupport](TestSupport/API.md)), never at once;
+    the deadline bounds a hang, it is no tolerance on a promise;
+  - after `Dispose` nothing runs: promised by the package root's `Dispose`, held where
+    a test needs it ([Concurrency](Concurrency/API.md) counts the workers).
+
+  The package does not promise "the result only after every worker has left its loop",
+  and a test here does not assume it. Making it a promise would be a contract change of
+  the CPU package, the owner's decision (AGENTS.md §11).
 
 ## Dependencies
 
@@ -92,6 +111,29 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       [TestSupport](TestSupport/BOOT.md) has the `BuilderOptimizer` case.
 - [ ] ⚠ The orchestration tests through the harness are unseeded: a seed passed to
       `ExecutorFactory` is dropped when `workersCount > 1`.
+- [ ] ⚠ The stop assertions raced (found 2026-10-27). `WorkersOrchestratorTests` (both
+      cases) asserted `Assert.False(harness.AnyRunning)` and `WorkerControllerTests`
+      (`ConvergesAndStopsOnTermination`, `PropagatesFitnessFunctionExceptionAndStops`)
+      `Assert.False(worker.IsRunning)` the moment the result task completed, which
+      includes the worker carrying the handler, still inside its loop at that moment
+      (see the invariant above). Seen red in GitHub Actions on Ubuntu, step "Tests
+      (excluding slow and GPU)": run 38089616342 (`main`, `cda6cf3`) and the release run
+      40489873217 (tag `gpu-v1.2.0`, `de6991f`), both
+      `AllWorkersCooperateToConverge`, `Assert.False()` at line 37; PR CI on the same trees
+      and every local run passed. Closed when all four cases assert by the invariant
+      above and the proof below is recorded here (mutations in a scratch copy only):
+      - green: each of the two classes run 200 times in a loop, no failure;
+      - the old assertion red under a schedule the contract allows: a pause of 200 ms in
+        `WorkerController` between `Handle` returning `shouldTerminate` and the loop's
+        exit (M0) turns the old `AllWorkersCooperateToConverge` red and leaves the new
+        one green;
+      - the new at-once check red on a slave left running: `StopAllWorkers` skipping
+        the last slave (M1) turns `AllWorkersCooperateToConverge` red (the exception
+        case only when the skipped slave is not the one that threw; record what is seen);
+      - the new deadline red on a worker that does not leave its loop: the loop not
+        breaking on `shouldTerminate` (M2) turns both convergence cases red; the failure
+        path waiting for `Stop` after reporting (M3) turns
+        `PropagatesFitnessFunctionExceptionAndStops` red.
 
 ## Taboos
 

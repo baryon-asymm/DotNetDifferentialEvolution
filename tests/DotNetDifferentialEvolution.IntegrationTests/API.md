@@ -9,6 +9,7 @@ points upward: it is what the CPU package may consider proven as a whole.
 |---|---|---|
 | The executor's loop, alone on one thread and seeded, reaches the optimum of Sphere 5-D and Rosenbrock 2-D (1e-6 in value, 1e-3 per gene) | I0, `AlgorithmExecutorConvergenceTests` | ✅ |
 | A single worker and a master with slaves converge and stop; an objective's exception faults the result with `AggregateException` and stops every worker | I1, `WorkerControllerTests`, `WorkersOrchestratorTests` | ✅ |
+| "Stop" above means: every slave has left its loop when the result task completes; the worker carrying the handler leaves its own within 10 s after (decided 2026-10-27, [BOOT.md](BOOT.md) "After the result") | I1, the same four cases | ⏳ the assertions raced until then |
 | Start/stop on a worker follows its state machine over 2 000 seeded commands | I1, `WorkerControllerTests` (`Slow`) | ✅ local only |
 | `NaN` never becomes the reported best: per-worker scan, cross-worker reduction, population scan, the builder's initial pick, a JADE run | I1, `NaNFitnessTests` | ✅ |
 | The engine keeps the fitness ranking current whenever the mutation strategy declares it, with or without a generation strategy | I1, `FitnessRankingMaintenanceTests` | ✅ |

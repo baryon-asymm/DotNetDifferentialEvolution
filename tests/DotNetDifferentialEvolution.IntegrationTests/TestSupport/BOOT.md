@@ -11,6 +11,10 @@ convergence. It holds no tests.
 - **The assertion reads the optimum from the evaluator**, so a test cannot state its
   own expected value.
 - **The harness disposes every worker** it created.
+- **No at-once query covers the worker carrying the handler** (2026-10-27): the harness
+  answers for the slaves at once (`AnySlaveRunning`) and leaves the master to
+  `WorkerStopAssert`, whose wait is bounded and never stops the worker itself. Why: the
+  parent's invariant "After the result" ([BOOT.md](../BOOT.md)).
 - **The manual runner's loop is the orchestrator's, without threads**: execute, swap,
   stamp, check termination.
 
