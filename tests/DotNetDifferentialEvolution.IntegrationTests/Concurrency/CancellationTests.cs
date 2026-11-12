@@ -120,9 +120,10 @@ public class CancellationTests
 
     private const int Generations = 50;
 
-    private static DifferentialEvolution Build(
+    internal static DifferentialEvolution Build(
         IPopulationUpdatedHandler observer,
-        int workers)
+        int workers,
+        int generations = Generations)
     {
         var evaluator = new SphereEvaluator(dimension: 6);
 
@@ -132,7 +133,7 @@ public class CancellationTests
             .WithUniformPopulationSampling()
             .WithDefaultMutationStrategy(0.6, 0.9)
             .WithDefaultSelectionStrategy()
-            .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(Generations))
+            .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(generations))
             .UseProcessors(workers)
             .WithPopulationUpdateHandler(observer)
             .Build();

@@ -45,9 +45,14 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 - Relies on the assembly running its tests one at a time: thread counts and heap size
   are process-wide.
+- Lifecycle probes use the integration test assembly's executable entry point. xUnit
+  starts a child for each case, captures its error output and kills a hung process at 30 seconds.
+  A worker terminating the process or blocking a disposer therefore fails only its own probe.
 
 ## Acceptance criteria
 
+- [x] 2026-11-12, `ActiveRunLifecycleIsSafe`. Both reentry cases, disposal with one and
+      four workers, and disposal from the observer failed on `1d8fe39` and passed with the fix.
 - [x] Green: 2026-10-02, 21 cases in 5 classes (cancellation 6, reproducibility 9,
       parallel 3, lifecycle 2, resources 1 `Slow`).
 - [x] Non-degenerate: 2026-10-02, scratch clone of `a504474`. Ignoring cancellation at
@@ -59,9 +64,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       runs are unseeded.
 - [ ] ⚠ The leak and heap checks were not shown red: no mutation leaked a worker or
       memory in this pass.
-- [ ] ⚠ `ACanceledRunDisposesWithoutHanging` says `Dispose` "joins" every worker
-      thread; it waits until each has left its loop
-      ([Controllers](../../../src/DotNetDifferentialEvolution/Controllers/API.md)).
+- [x] 2026-11-12, `ACanceledRunDisposesWithoutHanging` and `ActiveRunLifecycleIsSafe`.
+      ⚠ The former implementation waited for loop-exit flags. External `Dispose` now joins
+      the worker threads ([Controllers](../../../src/DotNetDifferentialEvolution/Controllers/API.md)).
 
 ## Taboos
 

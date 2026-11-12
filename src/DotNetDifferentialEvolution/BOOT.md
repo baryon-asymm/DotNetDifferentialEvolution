@@ -41,6 +41,9 @@ This node owns the two entry points, `DifferentialEvolutionBuilder` and
   `SeededReproducibilityTests.TheSameSeedReproducesTheRunExactly`,
   `TheSameSeedReproducesTheInitialPopulationToo` and
   `AnAdaptiveVariantIsReproducibleIncludingItsArchiveEviction`.
+- The optimizer accepts one start. An active repeat preserves the running task and token.
+  Disposal requests cancellation at the barrier. External disposal joins every worker.
+  A worker can request disposal from its own callback and continue to the barrier.
 - **The initial population is evaluated once, single-threaded, through
   `Evaluate(genes)`, and counted.** `EvaluationCount` starts at `N`; the best index and
   the fitness ranking are computed before the first generation. During the run the
@@ -74,8 +77,11 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       (3 tests).
 - [x] Parallel runs converge without data-race corruption, oversubscribed included:
       2026-10-02, `ParallelDeterminismTests` (3 tests).
-- [x] Build, run, cancel and dispose leave no workers or threads behind: 2026-10-02,
-      `WorkerLifecycleTests` (2), `CancellationTests` (5), `ResourceUsageTests` (1).
+- [x] Completed runs release worker resources: 2026-10-02, `WorkerLifecycleTests`,
+      `CancellationTests`, `ResourceUsageTests`. ⚠ 2026-11-12: these tests had also been
+      cited for active disposal. Disposing mid-generation could hang or strand the task.
+- [x] 2026-11-12, `ActiveRunLifecycleIsSafe` checks active reentry with either token,
+      disposal with one and four workers, and disposal inside an observer.
 - [x] The children are described: 2026-10-02, brownfield slices 3 to 5 (commits
       `1faf888`, `c293ccb`, `c8bf78f`).
 - [x] ⚠ The validation baseline was 4.0.0 although 4.1.0 and 5.1.0 shipped, so the

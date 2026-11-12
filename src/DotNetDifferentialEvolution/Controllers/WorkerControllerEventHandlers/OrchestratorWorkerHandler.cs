@@ -30,6 +30,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// The token the run was started with. Read only on the orchestrator thread, at the barrier.
     /// </summary>
     private CancellationToken _cancellationToken = CancellationToken.None;
+    private volatile bool _disposalRequested;
 
     /// <summary>
     /// The narrowed view handed to the generation hook. Built once — it holds no state of its
@@ -122,22 +123,20 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
             _context.PopulationUpdatedHandler?.Handle(population);
 
             shouldTerminate = _context.TerminationStrategy.ShouldTerminate(population);
-            if (shouldTerminate)
+            if (_disposalRequested || (!shouldTerminate && _cancellationToken.IsCancellationRequested))
+            {
+                StopAllWorkers();
+
+                shouldTerminate = true;
+                var token = _cancellationToken.IsCancellationRequested ? _cancellationToken : new CancellationToken(canceled: true);
+                _resultPopulationTcs.SetCanceled(token);
+            }
+            else if (shouldTerminate)
             {
                 StopAllWorkers();
 
                 population.MoveCursorToBestIndividual();
                 _resultPopulationTcs.SetResult(population);
-            }
-            else if (_cancellationToken.IsCancellationRequested)
-            {
-                // The barrier is the one moment the run is quiescent: every worker has finished
-                // its stripe and none has been permitted to start the next. Stopping here leaves
-                // the population in a consistent state and no thread mid-generation.
-                StopAllWorkers();
-
-                shouldTerminate = true;
-                _resultPopulationTcs.SetCanceled(_cancellationToken);
             }
             else
             {
@@ -183,6 +182,12 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// <param name="cancellationToken">The already-canceled token.</param>
     internal void CancelBeforeStart(
         CancellationToken cancellationToken) => _ = _resultPopulationTcs.TrySetCanceled(cancellationToken);
+
+    /// <summary>Records a startup failure when no master thread can publish the result.</summary>
+    internal void FailBeforeStart(Exception exception) => _resultPopulationTcs.SetException(exception);
+
+    /// <summary>Requests cancellation at the next quiescent generation barrier.</summary>
+    internal void RequestDisposal() => _disposalRequested = true;
 
     /// <summary>
     /// Waits for all workers to complete their pass loops or encounter exceptions.

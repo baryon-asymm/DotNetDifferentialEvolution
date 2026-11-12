@@ -40,6 +40,11 @@ handler, and ends the loop.
 - `GlobalWorkerCounter` counts live controllers process-wide (incremented on
   construction, decremented on disposal).
 
+The owning optimizer requests a coordinated stop at the generation barrier and
+defers disposal of each running controller until it exits. A call from outside the
+worker group joins each thread. The optimizer's callback path leaves the actual
+release to the workers as they finish.
+
 ## Errors
 
 | Situation | Behaviour |

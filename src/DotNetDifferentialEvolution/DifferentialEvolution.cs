@@ -10,6 +10,8 @@ namespace DotNetDifferentialEvolution;
 /// </summary>
 public class DifferentialEvolution : IDisposable
 {
+    private readonly object _lifecycleLock = new();
+    private bool _started;
     private bool _isDisposed;
 
     private readonly ProblemContext _problemContext;
@@ -71,35 +73,60 @@ public class DifferentialEvolution : IDisposable
     /// </param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the final population.</returns>
     /// <exception cref="OperationCanceledException">The run was canceled.</exception>
+    /// <exception cref="InvalidOperationException">The run is already in progress.</exception>
+    /// <exception cref="ObjectDisposedException">The optimizer has been disposed.</exception>
     public Task<Population> RunAsync(
         CancellationToken cancellationToken = default)
     {
-        var task = _orchestratorWorkerHandler.GetResultPopulationTask();
-
-        if (task.IsCompleted)
+        lock (_lifecycleLock)
         {
+            ObjectDisposedException.ThrowIf(_isDisposed, this);
+            var task = _orchestratorWorkerHandler.GetResultPopulationTask();
+            if (task.IsCompleted)
+            {
+                return task;
+            }
+
+            if (_started)
+            {
+                throw new InvalidOperationException("The optimization is already running.");
+            }
+
+            _started = true;
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _orchestratorWorkerHandler.CancelBeforeStart(cancellationToken);
+                return task;
+            }
+
+            _orchestratorWorkerHandler.UseCancellationToken(cancellationToken);
+            try
+            {
+                foreach (var worker in _workerControllers.Span)
+                {
+                    worker.Start(throwIfRunning: true);
+                }
+            }
+            catch (Exception exception)
+            {
+                // The master starts last. A partially started set of workers has no
+                // orchestrator to release it from its first barrier.
+                foreach (var worker in _workerControllers.Span)
+                {
+                    worker.RequestStop();
+                }
+
+                _orchestratorWorkerHandler.FailBeforeStart(exception);
+                throw;
+            }
+
             return task;
         }
-
-        if (cancellationToken.IsCancellationRequested)
-        {
-            _orchestratorWorkerHandler.CancelBeforeStart(cancellationToken);
-
-            return _orchestratorWorkerHandler.GetResultPopulationTask();
-        }
-
-        _orchestratorWorkerHandler.UseCancellationToken(cancellationToken);
-
-        foreach (var workerController in _workerControllers.Span)
-        {
-            workerController.Start(throwIfRunning: true);
-        }
-
-        return _orchestratorWorkerHandler.GetResultPopulationTask();
     }
 
     /// <summary>
-    /// Releases the resources used by the <see cref="DifferentialEvolution"/> class.
+    /// Requests cancellation at the generation barrier and waits for every worker to exit.
+    /// When called by one of this optimizer's workers, returns after requesting shutdown.
     /// </summary>
     public void Dispose()
     {
@@ -113,20 +140,33 @@ public class DifferentialEvolution : IDisposable
     /// <param name="disposing">A value indicating whether to release both managed and unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
-        if (_isDisposed)
+        if (!disposing)
         {
             return;
         }
 
-        if (disposing)
+        lock (_lifecycleLock)
         {
-            foreach (var workerController in _workerControllers.Span)
-            {
-                workerController.Dispose();
-            }
+            _isDisposed = true;
+            _orchestratorWorkerHandler.RequestDisposal();
         }
 
-        _isDisposed = true;
+        // Only the master may stop the workers at the barrier. Disposing one slave early
+        // would leave the master waiting for a stripe that can never finish.
+        var calledFromWorker = false;
+        foreach (var worker in _workerControllers.Span)
+        {
+            worker.DisposeWhenStopped();
+            calledFromWorker |= worker.IsCurrentThread;
+        }
+
+        if (!calledFromWorker)
+        {
+            foreach (var worker in _workerControllers.Span)
+            {
+                worker.WaitForExit();
+            }
+        }
     }
 
     /// <summary>

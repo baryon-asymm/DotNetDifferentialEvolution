@@ -7,6 +7,13 @@ against the previously released package on every build, and the differences it f
 in `src/DotNetDifferentialEvolution/CompatibilitySuppressions.xml`. Behavioural changes are a
 different matter — nothing can detect those automatically, so they are called out explicitly.
 
+## Unreleased
+
+- Disposing an active CPU optimizer cancels its task at the generation barrier. External
+  callers wait for the workers to exit. Disposal from a worker callback requests shutdown.
+- A second `RunAsync` during a search throws `InvalidOperationException` and preserves the
+  active task and its token. Calling `RunAsync` after disposal throws `ObjectDisposedException`.
+
 ## 6.0.1
 
 A fix to SHADE and L-SHADE; no API change.

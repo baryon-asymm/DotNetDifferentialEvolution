@@ -14,6 +14,9 @@ cancellation, and the result. It is the one place where the run is quiescent.
   and no thread is mid-generation; a run stops within about one generation of the
   request (`de15b2d`). Held by `CancellationTests` (five cases, including an
   already-canceled token and disposal after cancellation).
+- An explicit optimizer disposal requests shutdown at the same barrier. Worker
+  failures take precedence. Disposal cancels the task even if the stop rule is met
+  at this barrier. The caller's canceled token is retained when available.
 - **Any worker's exception fails the whole run, with every worker's exception.** Held
   by `WorkersOrchestratorTests.FitnessFunctionExceptionPropagatesFromAnyWorkerAndStopsAll`.
 - **The ranking is engine state, rebuilt before the hook runs** when the strategy
