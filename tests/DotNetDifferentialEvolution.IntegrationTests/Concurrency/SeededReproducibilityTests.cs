@@ -109,6 +109,41 @@ public class SeededReproducibilityTests
         Assert.Equal(first.PopulationFfValues, second.PopulationFfValues);
     }
 
+    /// <summary>Running one optimizer must leave a second optimizer from the same seeded builder untouched.</summary>
+    /// <param name="variant">Built-in adaptive variant to exercise.</param>
+    [Theory]
+    [InlineData("jde")]
+    [InlineData("jade")]
+    [InlineData("shade")]
+    [InlineData("lshade")]
+    public async Task OptimizersBuiltTogetherHaveIndependentAdaptiveState(string variant)
+    {
+        const long budget = 1500;
+        var evaluator = new SphereEvaluator(dimension: 5);
+        var strategies = DifferentialEvolutionBuilder.ForFunction(evaluator)
+            .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds())
+            .WithPopulationSize(24)
+            .WithUniformPopulationSampling();
+        var configured = variant switch
+        {
+            "jde" => strategies.WithJde(),
+            "jade" => strategies.WithJade(),
+            "shade" => strategies.WithShade(),
+            "lshade" => strategies.WithLShade(budget),
+            _ => throw new ArgumentOutOfRangeException(nameof(variant)),
+        };
+        var builder = configured.WithTerminationCondition(new LimitEvaluationNumberTerminationStrategy(budget))
+            .UseProcessors(2).WithSeed(19);
+        using var first = builder.Build();
+        using var second = builder.Build();
+
+        var firstResult = RunResult.From(await first.RunAsync().WaitAsync(Timeout).ConfigureAwait(true));
+        var secondResult = RunResult.From(await second.RunAsync().WaitAsync(Timeout).ConfigureAwait(true));
+
+        Assert.Equal(firstResult.BestGenes, secondResult.BestGenes);
+        Assert.Equal(firstResult.PopulationFfValues, secondResult.PopulationFfValues);
+    }
+
     private static async Task<RunResult> RunAsync(
         int? seed,
         int workers,

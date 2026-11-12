@@ -30,10 +30,14 @@ public readonly record struct DeVariantSetup
 }
 ```
 
-`Configure` is called once, when the variant is chosen on the builder; `PopulationSize`
-is the initial size. `Validate` is called from `Build`, after the builder's own checks;
-it rejects by throwing `InvalidOperationException`. A third-party variant goes through
-exactly the same checks as a built-in one.
+Selecting a variant calls `Configure` with the initial population size and bounds. The first
+build with those dimensions takes that setup. Each further build requests a new setup, as
+does a build whose dimensions have changed. Return fresh mutable strategy objects on every
+call. Within one setup, the provider and generation hook may point to the same object.
+`Validate` runs after the builder's own checks and may throw `InvalidOperationException`.
+
+⚠ 2026-11-12: this contract previously specified one `Configure` call per builder.
+Two optimizers built from it then used the same adaptive strategies.
 
 ## Published variants ✅
 

@@ -13,6 +13,8 @@ different matter — nothing can detect those automatically, so they are called 
   callers wait for the workers to exit. Disposal from a worker callback requests shutdown.
 - A second `RunAsync` during a search throws `InvalidOperationException` and preserves the
   active task and its token. Calling `RunAsync` after disposal throws `ObjectDisposedException`.
+- Reusing a builder gives each CPU optimizer its own jDE, JADE, SHADE or L-SHADE adaptation
+  state and uniform sampler. A custom variant's `Configure` supplies a setup for each build.
 
 ## 6.0.1
 

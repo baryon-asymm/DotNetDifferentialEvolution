@@ -78,6 +78,11 @@ by `workerIndex`. `Build` samples and evaluates the initial population (single-t
 the legacy `MutationStrategy`, which carries its own F and CR; the other four fixed-F
 schemes get a `ConstantControlParameterProvider`.
 
+Each `Build` allocates separate state for the built-in adaptive variants and the built-in
+uniform sampler. You can build a second optimizer while the first is running. Objects
+passed explicitly, including an objective, sampler, stop rule or observer, are used by
+reference. Custom variants supply fresh state through [Variants](Variants/API.md).
+
 ## Optimizer ✅
 
 ```csharp

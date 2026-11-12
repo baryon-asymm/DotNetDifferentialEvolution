@@ -13,6 +13,7 @@ variant extension point.
 | A strategy that reads F and CR is refused without a provider, accepted with one; every built-in declares it | `MutationRequirementsValidationTests` | ✅ (see the BOOT ⚠ on which guard) |
 | Each preset installs its mutation, its single provider-and-hook object, its tie rule and its archive | `DeVariantTests` | ✅ |
 | A third-party variant is configured, validated and checked exactly like a built-in | `DeVariantTests` | ✅ |
+| A custom variant receives an updated population size before building. Explicit mutation, provider and selection survive the next build alongside a fresh preset generation hook. | `DeVariantTests` | ✅ |
 
 ## Tests ✅
 
@@ -58,6 +59,7 @@ public class DeVariantTests
     public void LShadeInstallsCurrentToPBestWithTheLargerArchiveItsPaperSpecifies();
     public void EveryPresetSatisfiesItsOwnMutationStrategysRequirements(string preset);
     public void AThirdPartyVariantIsConfiguredWithTheProblemDimensions();
+    public void RepeatedBuildsKeepTheStrategiesSetAfterTheVariant();
     public void AThirdPartyVariantsValidateRunsAgainstTheCompletedConfiguration();
     public void AThirdPartyVariantCanRejectTheConfigurationFromItsOwnValidate();
     public void AThirdPartyVariantGetsTheSameControlParameterCheckAsABuiltIn();

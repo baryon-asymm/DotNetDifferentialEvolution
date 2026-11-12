@@ -12,6 +12,7 @@ Nothing outward. What this node proves about the engine under real threads.
 | 25 build/run/dispose cycles leave the global worker counter at its baseline and the thread count within `W + 8` | `WorkerLifecycleTests` | ✅ |
 | 50 cycles grow the settled managed heap by at most 32 MB | `ResourceUsageTests` (`Slow`) | ✅ local only |
 | A second active run is rejected with its first task and token intact. Disposal cancels an active run and prevents subsequent starts. | `LifecycleRegressionTests`, isolated child processes | ✅ |
+| Two optimizers built together from a seeded adaptive preset produce equal results when run in sequence. | `OptimizersBuiltTogetherHaveIndependentAdaptiveState` | ✅ |
 
 ## Tests ✅
 
@@ -33,6 +34,7 @@ public class SeededReproducibilityTests
     public async Task DifferentSeedsProduceDifferentRuns(int workers);
     public async Task AnUnseededRunIsStillFreeToDiffer();
     public async Task AnAdaptiveVariantIsReproducibleIncludingItsArchiveEviction(int workers);
+    public async Task OptimizersBuiltTogetherHaveIndependentAdaptiveState(string variant);
 }
 [Trait("Category", "Integration")]
 public sealed class LifecycleRegressionTests

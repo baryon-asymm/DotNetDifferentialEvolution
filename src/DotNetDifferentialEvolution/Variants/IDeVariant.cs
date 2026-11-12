@@ -12,8 +12,9 @@ namespace DotNetDifferentialEvolution.Variants;
 public interface IDeVariant
 {
     /// <summary>
-    /// Builds the variant's strategies for the given problem dimensions. Called once, when the
-    /// variant is selected on the builder.
+    /// Builds the variant's strategies for one optimizer. The builder prepares the first setup
+    /// when the variant is selected and calls this method again for each subsequent build or
+    /// if the problem dimensions change. Return fresh instances for strategies with mutable state.
     /// </summary>
     /// <param name="configuration">The problem dimensions known at configuration time.</param>
     /// <returns>The strategies to install.</returns>

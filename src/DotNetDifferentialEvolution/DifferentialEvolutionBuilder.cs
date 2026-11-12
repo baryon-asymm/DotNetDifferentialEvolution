@@ -39,18 +39,15 @@ public class DifferentialEvolutionBuilder
 
     private int _populationSize;
 
-    private IPopulationSamplingMaker? _populationSamplingMaker;
+    private Func<IPopulationSamplingMaker>? _createPopulationSampler;
 
     private IMutationStrategy? _mutationStrategy;
     private ISelectionStrategy? _selectionStrategy;
     private ITerminationStrategy? _terminationStrategy;
 
     private IControlParameterProvider? _controlParameterProvider;
-    private IGenerationStrategy? _generationStrategy;
-
-    private int _archiveCapacity;
-
     private IDeVariant? _variant;
+    private PreparedVariant? _preparedVariant;
 
     private int _workersCount;
 
@@ -163,7 +160,7 @@ public class DifferentialEvolutionBuilder
     {
         ArgumentNullException.ThrowIfNull(populationSamplingMaker);
 
-        _populationSamplingMaker = populationSamplingMaker;
+        _createPopulationSampler = () => populationSamplingMaker;
 
         return this;
     }
@@ -171,7 +168,7 @@ public class DifferentialEvolutionBuilder
     /// <inheritdoc />
     public IMutationStrategyRequired WithUniformPopulationSampling()
     {
-        _populationSamplingMaker = new UniformRandomSamplingMaker(_lowerBound, _upperBound);
+        _createPopulationSampler = () => new UniformRandomSamplingMaker(_lowerBound, _upperBound);
 
         return this;
     }
@@ -252,20 +249,12 @@ public class DifferentialEvolutionBuilder
         ArgumentNullException.ThrowIfNull(variant);
 
         var configuration = CreateVariantConfiguration();
-        var setup = variant.Configure(in configuration);
-
-        if (setup.MutationStrategy is null)
-        {
-            throw new InvalidOperationException(
-                $"The variant {variant.GetType().Name} produced no mutation strategy.");
-        }
-
+        var setup = ConfigureVariant(variant, in configuration);
         _variant = variant;
-        _mutationStrategy = setup.MutationStrategy;
-        _controlParameterProvider = setup.ControlParameterProvider;
-        _generationStrategy = setup.GenerationStrategy;
-        _selectionStrategy = setup.SelectionStrategy ?? new SelectionStrategy(configuration.GenomeSize);
-        _archiveCapacity = setup.ArchiveCapacity;
+        _preparedVariant = new PreparedVariant(configuration, setup);
+        _mutationStrategy = null;
+        _controlParameterProvider = null;
+        _selectionStrategy = null;
 
         return this;
     }
@@ -390,18 +379,21 @@ public class DifferentialEvolutionBuilder
     /// <inheritdoc />
     public DifferentialEvolution Build()
     {
-        EnsureReadyStateToBuild();
+        var configuration = CreateVariantConfiguration();
+        var setup = CreateRunSetup(in configuration);
+        EnsureReadyStateToBuild(in setup, in configuration);
 
         var genomeSize = _lowerBound.Length;
 
-        SeedComponents();
+        var sampler = _createPopulationSampler!();
+        SeedComponents(sampler, setup.GenerationStrategy);
 
         var population = new double[_populationSize * genomeSize];
         var populationFfValues = new double[_populationSize];
         var trialPopulation = new double[_populationSize * genomeSize];
         var trialPopulationFfValues = new double[_populationSize];
 
-        _populationSamplingMaker!.SamplePopulation(population);
+        sampler.SamplePopulation(population);
 
         EvaluatePopulationFfValues(
             population,
@@ -421,15 +413,15 @@ public class DifferentialEvolutionBuilder
             trialPopulationFfValues: trialPopulationFfValues)
         {
             PopulationUpdatedHandler = _populationUpdatedHandler,
-            ControlParameterProvider = _controlParameterProvider,
-            GenerationStrategy = _generationStrategy,
-            MutationRequirements = _mutationStrategy!.Requirements,
+            ControlParameterProvider = setup.ControlParameterProvider,
+            GenerationStrategy = setup.GenerationStrategy,
+            MutationRequirements = setup.MutationStrategy.Requirements,
             RandomSeed = _seed,
             LocalSearchRefiner = _localSearchRefiner,
             LocalSearchInterval = _localSearchInterval,
             BestIndividualIndex = FindBestIndividualIndex(populationFfValues),
-            Archive = _archiveCapacity > 0 ? new double[_archiveCapacity * genomeSize] : Memory<double>.Empty,
-            ArchiveCapacity = _archiveCapacity,
+            Archive = setup.ArchiveCapacity > 0 ? new double[setup.ArchiveCapacity * genomeSize] : Memory<double>.Empty,
+            ArchiveCapacity = setup.ArchiveCapacity,
             EvaluationCount = _populationSize
         };
 
@@ -437,17 +429,57 @@ public class DifferentialEvolutionBuilder
             context.FitnessSortedIndices.Span, populationFfValues, _populationSize, new double[_populationSize]);
 
         var algorithmExecutor = new AlgorithmExecutor(
-            _mutationStrategy!,
-            _selectionStrategy!,
+            setup.MutationStrategy,
+            setup.SelectionStrategy!,
             context);
 
         return new DifferentialEvolution(context, algorithmExecutor);
     }
 
     /// <summary>
+    /// Takes the eagerly configured variant components for the first matching build. Further builds
+    /// request their own components so seeding and adaptation can never modify an earlier preset.
+    /// Explicit strategy choices made after variant selection override the corresponding components.
+    /// </summary>
+    private DeVariantSetup CreateRunSetup(in DeVariantConfiguration configuration)
+    {
+        var setup = default(DeVariantSetup);
+        if (_variant is not null)
+        {
+            var prepared = Interlocked.Exchange(ref _preparedVariant, null);
+            setup = prepared is not null && prepared.Configuration == configuration
+                ? prepared.Setup
+                : ConfigureVariant(_variant, in configuration);
+        }
+
+        return setup with
+        {
+            MutationStrategy = _mutationStrategy ?? setup.MutationStrategy,
+            ControlParameterProvider = _controlParameterProvider ?? setup.ControlParameterProvider,
+            SelectionStrategy = _selectionStrategy ?? setup.SelectionStrategy
+        };
+    }
+
+    private static DeVariantSetup ConfigureVariant(IDeVariant variant, in DeVariantConfiguration configuration)
+    {
+        var setup = variant.Configure(in configuration);
+        return setup with
+        {
+            MutationStrategy = setup.MutationStrategy
+                ?? throw new InvalidOperationException($"The variant {variant.GetType().Name} produced no mutation strategy."),
+            SelectionStrategy = setup.SelectionStrategy ?? new SelectionStrategy(configuration.GenomeSize)
+        };
+    }
+
+    /// <summary>
+    /// Holds the initial setup until a single build claims it.
+    /// </summary>
+    private sealed record PreparedVariant(DeVariantConfiguration Configuration, DeVariantSetup Setup);
+
+    /// <summary>
     /// Ensures that all required parameters are set before building the Differential Evolution instance.
     /// </summary>
-    private void EnsureReadyStateToBuild()
+    private void EnsureReadyStateToBuild(in DeVariantSetup setup, in DeVariantConfiguration configuration)
     {
         if (_lowerBound.Length == 0)
         {
@@ -464,32 +496,32 @@ public class DifferentialEvolutionBuilder
             throw new InvalidOperationException("Population size must be set.");
         }
 
-        if (_populationSamplingMaker == null)
+        if (_createPopulationSampler == null)
         {
             throw new InvalidOperationException("Population sampling maker must be set.");
         }
 
-        if (_mutationStrategy == null)
+        if (setup.MutationStrategy == null)
         {
             throw new InvalidOperationException("Mutation strategy must be set.");
         }
 
-        if (_populationSize < _mutationStrategy.MinimumPopulationSize)
+        if (_populationSize < setup.MutationStrategy.MinimumPopulationSize)
         {
             throw new InvalidOperationException(
                 $"Population size {_populationSize} is too small for the chosen mutation strategy, " +
-                $"which needs at least {_mutationStrategy.MinimumPopulationSize} individuals to draw " +
+                $"which needs at least {setup.MutationStrategy.MinimumPopulationSize} individuals to draw " +
                 "the distinct vectors it requires.");
         }
 
         // An unmet ControlParameters requirement is not recoverable at run time: the strategy would
         // read NaN for F and CR, every mutant vector would be NaN, every trial would lose selection,
         // and the run would complete normally having optimized nothing.
-        if (_mutationStrategy.Requirements.HasFlag(MutationRequirements.ControlParameters)
-            && _controlParameterProvider is null)
+        if (setup.MutationStrategy.Requirements.HasFlag(MutationRequirements.ControlParameters)
+            && setup.ControlParameterProvider is null)
         {
             throw new InvalidOperationException(
-                $"The mutation strategy {_mutationStrategy.GetType().Name} takes its per-individual " +
+                $"The mutation strategy {setup.MutationStrategy.GetType().Name} takes its per-individual " +
                 "control parameters (F and CR) from the mutation context, but no control-parameter " +
                 "provider was configured. Pass one to WithMutationStrategy(strategy, provider) — " +
                 $"{nameof(ConstantControlParameterProvider)} and {nameof(DitheredControlParameterProvider)} " +
@@ -498,7 +530,7 @@ public class DifferentialEvolutionBuilder
                 $"{nameof(MutationRequirements)}.{nameof(MutationRequirements.None)}.");
         }
 
-        if (_selectionStrategy == null)
+        if (setup.SelectionStrategy == null)
         {
             throw new InvalidOperationException("Selection strategy must be set.");
         }
@@ -515,11 +547,7 @@ public class DifferentialEvolutionBuilder
 
         // Last, so a variant's own cross-checks see a configuration the builder has already
         // agreed is coherent.
-        if (_variant is not null)
-        {
-            var configuration = CreateVariantConfiguration();
-            _variant.Validate(in configuration, _terminationStrategy);
-        }
+        _variant?.Validate(in configuration, _terminationStrategy);
     }
 
     /// <summary>
@@ -534,15 +562,15 @@ public class DifferentialEvolutionBuilder
     /// components sharing a stream would still be reproducible, but only by accident — a change
     /// in how one of them draws would silently reshuffle the other.
     /// </remarks>
-    private void SeedComponents()
+    private void SeedComponents(IPopulationSamplingMaker sampler, IGenerationStrategy? generationStrategy)
     {
         if (_seed is not { } seed)
         {
             return;
         }
 
-        _generationStrategy?.UseRandomProvider(new SeededRandomProvider(seed + _workersCount));
-        _populationSamplingMaker!.UseRandomProvider(new SeededRandomProvider(seed + _workersCount + 1));
+        generationStrategy?.UseRandomProvider(new SeededRandomProvider(seed + _workersCount));
+        sampler.UseRandomProvider(new SeededRandomProvider(seed + _workersCount + 1));
     }
 
     /// <summary>
@@ -791,6 +819,8 @@ public interface IMutationStrategyRequired
     /// mutation strategy's requirements are checked against what it installed, the population size
     /// is checked against the operator's minimum, and its own
     /// <see cref="IDeVariant.Validate"/> runs against the completed configuration.
+    /// Each build uses its own variant setup. A custom variant supplies any mutable strategies
+    /// through <see cref="IDeVariant.Configure"/>.
     /// </para>
     /// </remarks>
     ITerminationConditionRequired WithVariant(
@@ -1046,9 +1076,9 @@ public interface IDifferentialEvolutionBuilder
     /// strategy's. Every message names what to change.
     /// </exception>
     /// <remarks>
-    /// The result owns worker threads: dispose it. It is also single-use — a second
-    /// <see cref="DifferentialEvolution.RunAsync()"/> returns the already-completed task rather than
-    /// starting a new search, so searching again means building again.
+    /// Each call creates a single-use optimizer with its own built-in sampler and adaptive
+    /// preset state. Objects passed explicitly to the builder, including the termination
+    /// strategy and observer, are reused by reference. Dispose each optimizer after use.
     /// </remarks>
     DifferentialEvolution Build();
 }

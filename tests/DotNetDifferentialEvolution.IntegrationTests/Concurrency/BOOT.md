@@ -53,6 +53,8 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 - [x] 2026-11-12, `ActiveRunLifecycleIsSafe`. Both reentry cases, disposal with one and
       four workers, and disposal from the observer failed on `1d8fe39` and passed with the fix.
+- [x] 2026-11-12, `OptimizersBuiltTogetherHaveIndependentAdaptiveState`. The jDE, JADE,
+      SHADE and L-SHADE pairs diverged on `1d8fe39` and matched with the fix.
 - [x] Green: 2026-10-02, 21 cases in 5 classes (cancellation 6, reproducibility 9,
       parallel 3, lifecycle 2, resources 1 `Slow`).
 - [x] Non-degenerate: 2026-10-02, scratch clone of `a504474`. Ignoring cancellation at

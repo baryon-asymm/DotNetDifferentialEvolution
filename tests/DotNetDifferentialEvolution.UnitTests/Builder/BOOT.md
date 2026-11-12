@@ -57,6 +57,9 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
+- [x] 2026-11-12, `AThirdPartyVariantIsConfiguredWithTheProblemDimensions` and
+      `RepeatedBuildsKeepTheStrategiesSetAfterTheVariant` passed. On `1d8fe39`,
+      the variant still saw the old population size and both engines shared one JADE hook.
 - [x] Green: 2026-10-03, 54 cases in 3 classes (builder 15, requirements 20,
       variants 19); 53 on 2026-10-02, before the jDE tie row.
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. Dropping the

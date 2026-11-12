@@ -41,6 +41,10 @@ This node owns the two entry points, `DifferentialEvolutionBuilder` and
   `SeededReproducibilityTests.TheSameSeedReproducesTheRunExactly`,
   `TheSameSeedReproducesTheInitialPopulationToo` and
   `AnAdaptiveVariantIsReproducibleIncludingItsArchiveEviction`.
+- A build owns its adaptive preset state and built-in uniform sampler. Caller-supplied
+  objects retain their identity across builds. Custom variants create mutable components
+  per setup. ⚠ 2026-11-12: only fresh builders were covered by the seeded checks above.
+  Reusing one builder could reset an active run's generator and share its adaptation memory.
 - The optimizer accepts one start. An active repeat preserves the running task and token.
   Disposal requests cancellation at the barrier. External disposal joins every worker.
   A worker can request disposal from its own callback and continue to the barrier.
@@ -82,6 +86,8 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       cited for active disposal. Disposing mid-generation could hang or strand the task.
 - [x] 2026-11-12, `ActiveRunLifecycleIsSafe` checks active reentry with either token,
       disposal with one and four workers, and disposal inside an observer.
+- [x] 2026-11-12, `OptimizersBuiltTogetherHaveIndependentAdaptiveState` compares two
+      seeded builds for each of jDE, JADE, SHADE and L-SHADE.
 - [x] The children are described: 2026-10-02, brownfield slices 3 to 5 (commits
       `1faf888`, `c293ccb`, `c8bf78f`).
 - [x] ⚠ The validation baseline was 4.0.0 although 4.1.0 and 5.1.0 shipped, so the
@@ -89,9 +95,9 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       baseline 5.1.0, suppression file regenerated (`dotnet pack … -p:ApiCompatGenerateSuppressionFile=true`).
 - [ ] ⚠ `WithPopulationUpdateHandler` accepts `null` without a check, unlike every other
       `With…` that takes an object.
-- [ ] ⚠ A variant is configured when it is chosen, against the population size and
-      bounds of that moment. The staged order makes them final by then; nothing else
-      guards it.
+- [x] 2026-11-12, `DeVariantTests.AThirdPartyVariantIsConfiguredWithTheProblemDimensions`
+      changes the population size after variant selection and verifies the new setup.
+      ⚠ The earlier open criterion relied on the staged order alone.
 
 ## Taboos
 

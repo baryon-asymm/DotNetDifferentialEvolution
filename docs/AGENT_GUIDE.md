@@ -172,7 +172,8 @@ guessing:
 5. **Each optimizer runs once.** Store the task returned by `RunAsync`. A call during the run
    throws `InvalidOperationException` and preserves the first token. A call after completion
    returns the same task until disposal. Use `using var` for each optimizer. To run another search,
-   call `Build()` again.
+   call `Build()` again. Built-in adaptive presets and uniform sampling have separate state in
+   each build. An explicitly supplied object, such as a stateful stop rule, is shared by reference.
 6. **`WithShade` is SHADE 1.0** (CEC 2013), not the SHADE 1.1 the authors distribute as source. The
    two differ in the memory update. `WithLShade` is built on 1.1, as the L-SHADE paper specifies.
 7. **A tie is resolved per variant.** SHADE and L-SHADE take a trial equal to its parent, JADE keeps
