@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 
 namespace DotNetDifferentialEvolution.Protocol.Tests;
@@ -9,6 +11,58 @@ namespace DotNetDifferentialEvolution.Protocol.Tests;
 public sealed class ApiDeclarationsTests
 {
     private const string Fence = "```";
+
+    /// <summary>The first info word selects the language, independent of marker, length, case and up to three leading spaces.</summary>
+    [Theory]
+    [InlineData("```C#", "```")]
+    [InlineData(" ```CSharp", "  ```")]
+    [InlineData("  ~~~~ Cs linenos", " ~~~~~")]
+    [InlineData("~~~csharp,linenos", "~~~")]
+    [InlineData("   `````\tcsharp extra", "   ``````\t")]
+    public void RecognizesCSharpFences(string opening, string closing)
+    {
+        ArgumentNullException.ThrowIfNull(opening);
+        var indent = opening.Length - opening.TrimStart().Length;
+        var section = Assert.Single(ApiDeclarations.ImplementedSections("## Done ✅\n" + opening + "\n" +
+            new string(' ', indent) + "class Seen {}\n" + closing + "\nprose"));
+        Assert.Equal(("class Seen {}", false, 3), section);
+    }
+
+    /// <summary>Only the matching closing delimiter ends a block; marks and nested examples in another language are literal.</summary>
+    [Fact]
+    public void ForeignFencesIsolateMarksAndExampleDeclarations()
+    {
+        var document = string.Join('\n', "## Done ✅", "````text", "## " + ProtocolConfig.TreeContractMarker + " ⏳",
+            "```csharp", "class Ghost {}", "```", "~~~~", "````` trailing text", "````", "~~~cs", "class Seen {}");
+        var section = Assert.Single(ApiDeclarations.ImplementedSections(document));
+        Assert.Equal(("class Seen {}", false, 11), section);
+        Assert.Equal(("Seen", false), Assert.Single(ApiDeclarations.DeclaredTypeSections(document)));
+    }
+
+    /// <summary>An unlabelled API signature is reported at its fence even beside a correctly labelled declaration.</summary>
+    [Theory]
+    [InlineData("public static class Converter { public static int Twice(string quantity); }")]
+    [InlineData("public static int Twice(string quantity);")]
+    [InlineData("internal readonly record struct Quantity(double Value);")]
+    public void UnlabelledApiDeclarationsNameTheirOpeningLine(string declaration)
+    {
+        var document = string.Join('\n', "## Done ✅", Fence + "cs", "public class Other {}", Fence, Fence, declaration, Fence);
+        Assert.Equal(5, Assert.Single(ApiDeclarations.UnlabelledDeclarationLines(document)));
+    }
+
+    /// <summary>Commands, prose, scripts, labels for other languages and future work may contain ordinary examples.</summary>
+    [Fact]
+    public void OrdinaryExamplesDoNotRequireACSharpLabel()
+    {
+        var document = string.Join('\n', "## Done ✅", Fence, "dotnet test tests/Project.Tests", Fence,
+            Fence, "class Example { constructor(value) { this.value = value; } }", Fence,
+            Fence, "interface Line { name: string; }", Fence, Fence, "class Item:\n    pass", Fence,
+            Fence, "public transport on Saturdays", Fence,
+            Fence + "text", "public class Printed {}", Fence,
+            "````text", Fence, "public class Nested {}", Fence, "````",
+            "## Planned ⏳", Fence, "public class Future {}", Fence);
+        Assert.Empty(ApiDeclarations.UnlabelledDeclarationLines(document));
+    }
 
     /// <summary>The nearest mark above a block decides it; a mark-like character inside the code does not; a document
     /// without marks is ✅ throughout.</summary>
@@ -38,19 +92,18 @@ public sealed class ApiDeclarationsTests
             "    public enum Side { Left, Right }",
             "    public static int Sum(Pair pair);",
             "}");
-        var declarations = ApiDeclarations.Declarations(block).ToList();
-        Assert.True(declarations.Single(d => d.Name == "Outer").OpensBody);
-        Assert.False(declarations.Single(d => d.Name == "Pair").OpensBody);
-        Assert.False(declarations.Single(d => d.Name == "Side").OpensBody);
-        Assert.True(declarations.Single(d => d.Name == "Left").FromTypeLine);
-        Assert.False(declarations.Single(d => d.Name == "Sum").FromTypeLine);
+        var outer = Assert.Single(SyntaxFactory.ParseCompilationUnit(block).Members.OfType<ClassDeclarationSyntax>());
+        var pair = Assert.Single(outer.Members.OfType<RecordDeclarationSyntax>());
+        Assert.Equal(["Left", "Right"], pair.ParameterList!.Parameters.Select(parameter => parameter.Identifier.ValueText));
+        Assert.Equal("Side", Assert.Single(outer.Members.OfType<EnumDeclarationSyntax>()).Identifier.ValueText);
+        Assert.Equal("Sum", Assert.Single(outer.Members.OfType<MethodDeclarationSyntax>()).Identifier.ValueText);
     }
 
     /// <summary>A method returning a tuple is read by its own name, not as a member named after a modifier.</summary>
     [Fact]
     public void AModifierBeforeATupleIsNotAMemberName()
     {
-        var declarations = ApiDeclarations.Declarations("internal static (long Low, long High) Band(int count);").Select(d => d.Name).ToList();
+        var declarations = ParsedMethodNames("internal static (long Low, long High) Band(int count);");
         Assert.DoesNotContain("static", declarations);
         Assert.Contains("Band", declarations);
     }
@@ -71,7 +124,7 @@ public sealed class ApiDeclarationsTests
     [InlineData("public new (int A, int B) Band(int count);")]
     public void ADeclarationSplitAcrossLinesIsReadByItsMemberName(string declaration)
     {
-        var names = ApiDeclarations.Declarations(declaration + "\npublic static int After();").Select(d => d.Name).ToList();
+        var names = ParsedMethodNames(declaration + "\npublic static int After();");
         Assert.Equal(["Band", "After"], names);
     }
 
@@ -88,4 +141,8 @@ public sealed class ApiDeclarationsTests
         Assert.True(ApiDeclarations.NamesTypeInTreeContract(document, "Shared"));
         Assert.False(ApiDeclarations.NamesTypeInPackageSurface(document, "Shared"));
     }
+
+    private static string[] ParsedMethodNames(string members) =>
+        [.. SyntaxFactory.ParseCompilationUnit("class Example { " + members + " }").DescendantNodes()
+            .OfType<MethodDeclarationSyntax>().Select(method => method.Identifier.ValueText)];
 }

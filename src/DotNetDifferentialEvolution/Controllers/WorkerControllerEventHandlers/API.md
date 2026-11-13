@@ -24,8 +24,8 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
 `Handle`, on the master's thread, in this order:
 
 1. wait for every slave to finish its stripe or fail (spin-then-yield, never sleep);
-2. if any worker failed: stop the slaves, fault the result task with an
-   `AggregateException` of all worker exceptions, terminate;
+2. if any worker reported failure: stop the slaves, fault the result task with an
+   `AggregateException` of all captured worker exceptions, terminate;
 3. otherwise swap populations; add the live size to `EvaluationCount`; re-rank if the
    mutation strategy declared `FitnessRanking`; call the generation strategy;
 4. best index: the reduction of the workers' bests when there is no generation strategy,
@@ -46,8 +46,11 @@ with two workers. Disposal is now a barrier request alongside token cancellation
 | Situation | Behaviour |
 |---|---|
 | `null` context or master | `ArgumentNullException` |
-| Any worker throws | Result task faulted with `AggregateException`; slaves stopped |
-| A hook, the observer or the stop rule throws | The master worker records it as its own failure and calls `Handle` again, which faults the task as above |
+| A worker reports a captured exception | The master faults the task with `AggregateException` and stops the other workers |
+| The master captures an exception from a hook, the observer or the stop rule | It records the failure and calls `Handle` again to fault the task |
+
+⚠ 2026-11-13: the old table included every thrown exception. The worker's filter lets
+`OutOfMemoryException` escape before the handler receives a report. See the [worker contract](../API.md).
 
 ## Side effects
 

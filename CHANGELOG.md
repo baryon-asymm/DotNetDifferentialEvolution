@@ -9,12 +9,20 @@ different matter — nothing can detect those automatically, so they are called 
 
 ## Unreleased
 
+- Uniform sampling and mutation repair keep genes inside finite bounds even when the box width
+  or the sum used for midpoint repair exceeds `double.MaxValue`.
+- SHADE and L-SHADE retain the relative weights of subnormal fitness improvements and of
+  improvements between finite scores whose difference overflows when updating F/CR memory.
+  When a weighted product approaches underflow, the update uses separate binary exponents
+  to preserve a representable mean for small F or CR.
 - Disposing an active CPU optimizer cancels its task at the generation barrier. External
   callers wait for the workers to exit. Disposal from a worker callback requests shutdown.
 - A second `RunAsync` during a search throws `InvalidOperationException` and preserves the
   active task and its token. Calling `RunAsync` after disposal throws `ObjectDisposedException`.
 - Reusing a builder gives each CPU optimizer its own jDE, JADE, SHADE or L-SHADE adaptation
   state and uniform sampler. A custom variant's `Configure` supplies a setup for each build.
+- Changing the bounds through a saved builder stage now sizes the built-in selection
+  strategy for the next optimizer. Previously built optimizers keep their original dimensions.
 
 ## 6.0.1
 

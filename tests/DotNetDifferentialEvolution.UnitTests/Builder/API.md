@@ -40,9 +40,9 @@ public class DifferentialEvolutionBuilderTests
 [Trait("Category", "Unit")]
 public class MutationRequirementsValidationTests
 {
-    public static TheoryData<IMutationStrategy> StrategiesNeedingControlParameters();
-    public void BuildThrowsWhenAStrategyNeedingControlParametersHasNoProvider(IMutationStrategy mutationStrategy);
-    public void BuildSucceedsWhenTheSameStrategyIsPairedWithAProvider(IMutationStrategy mutationStrategy);
+    public static TheoryData<string> StrategiesNeedingControlParameters();
+    public void BuildThrowsWhenAStrategyNeedingControlParametersHasNoProvider(string strategyName);
+    public void BuildSucceedsWhenTheSameStrategyIsPairedWithAProvider(string strategyName);
     public void EveryStrategyNeedingControlParametersSaysSo();
     public void TheLegacyStrategyCarriesItsOwnParametersAndStillBuildsAlone();
     public void ACustomStrategyThatDeclaresNoRequirementsBuildsAlone();
@@ -68,3 +68,7 @@ public class DeVariantTests
     public void WithVariantRejectsNull();
 }
 ```
+
+⚠ 2026-11-13 — Signature verification found that the provider cases receive strategy
+names from `TheoryData<string>`. The previous declarations passed `IMutationStrategy`
+instances through the theory data and both test methods.

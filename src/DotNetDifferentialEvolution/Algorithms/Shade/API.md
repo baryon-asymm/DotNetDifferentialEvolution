@@ -31,11 +31,18 @@ clamped to `[0, 1]`, or exactly 0 if the slot is terminal (negative); F ~ Cauchy
 
 After the generation: the archive update of [Common](../Common/API.md), then one slot
 (round-robin) is overwritten from **improving** trials weighted by
-`w = parent fitness − trial fitness`, skipping non-finite weights:
+`w = parent fitness − trial fitness` when both fitness values are finite:
 `M_F ← Σ w F² / Σ w F`; `M_CR ←` weighted arithmetic mean (SHADE), or weighted Lehmer
 mean when `UseLehmerCrMean`, or the terminal value when `UseTerminalCr` and every
 successful CR was 0 (or the slot already was terminal). No usable success leaves the
 memory and the slot index unchanged.
+
+⚠ 2026-11-13 (F7): the previous contract skipped non-finite differences. A difference
+above `double.MaxValue` between finite endpoints now contributes its relative weight.
+Tiny differences are scaled before forming the products in either mean.
+⚠ 2026-11-13: even with normal weights a product such as w·F² can lose precision or vanish.
+An affected ratio is accumulated with separate binary exponents for its moments. Ordinary
+ratios retain their summation order and arithmetic. Results use binary64 precision and range.
 
 ## Errors
 

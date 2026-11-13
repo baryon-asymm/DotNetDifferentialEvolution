@@ -28,6 +28,14 @@ current population, **combine** into its fitness.
   midpoint repair and survival follow `docs/ALGORITHMS.md` §§2–3 and §9, and consume
   draws in the same order as the CPU `MutationStrategy`, so the same draws give the same
   trial bit for bit. Held by ACCEPTANCE.md, checks 1b–1e and 1g.
+- **A finite search box with an in-box parent yields an in-box trial.** A crossed NaN
+  uses the parent. Check NaN before the ordered comparisons on the device. Either
+  infinity uses the midpoint with its violated bound. Halve the sum when finite,
+  otherwise add the two halves.
+- **Initial sampling stays in the closed box for finite ordered endpoints.** Keep
+  `lower + u * (upper - lower)` for a finite width. For an overflowing width,
+  interpolate the two weighted endpoints. Limit a rounded overshoot to the upper
+  endpoint. Either path consumes the same single Philox draw per gene.
 - **Thread i writes only trial slot i and next slot i.** Every thread reads the whole
   current population; nothing else is written. A launch therefore needs no
   synchronisation. Held by check 2b.

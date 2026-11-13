@@ -14,7 +14,7 @@ had to decide beyond those bounds into the report.
 **Start** (`AGENTS.md`, §10): the protocol; the upward chain of `BOOT.md` to the root,
 plus this node's own `ACCEPTANCE.md` if its `BOOT.md` points to one (an ancestor's
 `ACCEPTANCE.md` is not read - it is that ancestor's evidence, not frame); the `API.md`
-of the neighbours from this node's `## Dependencies`; the linter. **Do not read the
+of declared ancestors and neighbours from this node's `## Dependencies`; the linter. **Do not read the
 neighbours' code** (§3): their contract is their `API.md`. If the contract is
 insufficient, that is a defect of their document: stop and escalate (§11), do not peek
 into the implementation.
@@ -30,7 +30,8 @@ Rules:
    constraints may be narrowed but not loosened. Do not invent beyond the contract:
    extra public surface is a contract nobody asked for, and it will have to be
    described and maintained.
-2. **If the document is insufficient for a local decision**, make a reversible
+2. **If an essential invariant is unspecified**, report the decision and the example it
+   affects before coding. For a local implementation detail left to the implementer, make a reversible
    decision within the node's bounds and record it: in `BOOT.md` as a line with ⚠
    ("assumption made: …, because …") or as a `- [ ]` criterion. An irreversible
    decision, or one touching the neighbours, is a reason to stop, not to guess.

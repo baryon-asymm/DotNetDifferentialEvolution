@@ -3,11 +3,14 @@
 ## Purpose
 
 The CPU Differential Evolution package, `DotNetDifferentialEvolution` on nuget.org
-(6.0.0 in the csproj, 5.1.0 the latest published): multi-threaded, SIMD-accelerated, classic DE with several
+([project file](DotNetDifferentialEvolution.csproj)): multi-threaded, SIMD-accelerated, classic DE with several
 mutation schemes plus jDE, JADE, SHADE and L-SHADE, built through a staged fluent
 builder. The objective contract and the solution type come from the shared
 `DotNetOptimization.Abstractions` package, so one objective drives every optimizer of
 that family.
+
+⚠ 2026-11-13: the summary still named 6.0.0 as the project version after the 6.0.1 update.
+The project file above carries the current version.
 
 This node owns the two entry points, `DifferentialEvolutionBuilder` and
 `DifferentialEvolution`; everything else is a child.
@@ -45,6 +48,12 @@ This node owns the two entry points, `DifferentialEvolutionBuilder` and
   objects retain their identity across builds. Custom variants create mutable components
   per setup. ⚠ 2026-11-12: only fresh builders were covered by the seeded checks above.
   Reusing one builder could reset an active run's generator and share its adaptation memory.
+- Each build constructs an explicitly requested default selector for its current genome
+  size. A caller-supplied selector keeps its identity. Selecting a variant clears either
+  override so that the variant supplies its own survival rule.
+  ⚠ 2026-11-13. The default selector previously captured the size at
+  `WithDefaultSelectionStrategy()`. `BuilderBoundsTests` reproduced a failed survivor
+  copy after a retained bounds stage changed dimensions from 2 to 3 and from 3 to 2.
 - The optimizer accepts one start. An active repeat preserves the running task and token.
   Disposal requests cancellation at the barrier. External disposal joins every worker.
   A worker can request disposal from its own callback and continue to the barrier.
@@ -74,6 +83,10 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
+- [x] 2026-11-13, `BuilderBoundsTests.DefaultSelectionUsesEachBuildsGenomeSize`
+      runs both optimizers after resizing the box in either direction and checks
+      every survivor against the fixed coordinates of its respective box.
+
 - [x] The package builds with 0 warnings and its unit and integration suites pass:
       2026-10-02, local run of the CI filters (232 unit, 70 integration); the full
       integration set including `Slow` 76/76.
@@ -98,6 +111,18 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - [x] 2026-11-12, `DeVariantTests.AThirdPartyVariantIsConfiguredWithTheProblemDimensions`
       changes the population size after variant selection and verifies the new setup.
       ⚠ The earlier open criterion relied on the staged order alone.
+
+## Lifecycle and builder verification on 2026-11-13
+
+The 2026-11-12 criteria were rechecked on Git tree `7b7dc4e91f02259ad4b3b84afb6e0c23f7d4248a`.
+Run from the root after a Release solution build:
+
+- `dotnet test tests/DotNetDifferentialEvolution.IntegrationTests -c Release --no-build --blame-hang-timeout 4m`
+  passed 87/87, including the five `ActiveRunLifecycleIsSafe` cases, the four
+  `OptimizersBuiltTogetherHaveIndependentAdaptiveState` presets and `ACanceledRunDisposesWithoutHanging`.
+- `dotnet test tests/DotNetDifferentialEvolution.UnitTests -c Release --no-build --blame-hang-timeout 4m`
+  passed 264/264, including `DeVariantTests.AThirdPartyVariantIsConfiguredWithTheProblemDimensions`
+  and `DeVariantTests.RepeatedBuildsKeepTheStrategiesSetAfterTheVariant`.
 
 ## Taboos
 

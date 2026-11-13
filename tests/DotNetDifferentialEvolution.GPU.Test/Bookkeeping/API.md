@@ -7,10 +7,14 @@ Nothing outward. What this node proves about the GPU package's work between gene
 | Claim | Confirmed by | State |
 |---|---|---|
 | JADE's means and the SHADE and L-SHADE memories are the CPU strategies' bit for bit; the kernels are the rules in chunks of 1 024 (S7) | `AdaptationParityTests` | ✅ |
+| With successes in separate chunks, the updated SHADE and L-SHADE slots match known rational values for subnormal and overflowing differences on ILGPU CPU, CUDA and OpenCL (F7) | `ExtremeImprovementTests` | ✅ |
+| Cross-chunk weighted products retain representable means down to ε, including opposite maxima and a positive subnormal CR among signed zeros | `ExtremeImprovementTests` | ✅ |
+| On OpenCL, NaN weight markers leave every wide-chunk maximum and each ordinary partial sum at its exact expected value, including the last partial chunk | `OpenClExcludesUnusableRecordsBeforeReducingWeights` | ✅ |
 | The archive is the CPU package's `UpdateArchive` given the same slot draws; the kernels are the rule (S8) | `ArchiveParityTests` | ✅ |
 | Both rankings give the order by (key, index), `NaN` as +∞ (S9); the best index is `BestPick`'s (S10) | `RankingTests` | ✅ |
 | L-SHADE's sizes are the known answers and the CPU package's; the reduction keeps the ranking's first N (S11) | `LShadeReductionTests` | ✅ |
 | The stop rule is the CPU package's; a run stops where it says, whatever the read interval (S12) | `StagnationTests` | ✅ |
+| Public SHADE with streak 5 stops at generation 6 for constant 1 or either infinity and 5 for NaN. With the largest finite threshold, initial distance equal to the threshold stops at 5 and an overflowing distance at 6, on ILGPU CPU, CUDA and OpenCL. | `StagnationProcessTests` | ✅ |
 | `OrderKey` orders −∞, −`double.MaxValue`, −1, −ε, −0, +0, ε, 1, `double.MaxValue`, +∞, NaN non-decreasingly with −0 = +0 and +∞ = NaN, as `KeyOf` orders any two doubles; `Precedes` is (key, index) (A3, CI) | `FitnessOrderTests` | ✅ |
 | `RankingCalibration.LimitOf` against a scripted `time` that records the n it was asked: N_init ≤ 1 024 → 1 024 and never asked; faster at 2 048 and 4 096, slower at 8 192 → 4 096; slower at 2 048 → 1 024; faster everywhere with N_init 3 000 → 3 000 (asked at 2 048 and 3 000 only), with 20 000 → 8 192; the first slower n ends the search (A3 ⚠, CI) | `RankingCalibrationTests` | ✅ |
 | The CPU accelerator's instance has L = 2 048 and times nothing; a limit forced through `BookkeepingTuning` decides the ranking and times nothing; `RankingTests` straddles the instance's limit (A3 ⚠, CI) | `RankingTests` | ✅ |
@@ -22,10 +26,21 @@ Nothing outward. What this node proves about the GPU package's work between gene
 
 ```csharp
 [Trait("Category", "Integration")] public class AdaptationParityTests;
+public class ExtremeImprovementTests
+{
+    public void CpuAcceleratorRetainsExtremeImprovements();
+    public void GpuRetainsExtremeImprovements(string backendName);
+    public void OpenClExcludesUnusableRecordsBeforeReducingWeights(bool singleSuccess);
+}
 [Trait("Category", "Integration")] public class ArchiveParityTests;
 [Trait("Category", "Integration")] public sealed class RankingTests : IDisposable;
 [Trait("Category", "Integration")] public class LShadeReductionTests;
 [Trait("Category", "Integration")] public class StagnationTests;
+public sealed class StagnationProcessTests
+{
+    public Task CpuStopsOnConstantScores();
+    public Task GpuStopsOnConstantScores(GpuDevice device);
+}
 [Trait("Category", "Unit")] public class FitnessOrderTests;
 [Trait("Category", "Unit")] public class RankingCalibrationTests;
 [Trait("Category", "Integration")] public sealed class WideChunkTests : IDisposable;

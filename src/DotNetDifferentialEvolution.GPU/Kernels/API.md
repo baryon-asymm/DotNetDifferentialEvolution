@@ -71,10 +71,15 @@ internal static class GpuKernels
   redrawn while it repeats an earlier one.
 - `BuildTrial`: `v = x_r1 + F·(x_r2 − x_r3)` into slot i of `trial`; then `jrand` is
   drawn, and gene `jrand` and every gene whose 64-bit draw passes the threshold keep the
-  mutant gene, repaired to `(bound + parent)/2` if it left the box; every other gene is
-  the parent's. No draw is consumed for gene `jrand`, as in the CPU step.
-- `Initialize`: thread i samples `lower + u·(upper − lower)` per gene from its
-  generation-0 draws, then evaluates. `Generation`: thread i builds its trial, evaluates
+  mutant gene after repair. An out-of-box mutant, including an infinity, takes the
+  midpoint with the violated bound. The midpoint is `(bound + parent)/2` when the
+  sum is finite and `bound/2 + parent/2` when it overflows. A NaN mutant takes the
+  parent. Every uncrossed gene is the parent's. No draw is consumed for gene `jrand`.
+- `Initialize`: thread i samples one gene per generation-0 draw, then evaluates.
+  For finite ordered endpoints a gene lies in the closed interval. Sampling uses
+  `lower + u·(upper − lower)` for a finite width and `(1 − u)·lower + u·upper` if the
+  width overflows. A rounded overshoot returns the upper endpoint.
+  `Generation`: thread i builds its trial, evaluates
   it and writes the survivor and its fitness into slot i of `Next`.
 - `SampleIndividual` is `Initialize`'s sampling, one draw per gene in gene order, into
   slot i of `Current`; since 1.2.0 it samples in the initial box when `InitialLowerBound`

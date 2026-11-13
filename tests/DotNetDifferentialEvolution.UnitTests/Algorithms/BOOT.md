@@ -18,10 +18,17 @@ cosine term is 0 (draws `0.5, 0.75`), the Cauchy to its location at the draw `0.
 - **Tie handling is pinned in both directions**: jDE inherits on a tie, JADE and SHADE
   learn nothing from one.
 - **`TrialRecord`s are built by hand**; no test runs selection to produce them.
+- The supplementary CPU replay checks slot zero after one generation. Its constant
+  matrix uses two improved records with differences in ratio 1:2. Its mixed matrix
+  uses one fixed set and 192 sets of four exponent triples from Python `Random(53247)`.
+  Python's `Fraction` evaluates the weighted arithmetic and Lehmer means exactly
+  before conversion to binary64.
 - **The unscaled memory update is a copy, frozen.** `UnscaledShadeMemory` holds 6.0.0's
   arithmetic as at `a5e579e` and the exact read-back of a strategy's memory (the Gaussian's
   uniforms 0 and the Cauchy's ½ make both samplers return their centre); the strategies
-  must equal it bit for bit below the overflow bound (O2).
+  must equal it bit for bit on the ordinary-scale inputs of O2.
+  ⚠ 2026-11-13 (F7): the former wording included subnormal improvements, which lost
+  precision in the frozen update. Their expected values come from the weight ratios.
 
 ## Dependencies
 
@@ -51,6 +58,15 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 
 ## Acceptance criteria
 
+- [x] 2026-11-13, `replay_extreme_products.py` from a fresh source copy: 0/144
+      constant cases differed and 0/772 mixed values were nonfinite or outside 3 ULP
+      of the rounded reference. Replaying against first-candidate tree `49b91321`
+      reproduced 62 failing constant cases and 53 failing mixed values (exit 1).
+- [x] 2026-11-13, `ExtremeProductsRetainRepresentableMeans`: fixed-draw readback for
+      tiny parameters, opposite maxima and the signed-zero/minimum-subnormal CR pair.
+- [x] 2026-11-13, `ShadeStrategyTests.ExtremeImprovementsRetainTheirRelativeWeights`, four SHADE
+      and L-SHADE cases. Subnormal differences and opposite-sign finite endpoints give the
+      rational memory values in [Shade/BOOT.md](../../../src/DotNetDifferentialEvolution/Algorithms/Shade/BOOT.md).
 - [x] Green: 2026-10-02, 32 cases in 4 classes (jDE 4, JADE 4, SHADE 8, L-SHADE 16).
 - [x] The overflow checks O1 and O2 of [Shade](../../../src/DotNetDifferentialEvolution/Algorithms/Shade/BOOT.md)
       (2026-10-08): SHADE 11 and L-SHADE 19 cases; O1 red on `a5e579e` (`CR is NaN`), O2 green
@@ -66,8 +82,10 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 
 ## Taboos
 
-- **No reading the private means by reflection.** Sampling with centre-revealing draws
-  checks the same value through the public path the engine uses.
+- **Use centre-revealing draws in the xUnit tests.** The separate numerical replay
+  reads only `_memoryF[0]` and `_memoryCr[0]` by reflection after the public update.
+  ⚠ 2026-11-13: the former blanket prohibition on reflection would change the original
+  matrix comparisons. Sampling caps F, clamps CR and redraws a nonpositive F.
 - **No expectation taken from a run.** Each is a formula in the test.
 - **No "keeping `UnscaledShadeMemory` in step" with `ShadeStrategy`.** A copy that follows the
   code proves nothing; it changes only if the 6.0.0 arithmetic it records was copied wrongly.

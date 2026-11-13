@@ -8,8 +8,8 @@ namespace DotNetDifferentialEvolution.UnitTests.Algorithms;
 
 /// <summary>
 /// The memory update of 6.0.0, as it stood at <c>a5e579e</c>: the weights summed as they are, with
-/// no scale. It is the reference the scaled update must equal bit for bit whenever no weight
-/// exceeds <c>double.MaxValue / (2 * N)</c> (criterion O2 of <c>Algorithms/Shade</c>), copied here
+/// no scale. It is the bitwise reference for the ordinary-scale generations covered by O2.
+/// Extreme weights and products have independent known-answer tests. The arithmetic was copied here
 /// once and never changed; do not "keep it in step" with <see cref="ShadeStrategy"/>.
 /// </summary>
 /// <remarks>

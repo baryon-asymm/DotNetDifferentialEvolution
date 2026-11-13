@@ -65,6 +65,11 @@ file.
       streak reset on equality (sequence 0, step 0; and the run, which now ends at
       generation 10 000 by its observer: the first red run hung →
       [HISTORY.md](../HISTORY.md#symmetry-built-2026-10-05)).
+- [x] 2026-11-13, S12 on compiled devices. `StagnationProcessTests` exercises the public
+      SHADE builder on ILGPU CPU, CUDA and OpenCL. With streak 5, constant 1 and either
+      infinity stop at generation 6, NaN at 5. At threshold `double.MaxValue`, constant
+      zero stops at 5 (equality) and `double.MaxValue` at 6 (subtraction overflow).
+      With the previous comparison, gfx1036 passed generation 6 for +∞, −∞ and NaN.
 
 ## Overflow of SHADE's weights — check S19, frozen 2026-10-08, before code ✅
 
@@ -103,6 +108,38 @@ weight is divided by it; otherwise the weights are used as they are.
       device cases at N 3 000 and 5 000; with the scale at every bound: both CPU-parity tests.
       The non-GPU suite 319/319 →
       [HISTORY.md](../HISTORY.md#shade-weight-overflow-2026-10-08).
+
+## Extreme SHADE weights (F7)
+
+The first candidate below was Git tree `49b913216e1a29eb71650fff29803455f754d5b5`.
+The fixed kernel was verified on `7b7dc4e91f02259ad4b3b84afb6e0c23f7d4248a` with
+`dotnet test tests/DotNetDifferentialEvolution.GPU.Test -c Release --filter FullyQualifiedName~ExtremeImprovementTests`.
+
+- [x] 2026-11-13, `OpenClExcludesUnusableRecordsBeforeReducingWeights`, gfx1036.
+      With one improvement of 4 and 999 finite kept trials, the 32 maxima are [4, 0, …, 0]
+      and the raw sum vector is [4, 1, ¼, 2, 1, ¼].
+      Run the actual maximum and sum passes on 1 025 records. Each group of eight has one
+      improvement of 2⁻⁴² with F = ½ and CR = ¼, plus excluded outcomes or endpoints.
+      Before the explicit NaN exclusion, 16 of 17 wide chunks returned NaN. With it,
+      every chunk returns 2⁻⁴² and both sum chunks give their six expected entries exactly.
+      Independent consumer, seed 92: the first candidate wrote NaN in both parameters of the slot
+      for N = 1 000 (k = −42, layout 3) and N = 1 500 (k = −40, layout 0); the extended
+      pass recovered the memories but left infinite raw sums. With the exclusion, SHADE
+      and L-SHADE match the host composition bit for bit on both inputs with finite raw sums.
+- [x] 2026-11-13, `ExtremeImprovementTests`, ILGPU CPU, CUDA and OpenCL: cross-chunk
+      products recover F = CR = 2⁻⁵⁴ at weights (2⁻⁹⁶⁹, 2⁻⁹⁶⁸), 2⁻⁶⁰⁰ at unit weights,
+      2⁻¹⁰⁰⁰ at tiny weights, and ε at unit weights. Opposite maxima of weight and
+      parameter give Lehmer ½ and arithmetic 2⁻⁹⁹⁹. With CR (−0, ε) at unit weights,
+      the device writes ε for L-SHADE and +0 for SHADE. Two negative zero CR values
+      give L-SHADE's terminal sentinel and preserve the ordinary F update.
+- [x] 2026-11-13, `ExtremeImprovementTests` on ILGPU CPU, CUDA and OpenCL.
+      Two successes at indices 0 and 1 024 contribute weights in the ratio 1:3
+      (ε and 3ε) or 1:2 (MaxValue and 2·MaxValue). With F (¼, ¾), CR (¾, ¼) and
+      two further successes with infinite endpoints, read the actual device memory.
+      The expected (F, SHADE CR, L-SHADE CR) triples are (7/10, 3/8, 1/2)
+      and (19/28, 5/12, 11/20). Before the fix the first SHADE CR was 1/2 on all three backends.
+      The same test exercises ordinary weights (1, 3) and a subnormal difference of two
+      normal fitness values, with weights (ε, 2ε).
 
 ## Audit fixes — checks A3–A4, frozen 2026-10-10, before code
 

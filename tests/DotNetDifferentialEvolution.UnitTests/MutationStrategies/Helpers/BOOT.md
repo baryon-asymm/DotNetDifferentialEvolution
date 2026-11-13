@@ -33,6 +33,10 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 
 ## Acceptance criteria
 
+- [x] 2026-11-13, `RepairsFiniteIntervals` checks the exact bits for positive and
+      negative midpoint overflow, a NaN mutant and a fixed subnormal coordinate.
+      The first three cases failed before F6. Repair consumes no additional draw.
+
 - [x] Green: 2026-10-02, 42 cases in 3 classes (crossover 10, math 26, selector 6).
 - [x] Non-degenerate: 2026-10-02, scratch clone of `9e3e22d`. Clamping an above-bound
       gene to the bound instead of the midpoint turned

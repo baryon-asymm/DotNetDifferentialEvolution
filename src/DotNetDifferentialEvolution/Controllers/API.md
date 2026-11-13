@@ -30,8 +30,9 @@ public class WorkerController : IDisposable
 One dedicated thread (`ThreadPriority.Highest`, named `"{n}-DEWorkerThread_{id}"`). Its
 loop: wait for permission (spin, then yield; never sleep), run `Execute(workerId)`,
 publish its best index, mark the pass done, and — if it has a handler — call it, ending
-the loop when told to. An exception is caught, stored in `Exception`, reported to the
-handler, and ends the loop.
+the loop when told to. The worker stores a captured exception in `Exception`, reports
+it to the handler, and ends the loop. A worker-side `OutOfMemoryException` escapes and
+can terminate the process.
 
 - `Start` launches the thread and waits until it runs; with `throwIfRunning`, a second
   start throws.
@@ -50,7 +51,10 @@ release to the workers as they finish.
 | Situation | Behaviour |
 |---|---|
 | `Start(true)` while running / `Stop(true)` while stopped | `InvalidOperationException` |
-| Exception inside `Execute` | Captured, not thrown; see `HasException`, `Exception` |
+| Exception caught by the worker filter inside `Execute` | Recorded in `HasException` and `Exception` |
+
+⚠ 2026-11-13: the former table promised to capture every exception. A child-process
+objective throwing `OutOfMemoryException` terminated the process, as the filter specifies.
 
 ## Side effects
 

@@ -15,12 +15,15 @@ other.
 | Entry point | `DifferentialEvolutionBuilder.ForFunction(objective)` → staged calls → `Build()` | `GpuDifferentialEvolutionBuilder.ForFunction(objective)` → staged calls → `Build()` |
 | Objective | `IFitnessFunctionEvaluator` (`DotNetOptimization.Abstractions`), host code, called from every worker thread | an `IGpuFitnessFunction` struct compiled into the ILGPU kernel |
 | Run | `RunAsync()` / `RunAsync(CancellationToken)` → `Task<Population>`, the final population read through a cursor | `RunAsync(CancellationToken)` → `Task<GpuOptimizationResult>`, the best individual as an `ISolution`, on a thread of its own |
-| Algorithms | classic DE (seven schemes), jDE, JADE, SHADE, L-SHADE, custom variants through `IDeVariant` | DE/rand/1/bin |
+| Algorithms | classic DE (seven schemes), jDE, JADE, SHADE, L-SHADE, custom variants through `IDeVariant` | fixed mutation schemes, jDE, JADE, SHADE and L-SHADE |
 | Devices | CPU threads | CUDA, OpenCL or ILGPU's CPU accelerator |
 | Reproducible | `WithSeed`, per worker count | `WithSeed`, per device and versions |
 | Contract | [CPU API](src/DotNetDifferentialEvolution/API.md) | [GPU API](src/DotNetDifferentialEvolution.GPU/API.md) |
 
 ## Children
+
+⚠ 2026-11-13: the GPU column previously listed only DE/rand/1/bin. The GPU builder
+also exposes the other fixed schemes and adaptive variants in its contract.
 
 - [DotNetDifferentialEvolution](src/DotNetDifferentialEvolution/API.md) — the CPU
   package.

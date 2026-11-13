@@ -12,9 +12,8 @@ namespace DotNetDifferentialEvolution.GPU.Kernels;
 internal static class GpuKernels
 {
     /// <summary>
-    /// Samples individual <paramref name="index"/> uniformly in the box (<see cref="SampleIndividual"/>) from its generation-0
-    /// draws, <c>lower + u·(upper − lower)</c> with <c>u</c> in <c>[0, 1)</c>, and evaluates it into the
-    /// current population.
+    /// Samples individual <paramref name="index"/> in the box from its generation-0 draws
+    /// (<see cref="SampleIndividual"/>) and evaluates it into the current population.
     /// </summary>
     /// <typeparam name="TFunction">The objective.</typeparam>
     /// <param name="index">The individual.</param>
@@ -47,9 +46,8 @@ internal static class GpuKernels
 
     /// <summary>
     /// Samples individual <paramref name="individual"/> uniformly in the initial box, or in the search box when the run has
-    /// no initial box, from its generation-0 draws, one per gene in gene order, <c>lower + u·(upper − lower)</c> with
-    /// <c>u</c> in <c>[0, 1)</c>, into the current population. The one sampling every initialisation kernel calls, and the
-    /// only place the initial box is read.
+    /// no initial box, from its generation-0 draws, one per gene in gene order, into the current population.
+    /// Every sampling kernel calls this method, the only reader of the initial box.
     /// </summary>
     /// <param name="individual">The individual.</param>
     /// <param name="parameters">The seed and D.</param>
@@ -64,7 +62,13 @@ internal static class GpuKernels
         {
             var lower = hasInitialBox ? views.InitialLowerBound[j] : views.LowerBound[j];
             var upper = hasInitialBox ? views.InitialUpperBound[j] : views.UpperBound[j];
-            views.Current[offset + j] = lower + draws.NextUnitDouble() * (upper - lower);
+            var draw = draws.NextUnitDouble();
+            var width = upper - lower;
+            // A finite box can be wider than double.MaxValue. Its endpoints then have opposite signs.
+            var sample = double.IsFinite(width)
+                ? lower + draw * width
+                : (1.0 - draw) * lower + draw * upper;
+            views.Current[offset + j] = sample > upper ? upper : sample;
         }
     }
 

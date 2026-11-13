@@ -4,14 +4,19 @@
 
 The repository builds two NuGet packages of Differential Evolution (DE) for .NET:
 
-- `DotNetDifferentialEvolution` (`src/DotNetDifferentialEvolution`, version 6.0.0 in
-  its csproj, 5.1.0 the latest on nuget.org): CPU, multi-threaded, SIMD; classic DE plus
+- `DotNetDifferentialEvolution` (`src/DotNetDifferentialEvolution`, version in
+  its [project file](src/DotNetDifferentialEvolution/DotNetDifferentialEvolution.csproj)): CPU, multi-threaded, SIMD; classic DE plus
   jDE, JADE, SHADE and L-SHADE.
-- `DotNetDifferentialEvolution.GPU` (`src/DotNetDifferentialEvolution.GPU`, version
-  1.0.0 in its csproj, 0.2.0 the latest on nuget.org): DE/rand/1/bin on a GPU through
-  ILGPU. Imported into this repository with its history on 2026-10-02 (merge `fe13623`)
+- `DotNetDifferentialEvolution.GPU` (`src/DotNetDifferentialEvolution.GPU`, version in its
+  [project file](src/DotNetDifferentialEvolution.GPU/DotNetDifferentialEvolution.GPU.csproj)): fixed mutation schemes and
+  adaptive DE on ILGPU. Imported into this repository with its history on 2026-10-02 (merge `fe13623`)
   from the separate repository `baryon-asymm/DotNetDifferentialEvolution.GPU`, now
   archived; rebuilt as 1.0.0 on 2026-10-03.
+
+⚠ 2026-11-13: the earlier package summary listed CPU 6.0.0 and GPU 1.0.0 as current.
+The project files specify 6.0.1 and 1.2.0 respectively and own these version numbers.
+The summary also named only DE/rand/1/bin. The [GPU contract](src/DotNetDifferentialEvolution.GPU/API.md)
+lists the other fixed schemes and adaptive variants supported by the builder.
 
 The two packages are siblings: neither references the other. Both depend on the shared
 `DotNetOptimization.Abstractions` package for the solution type, and the CPU package for
@@ -151,7 +156,7 @@ Python 3.8+ (`tools/protocol-lint`).
 
 ## Decomposition
 
-73 nodes (2026-10-05). `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
+Use the project lint command with `--list-nodes` for the current inventory. `src/`, `tests/` and `benchmarks/` hold no code of their own and are not
 nodes; neither is `src/DotNetDifferentialEvolution/Algorithms/`.
 
 | Node | Role | Nodes | Readiness defined by |

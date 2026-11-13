@@ -8,9 +8,11 @@ Nothing outward. What this node proves about the four adaptive strategies.
 |---|---|---|
 | jDE returns the stored pair without regeneration, regenerates F in range and CR uniformly when triggered, and inherits parameters on survival (ties included) | `JdeStrategyTests` | ✅ |
 | JADE moves μCR to the arithmetic and μF to the Lehmer mean of improving trials only; a tie moves nothing and archives nothing | `JadeStrategyTests` | ✅ |
-| SHADE writes improvement-weighted means, skips non-finite weights, keeps the terminal slot rule switchable, and keeps the memory finite when finite improvements overflow the sums (parents scored `double.MaxValue`) | `ShadeStrategyTests` | ✅ |
+| SHADE writes improvement-weighted means, skips non-finite fitness endpoints, keeps the terminal slot rule switchable, and keeps the memory finite when finite improvements overflow the sums (parents scored `double.MaxValue`) | `ShadeStrategyTests` | ✅ |
+| SHADE and L-SHADE retain the 1:3 ratio of subnormal improvements and the 1:2 ratio of MaxValue to an overflowing finite-endpoint difference | `ExtremeImprovementsRetainTheirRelativeWeights` | ✅ |
+| On CPU the 144 constant cases preserve F and CR exactly. The 772 mixed values lie within three ULP of the rounded rational means for the review vectors. | [replay_extreme_products.py](replay_extreme_products.py) | ✅ |
 | L-SHADE reduces linearly, rounds half up, keeps the best in order, takes the Lehmer `M_CR` with the terminal rule first, refuses silent-failure arguments | `LShadeStrategyTests` | ✅ |
-| Below the overflow bound the memory of SHADE (200 sets, seed 20261008) and of L-SHADE (200 sets, seed 20261009, every fourth set all-zero successful CR, so terminal slots included) equals 6.0.0's unscaled arithmetic bit for bit | `…BelowTheOverflowBoundEqualsTheUnscaledArithmeticBitForBit`, against `UnscaledShadeMemory` | ✅ |
+| At ordinary scale the memory of SHADE (200 sets, seed 20261008) and of L-SHADE (200 sets, seed 20261009, every fourth set all-zero successful CR, so terminal slots included) equals 6.0.0's unscaled arithmetic bit for bit | `…BelowTheOverflowBoundEqualsTheUnscaledArithmeticBitForBit`, against `UnscaledShadeMemory` | ✅ |
 
 ## Tests ✅
 
@@ -34,6 +36,8 @@ public class JadeStrategyTests
 [Trait("Category", "Unit")]
 public class ShadeStrategyTests
 {
+    public void ExtremeImprovementsRetainTheirRelativeWeights(bool lShade, bool overflow);
+    public void ExtremeProductsRetainRepresentableMeans(bool lShade);
     public void ConstructorThrowsWhenMemorySizeIsNotPositive();
     public void AfterGenerationStoresImprovementWeightedMeans();
     public void AfterGenerationWithNoSuccessesLeavesMemoryUnchanged();

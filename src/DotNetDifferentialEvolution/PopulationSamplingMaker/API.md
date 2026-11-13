@@ -20,9 +20,14 @@ public class UniformRandomSamplingMaker : IPopulationSamplingMaker
 ```
 
 Implements [`IPopulationSamplingMaker`](../Interfaces/API.md). **Lower bound first.**
-Gene `k` of the flat buffer is `lower[k mod D] + NextDouble() * (upper - lower)`, so in
-`[lower, upper)`, with `D` the bounds' length; the whole buffer is filled. Without a
-provider it draws from the family's default `RandomProvider`; `UseRandomProvider` (called
+Gene `k` uses dimension `k mod D`, where `D` is the bounds' length. It consumes one
+unit draw `u`. For finite ordered bounds the result lies in `[lower, upper]`. It uses
+`u * (upper - lower) + lower` for a finite width and `(1 - u) * lower + u * upper`
+when the width overflows. A rounded overshoot returns the upper endpoint.
+⚠ 2026-11-13: the former half-open interval excluded fixed coordinates and values
+rounded to the upper endpoint (`SamplesFiniteIntervals`).
+
+The whole buffer is filled. Without a provider it draws from the family's default `RandomProvider`; `UseRandomProvider` (called
 by the builder for a seeded run) replaces it.
 
 ## Errors

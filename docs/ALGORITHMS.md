@@ -171,7 +171,7 @@ which orders NaN as worse than every real value — see [§9.2](#92-nan-is-worse
 | `LimitEvaluationNumberTerminationStrategy` | $\text{nfe}$ reaches its limit |
 | `StagnationStreakTerminationStrategy` | the best value stays within a threshold of the last value it was recorded at for $k$ consecutive generations; a change larger than the threshold, in either direction, records the new value and restarts the count |
 
-All in [TerminationStrategies/](../src/DotNetDifferentialEvolution/TerminationStrategies/). The
+All in [TerminationStrategies/](../src/DotNetDifferentialEvolution/TerminationStrategies/API.md). The
 condition is tested at the barrier, so a run stops within one generation of the condition becoming
 true, not instantly.
 
@@ -240,9 +240,10 @@ This is the JADE/SHADE/L-SHADE repair rule. It is applied by every strategy in t
 only the adaptive ones — see [§9.1](#91-midpoint-bound-repair-applies-to-every-strategy) — and it
 keeps the population inside the box for the whole run: the parent is in the box by induction, the
 bound is in the box, so their midpoint is too. The induction needs finite bounds and an initial
-population inside them: the built-in sampler draws one, a custom sampler must
-(`WithPopulationSampling`). With an infinite bound a mutant gene can be infinite or NaN, which no
-comparison with the bound catches, and the CPU builder does not reject such bounds.
+population inside them. The built-in sampler interpolates between finite endpoints even when
+their difference overflows. Midpoint repair handles endpoints whose sum overflows. A NaN
+mutant has no direction of violation, so the trial inherits its parent's gene. A custom
+CPU sampler or mutation strategy is responsible for supplying in-box genes.
 
 The papers repair $v_i$ before crossover; this repairs $u_i$ after it. The results are identical,
 because a gene is repaired exactly when it came from $v_i$, and a gene that came from $x_i$ was
@@ -255,7 +256,7 @@ already in the box.
 | `ConstantControlParameterProvider` | fixed | fixed |
 | `DitheredControlParameterProvider` | $F \sim \text{rand}[F_{min}, F_{max}]$, redrawn per individual | fixed |
 
-In [ControlParameterProviders/](../src/DotNetDifferentialEvolution/ControlParameterProviders/).
+In [ControlParameterProviders/](../src/DotNetDifferentialEvolution/ControlParameterProviders/API.md).
 The self-adaptive variants of §§4–7 are themselves `IControlParameterProvider` implementations.
 
 ---
@@ -670,26 +671,28 @@ counted. An evaluation budget therefore means total objective calls, which is wh
 measure. Under L-SHADE this also shifts the reduction schedule by one population's worth of budget
 relative to an implementation that starts the counter at zero.
 
-### 9.7 Non-finite improvement weights are skipped
+### 9.7 Representing fitness improvement weights
 
-$\Delta f_k = \lvert f(u) - f(x) \rvert$ is assumed finite by `[4, Eq. (14)]`. It need not be: a
-trial that replaces a parent scored NaN, or one scored $-\infty$, is a genuine success whose
-improvement cannot be weighted. Such a record is excluded from the weighted means. Letting it
-through would put NaN into the weight sum, which the "no successes" guard cannot catch — every
-comparison against NaN is false — permanently poisoning $M_F$ and $M_{CR}$ for the rest of the run.
+SHADE and L-SHADE weight each strict improvement by the difference between the parent
+and trial fitness. The means in §6 depend on ratios, so multiplying every weight in
+one generation by the same positive factor preserves the mathematical update.
 
-The exclusion reaches L-SHADE's terminal test too: $\max(S_{CR})$ is taken over the weighted
-successes only. A generation whose only success with $CR > 0$ had a non-finite weight therefore
-sets the slot to $\perp$, where the paper's maximum over every success would not.
-
-A weight can also be finite and still too large for the sums. Two improvements near the largest
-double (a parent the objective scored with `double.MaxValue`, the usual sentinel for an infeasible
-point) add up to $+\infty$; the "no successes" guard does not see an infinity, and $\infty/\infty$
-writes NaN into the memory. 5.1.0 and 6.0.0 had this (found 2026-10-07; fixed in 6.0.1). Every mean
-is a ratio, so a common factor of the weights cancels: when the generation's largest weight exceeds
-$\texttt{double.MaxValue}/(2N)$ all weights are divided by it, else they are used as they are, so a
-run below that bound is bit for bit what it was. With $F, CR \le 1$ no sum of the scaled weights
-exceeds $N$.
+- A success with a NaN or infinite fitness endpoint has no measurable weight. It is
+  excluded from both the means and L-SHADE's maximum successful CR for the terminal test.
+- Two finite endpoints can differ by more than the largest representable double. In that
+  generation, subtracting halved endpoints keeps the difference representable. All
+  successes use the same units, including improvements whose direct subtraction was finite.
+- Large finite differences can overflow when summed. When the largest finite weight
+  exceeds `double.MaxValue / (2·N)`, divide each weight by that maximum before accumulation
+  (introduced in 6.0.1).
+- When all positive weights are tiny, scale them up by a common power of two before
+  multiplying by F or CR. A representable improvement of one subnormal unit can then
+  contribute a fraction of the total weight. Intermediate scales retain the ordinary
+  arithmetic. When products such as `w·F²` approach underflow, CPU and GPU recompute
+  the affected mean with separate binary exponents for its sums. This preserves a
+  representable mean even when its numerator would round to zero in ordinary arithmetic.
+  If rounding the objective itself turns a strict improvement into a tie,
+  there is no success for memory adaptation.
 
 ### 9.8 Guards where a paper's formula is undefined
 

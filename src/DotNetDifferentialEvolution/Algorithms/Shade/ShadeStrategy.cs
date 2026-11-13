@@ -25,6 +25,11 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
     private const double CrStandardDeviation = 0.1;
     private const double FScale = 0.1;
 
+    // Below 2^-970, adjacent doubles can differ by a subnormal. Dividing these weights by
+    // 2^-1022 is an exact exponent shift, with a normal reciprocal even on device backends.
+    private const double MinNormal = 2.2250738585072014e-308;
+    private const double TinyWeightLimit = MinNormal * 4503599627370496.0; // 2^52
+
     /// <summary>
     /// Sentinel stored in an <c>M_CR</c> slot once it becomes terminal (<c>⊥</c>): any negative
     /// value is outside the valid CR range [0, 1] and forces sampled CR to 0 (L-SHADE, 2014).
@@ -144,10 +149,7 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
     /// </summary>
     /// <remarks>
     /// Each mean is a ratio of two sums of weights, so it does not depend on the scale of the
-    /// weights. That is what lets the sums be kept finite: when the largest weight of the
-    /// generation is so large that <c>N</c> of them (times F or CR, at most 1) could overflow, every
-    /// weight is divided by it first. Below that bound the divisor is 1 and the weights enter the
-    /// sums exactly as they are.
+    /// weights. The generation uses one scale for both means, before any products with F or CR.
     /// </remarks>
     private void UpdateMemory(
         ReadOnlySpan<TrialRecord> trialRecords,
@@ -164,14 +166,20 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
 
         for (var i = 0; i < currentPopulationSize; i++)
         {
-            if (!TryGetWeight(trialRecords[i], out var unscaledWeight))
+            ref readonly var record = ref trialRecords[i];
+            var weight = Improvement(record);
+            if (double.IsNaN(weight))
             {
                 continue;
             }
 
-            var weight = unscaledWeight / weightScale;
-            var cr = trialRecords[i].UsedCr;
-            var f = trialRecords[i].UsedF;
+            // +∞ marks a generation with an overflowing finite difference. Halving the endpoints
+            // before subtraction represents even that difference, in the same units for every trial.
+            weight = double.IsPositiveInfinity(weightScale)
+                ? (0.5 * record.ParentFfValue - 0.5 * record.TrialFfValue) / (0.5 * double.MaxValue)
+                : weight / weightScale;
+            var cr = record.UsedCr;
+            var f = record.UsedF;
 
             weightSum += weight;
             weightedCrSum += weight * cr;
@@ -197,27 +205,53 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
         // successful CR is zero. Under L-SHADE that case is the terminal rule above, so this is
         // unreachable there; the guard is what keeps the mean well defined for a subclass that
         // takes SHADE 1.1's mean without its terminal rule.
-        var crMean = UseLehmerCrMean && weightedCrSum > 0.0
-            ? weightedCrSquaredSum / weightedCrSum
-            : weightedCrSum / weightSum;
+        var lehmerCr = UseLehmerCrMean;
+        var crNumerator = lehmerCr ? weightedCrSquaredSum : weightedCrSum;
+        var crDenominator = lehmerCr ? weightedCrSum : weightSum;
+        var crMean = crDenominator > 0 ? crNumerator / crDenominator : 0.0;
+        var fMean = weightedFSum > 0 ? weightedFSquaredSum / weightedFSum : _memoryF[_memoryIndex];
 
-        _memoryCr[_memoryIndex] = isTerminal ? TerminalCrValue : crMean;
-
-        if (weightedFSum > 0.0)
+        var recoverCr = !isTerminal && maxSuccessfulCr > 0 && ExtendedMoments.NeedsRatio(crNumerator, crDenominator, weightSum, currentPopulationSize);
+        var recoverF = ExtendedMoments.NeedsRatio(weightedFSquaredSum, weightedFSum, weightSum, currentPopulationSize);
+        if (recoverCr || recoverF)
         {
-            _memoryF[_memoryIndex] = weightedFSquaredSum / weightedFSum;
+            var moments = AccumulateExtended(trialRecords[..currentPopulationSize]);
+            if (recoverCr)
+            {
+                crMean = lehmerCr ? moments.CrSquared.Ratio(moments.Cr) : moments.Cr.Ratio(moments.Weight);
+            }
+
+            if (recoverF && moments.F.Mantissa > 0)
+            {
+                fMean = moments.FSquared.Ratio(moments.F);
+            }
         }
 
+        _memoryCr[_memoryIndex] = isTerminal ? TerminalCrValue : crMean;
+        _memoryF[_memoryIndex] = fMean;
         _memoryIndex = (_memoryIndex + 1) % _memorySize;
     }
 
+    private static ExtendedMoments AccumulateExtended(ReadOnlySpan<TrialRecord> records)
+    {
+        var sums = default(ExtendedMoments);
+        foreach (ref readonly var record in records)
+        {
+            var difference = Improvement(record);
+            if (difference > 0)
+            {
+                var weight = double.IsPositiveInfinity(difference)
+                    ? ExtendedMoments.Binary.From(0.5 * record.ParentFfValue - 0.5 * record.TrialFfValue).Shift(1)
+                    : ExtendedMoments.Binary.From(difference);
+                sums.Add(weight, record.UsedCr, record.UsedF);
+            }
+        }
+
+        return sums;
+    }
+
     /// <summary>
-    /// Finds the divisor for this generation's weights: the largest weight when it exceeds
-    /// <c>double.MaxValue / (2 · N)</c>, else 1. A finite weight can still overflow the sums
-    /// (parents the objective scored <see cref="double.MaxValue"/> leave improvements near
-    /// <see cref="double.MaxValue"/>, and their sum is <c>+∞</c>, whose quotient <c>∞/∞</c> would
-    /// write NaN into <c>M_F</c> and <c>M_CR</c>). Divided by the largest weight, no weight exceeds
-    /// 1 and, with F and CR at most 1, no sum exceeds <c>N</c>.
+    /// Selects the common scale from the active successes. Ordinary weights retain their original arithmetic.
     /// </summary>
     private static double WeightScale(
         ReadOnlySpan<TrialRecord> trialRecords,
@@ -226,47 +260,26 @@ public class ShadeStrategy : AdaptiveStrategyBase, IControlParameterProvider, IG
         var largestWeight = 0.0;
         for (var i = 0; i < currentPopulationSize; i++)
         {
-            if (TryGetWeight(trialRecords[i], out var weight) && weight > largestWeight)
+            var weight = Improvement(trialRecords[i]);
+            if (weight > largestWeight)
             {
                 largestWeight = weight;
             }
         }
 
-        return largestWeight > double.MaxValue / (2.0 * currentPopulationSize)
-            ? largestWeight
-            : 1.0;
+        return largestWeight switch
+        {
+            < TinyWeightLimit => MinNormal,
+            _ when largestWeight > double.MaxValue / (2.0 * currentPopulationSize) => largestWeight,
+            _ => 1.0,
+        };
     }
 
     /// <summary>
-    /// Takes the weight of a record: its fitness improvement, when it has a usable one.
+    /// The difference of finite fitness values, including +∞ on overflow, or NaN for an unusable record.
     /// </summary>
-    private static bool TryGetWeight(
-        in TrialRecord record,
-        out double weight)
-    {
-        weight = 0.0;
-
-        // S_CR and S_F take improving trials only (both papers, Algorithm 2 line 16). A trial
-        // accepted on a tie has an improvement of exactly zero, so it would enter the weighted
-        // means with weight zero and contribute nothing but the risk of an empty weight sum.
-        if (!record.Improved)
-        {
-            return false;
-        }
-
-        // Weight by the fitness improvement. A success does not always come with a finite,
-        // strictly positive one: replacing a parent the objective scored NaN — or an infinite
-        // one — is a genuine success with an unmeasurable improvement. Such a record cannot be
-        // weighted, and letting it through would put NaN into weightSum, which the
-        // weightSum <= 0.0 guard in UpdateMemory does not catch (every comparison against NaN is
-        // false), permanently poisoning M_F and M_CR for the rest of the run.
-        var improvement = record.ParentFfValue - record.TrialFfValue;
-        if (!double.IsFinite(improvement))
-        {
-            return false;
-        }
-
-        weight = improvement;
-        return true;
-    }
+    private static double Improvement(in TrialRecord record) =>
+        record.Improved && double.IsFinite(record.ParentFfValue) && double.IsFinite(record.TrialFfValue)
+            ? record.ParentFfValue - record.TrialFfValue
+            : double.NaN;
 }

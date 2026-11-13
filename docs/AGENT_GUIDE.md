@@ -96,7 +96,8 @@ double Evaluate(int workerIndex, ReadOnlySpan<double> genes);
 - **Returning `NaN` is safe.** NaN is ranked worse than every real value, so a NaN individual is
   replaceable and can never become the incumbent best. It is the correct return for "this point is
   infeasible"; returning `double.MaxValue` also works but distorts nothing less.
-- The engine never calls `Evaluate` with an out-of-box vector: genes are repaired before evaluation.
+- With finite bounds, the built-in sampler and mutation schemes keep every evaluated gene in the box,
+  including at the extremes of `double`. A custom sampler or mutation strategy must supply in-box genes.
 
 ## 3. Choosing a variant
 

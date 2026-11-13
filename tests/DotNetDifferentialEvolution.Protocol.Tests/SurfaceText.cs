@@ -87,7 +87,7 @@ internal static class SurfaceText
             : type.IsAbstract ? "abstract class"
             : "class";
         if (type.GetMethod("<Clone>$", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) is not null
-            || (type.IsValueType && type.GetMethod("PrintMembers", BindingFlags.NonPublic | BindingFlags.Instance) is { } print && TypeShape.IsCompilerGenerated(print)))
+            || TypeShape.IsRecordStruct(type))
         {
             kind += " (record)";
         }

@@ -132,7 +132,7 @@ jobs:
           python-version: '3.12'
 
       - name: Protocol lint
-        run: python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates
+        run: python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates --strict
 
       - name: Build
         run: dotnet build DotNetDifferentialEvolution.sln --configuration Release

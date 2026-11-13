@@ -12,9 +12,9 @@ run repeatedly until the slices run out.
 
 ---
 
-We are bringing an existing project under the document-tree protocol. Read `AGENTS.md`
-at the tree root in full: it is the protocol, and in everything concerning the tree
-it outranks this message.
+We are bringing an existing project under the document-tree protocol. Read the root
+`AGENTS.md` in full. Apply its §10 rule for session templates and explicit owner
+decisions, including any changes the owner has already authorized for this task.
 
 The mode is **design** (§4). **Code is untouchable.** Do not rename, do not refactor,
 do not "fix" what you find, do not add or delete code files, do not edit manifests.
@@ -31,10 +31,13 @@ the **current** state, not the desired one (§9).
 
 ## Session 1 — inventory (only if there is no tree yet)
 
-1. Run `python tools/protocol-lint/protocol_lint.py <root> --list-nodes`. This is
+1. From the tree root run
+   `python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates --strict --list-nodes`. This is
    the list of directories the protocol considers nodes. Compare it with reality:
    what here is junk (generated, vendored, dead), what should be excluded with the
-   `--exclude` flag, and what are real levels of abstraction.
+   `--exclude` flag, and what are real levels of abstraction. Record the resulting project
+   command with its source roots and exclusions. Run it without `--list-nodes` and
+   save the baseline findings by relative path, rule, and message in the reconstruction checklist.
 2. Give me a **list of nodes for approval**: path, one line of purpose, who depends on
    whom in the code (not by intent, by actual imports and calls), and a mark "leaf /
    intermediate / root / tests". Mark separately:
@@ -94,8 +97,12 @@ For every node of the slice, **bottom-up**:
    contracts (how the system is used + the list of children), the parent's `BOOT.md`
    holds the common invariants and frame, and nothing that is already said in the children.
 
-At the end of the slice: update the `## Reconstruction` checklist, run the linter
-(`python tools/protocol-lint/protocol_lint.py <root>`) and get to zero errors.
+At the start and end of each slice, run the same project command from the tree root:
+`python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates --strict`
+with the inventory's project-specific options. Accept a slice when its nodes have
+zero findings and all findings elsewhere were present at the start. Compare paths,
+rules, and messages so that a new error cannot cancel a repaired one. Update
+`## Reconstruction` with the remaining diagnostics and the next slice.
 
 **Report:** which nodes were described; which invariants could be extracted and what
 holds each of them; what was recorded as divergences (as a list: this is the work
@@ -109,6 +116,8 @@ neighbours instead of linking to their `API.md`; do not remove inconvenient trut
 the documents: in brownfield it is the result.
 
 ## After the tree is reconstructed
+
+The same strict project command must exit 0 with no errors or warnings.
 
 1. The reflection checks for your stack: prompt `05-machine-checks.md`. It is they
    that hold what was reconstructed: without them the tree diverges from the code at

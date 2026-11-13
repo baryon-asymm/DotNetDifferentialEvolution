@@ -19,6 +19,28 @@ public class CrossoverHelperTests
     private static readonly double[] ExpectedUnchangedMutant = [1.0, 2.0, 3.0];
     private static readonly double[] ExpectedReflectedTrial = [50.0, 5.0, 300.0, 205.0];
 
+    /// <summary>A crossed gene in a finite box uses the midpoint for a violation and the parent for NaN.</summary>
+    /// <param name="lower">The lower endpoint.</param>
+    /// <param name="upper">The upper endpoint.</param>
+    /// <param name="parent">The in-box parent.</param>
+    /// <param name="mutant">The crossed gene.</param>
+    /// <param name="expected">The repaired gene.</param>
+    [Theory]
+    [InlineData(0.0, 1.6e308, 1.2e308, double.PositiveInfinity, 1.3999999999999999e308)]
+    [InlineData(-1.6e308, 0.0, -1.2e308, double.NegativeInfinity, -1.3999999999999999e308)]
+    [InlineData(-10.0, 10.0, -3.0, double.NaN, -3.0)]
+    [InlineData(double.Epsilon, double.Epsilon, double.Epsilon, 0.0, double.Epsilon)]
+    public void RepairsFiniteIntervals(double lower, double upper, double parent, double mutant, double expected)
+    {
+        double[] trial = [mutant];
+        var random = new ScriptedRandomProvider(ints: [0]);
+
+        CrossoverHelper.BinomialCrossoverAndRepair(0, 0.0, [parent], trial, [lower], [upper], new ProviderRandomSource(random));
+
+        Assert.Equal(BitConverter.DoubleToInt64Bits(expected), BitConverter.DoubleToInt64Bits(trial[0]));
+        Assert.Equal(0, random.DoubleDrawCount);
+    }
+
     /// <summary>
     /// Binomial crossover takes each gene from the mutant or the parent according to its draw, and
     /// repairs an out-of-bounds mutant gene only when that gene is actually taken.

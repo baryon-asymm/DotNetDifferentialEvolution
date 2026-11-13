@@ -9,6 +9,7 @@ Nothing outward. What this node proves about the DE step of the GPU package.
 | r1, r2, r3 are distinct and never i; each role is uniform over the others (1b) | `DonorPickTests` | ✅ |
 | CR = 0 takes exactly `jrand`, CR = 1 every gene, a mix the closed form (1c) | `CrossoverTests` | ✅ |
 | Out-of-box genes become the midpoint with the parent; in-box genes are untouched (1d) | `RepairTests` | ✅ |
+| Finite-box sampling and repair give the expected genes on ILGPU CPU, CUDA and OpenCL, including midpoint overflow and NaN fallback | `FiniteBoundsTests` | ✅ |
 | Survival is `f(u) ≤ f(x)` with NaN worst and two NaNs no tie, as in eight of the CPU's nine cases (1e) | `SurvivalTests` | ✅ |
 | The best index ranks NaN worst and gives a tie to the lowest index (1f) | `BestPickTests` | ✅ |
 | The same draws give bit-identical trials on GPU and CPU, 100 random cases (1g) | `CpuParityTests` | ✅ |
@@ -25,6 +26,7 @@ Nothing outward. What this node proves about the DE step of the GPU package.
 [Trait("Category", "Integration")] public class DonorPickTests;
 [Trait("Category", "Unit")] public class CrossoverTests;
 [Trait("Category", "Unit")] public class RepairTests;
+public class FiniteBoundsTests;
 [Trait("Category", "Unit")] public class SurvivalTests;
 [Trait("Category", "Unit")] public class BestPickTests;
 [Trait("Category", "Unit")] public class CpuParityTests;

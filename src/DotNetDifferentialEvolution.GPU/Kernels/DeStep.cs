@@ -116,7 +116,8 @@ internal static class DeStep
     /// The CPU package's <c>CrossoverHelper.BinomialCrossoverAndRepair</c> over slot i of <paramref name="trial"/>, which
     /// holds the mutant: <c>jrand</c> is drawn; gene <c>jrand</c>, and every other gene whose 64-bit draw is at most the
     /// threshold, keeps the mutant gene, repaired to the midpoint between the violated bound and the parent's gene;
-    /// every other gene is the parent's. No draw is consumed for gene <c>jrand</c>.
+    /// a NaN mutant uses the parent's gene. Every uncrossed gene is the parent's.
+    /// No draw is consumed for gene <c>jrand</c>.
     /// </summary>
     /// <typeparam name="TDraws">The draw source.</typeparam>
     /// <param name="draws">The individual's draws.</param>
@@ -146,13 +147,18 @@ internal static class DeStep
             if (j == guaranteedGene || draws.NextULong() <= crossoverThreshold)
             {
                 var mutantGene = trial[offset + j];
-                if (mutantGene < lowerBound[j])
+                // Handle unordered values before ILGPU lowers either ordered comparison.
+                if (double.IsNaN(mutantGene))
                 {
-                    trial[offset + j] = (lowerBound[j] + parentGene) / 2.0;
+                    trial[offset + j] = parentGene;
+                }
+                else if (mutantGene < lowerBound[j])
+                {
+                    trial[offset + j] = Midpoint(lowerBound[j], parentGene);
                 }
                 else if (mutantGene > upperBound[j])
                 {
-                    trial[offset + j] = (upperBound[j] + parentGene) / 2.0;
+                    trial[offset + j] = Midpoint(upperBound[j], parentGene);
                 }
             }
             else
@@ -171,6 +177,12 @@ internal static class DeStep
     /// <returns><see langword="true"/> when the trial replaces the parent.</returns>
     public static bool Survives(double trialFitness, double parentFitness) =>
         trialFitness <= parentFitness || (double.IsNaN(parentFitness) && !double.IsNaN(trialFitness));
+
+    private static double Midpoint(double bound, double parent)
+    {
+        var sum = bound + parent;
+        return double.IsFinite(sum) ? sum / 2.0 : bound / 2.0 + parent / 2.0;
+    }
 
     private static int DrawOther<TDraws>(ref TDraws draws, int individual, int populationSize)
         where TDraws : struct, IDrawSource

@@ -17,8 +17,10 @@ cancellation, and the result. It is the one place where the run is quiescent.
 - An explicit optimizer disposal requests shutdown at the same barrier. Worker
   failures take precedence. Disposal cancels the task even if the stop rule is met
   at this barrier. The caller's canceled token is retained when available.
-- **Any worker's exception fails the whole run, with every worker's exception.** Held
+- **A reported worker failure faults the task with all captured worker exceptions.** Held
   by `WorkersOrchestratorTests.FitnessFunctionExceptionPropagatesFromAnyWorkerAndStopsAll`.
+  ⚠ 2026-11-13: the previous wording included every thrown exception. A worker's
+  `OutOfMemoryException` escapes its filter before the handler runs.
 - **The ranking is engine state, rebuilt before the hook runs** when the strategy
   declared it (`7a7649f`). Held by `FitnessRankingMaintenanceTests`.
 - **A `NaN` individual is never reported best**, by either the reduction or the scan
@@ -61,6 +63,13 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
       worker as its own, which calls `Handle` again; that call stops the slaves and
       faults the task with an `AggregateException`, so a bug in a consumer's observer
       reads like a worker failure (by reading the code, not tested).
+
+## Callback failure evidence
+
+The pending hook/observer test above concerns exceptions admitted by the worker filter.
+Run `dotnet test tests/DotNetDifferentialEvolution.IntegrationTests -c Release --filter FullyQualifiedName~WorkersOrchestratorTests`
+for the ordinary worker-failure path. The full integration project passed on
+`7b7dc4e91f02259ad4b3b84afb6e0c23f7d4248a` on 2026-11-13.
 
 ## Taboos
 

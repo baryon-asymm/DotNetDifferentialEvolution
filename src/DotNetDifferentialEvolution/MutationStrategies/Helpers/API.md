@@ -57,7 +57,11 @@ internal static class CrossoverHelper
 `trialIndividual` holds the mutant on entry. One gene index `jrand` is drawn first and
 always taken from the mutant; every other gene is taken from the mutant when the raw draw
 is `<= Scale(CR)`, else from the parent. A mutant gene below the lower bound becomes
-`(lower + parent) / 2`, above the upper `(upper + parent) / 2`.
+the midpoint with the lower bound, and a gene above the upper bound takes the midpoint
+with the upper bound. This includes infinite mutants. The midpoint uses
+`(bound + parent) / 2` for a finite sum and `bound / 2 + parent / 2` on overflow.
+A NaN mutant takes the parent. Thus finite ordered bounds and an in-box parent give
+an in-box trial. Repair consumes no random draws.
 
 The context overloads draw through the worker's `SeededRandomProvider` when the engine
 supplied one, otherwise through any `BaseRandomProvider`

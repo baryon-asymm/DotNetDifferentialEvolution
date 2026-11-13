@@ -407,7 +407,9 @@ internal static class BookkeepingKernels
         for (var i = first; i < end; i++)
         {
             var weight = AdaptationRules.WeightOf(rule, strategy.Outcomes[i], parentFitness[i], trialFitness[i]);
-            if (weight > maximum)
+            // WeightOf uses NaN for excluded records. ILGPU's OpenCL lowering of the
+            // maximum can select NaN on an unordered comparison unless it is excluded first.
+            if (!double.IsNaN(weight) && weight > maximum)
             {
                 maximum = weight;
             }
@@ -470,8 +472,7 @@ internal static class BookkeepingKernels
             var weight = AdaptationRules.WeightOf(rule, strategy.Outcomes[i], parentFitness[i], trialFitness[i]);
             if (!double.IsNaN(weight))
             {
-                // Division by 1.0 changes no bit, and a double division is slow on the device: skipped when the scale is 1.
-                var scaled = scale == 1.0 ? weight : weight / scale;
+                var scaled = AdaptationRules.ScaledWeight(weight, scale, parentFitness[i], trialFitness[i]);
                 sums = sums.Add(scaled, strategy.CrossoverProbabilities[i], strategy.MutationForces[i]);
             }
         }
@@ -490,9 +491,10 @@ internal static class BookkeepingKernels
     /// <param name="adaptationRate">JADE's c.</param>
     /// <param name="memorySize">SHADE's H.</param>
     /// <param name="memoryRule">SHADE's or L-SHADE's update of a memory slot.</param>
-    /// <param name="adaptation">JADE's μCR and μF, or SHADE's memory.</param>
+    /// <param name="strategy">Parameter memory, control words and per-trial parameters.</param>
     /// <param name="memoryIndex">Entry 0: SHADE's memory index.</param>
-    /// <param name="stop">The stop word.</param>
+    /// <param name="population">Fitness endpoints for recomputing extreme products.</param>
+    /// <param name="count">Active population size.</param>
     public static void Adapt(
         Index1D index,
         ParameterRule rule,
@@ -501,11 +503,12 @@ internal static class BookkeepingKernels
         double adaptationRate,
         int memorySize,
         MemoryRule memoryRule,
-        ArrayView<double> adaptation,
+        StrategyViews strategy,
         ArrayView<int> memoryIndex,
-        ArrayView<int> stop)
+        PopulationViews population,
+        int count)
     {
-        if (index != 0 || stop[StopSet] != 0)
+        if (index != 0 || strategy.Stop[StopSet] != 0)
         {
             return;
         }
@@ -516,6 +519,7 @@ internal static class BookkeepingKernels
             sums = sums.Combine(Load(partials, c));
         }
 
+        var adaptation = strategy.Adaptation;
         if (rule == ParameterRule.Jade)
         {
             var meanCr = adaptation[0];
@@ -531,10 +535,54 @@ internal static class BookkeepingKernels
         var slotF = adaptation[memorySize + slot];
         if (AdaptationRules.UpdateShadeSlot(sums, memoryRule == MemoryRule.LShade, ref slotCr, ref slotF))
         {
+            var numerator = memoryRule == MemoryRule.LShade ? sums.WeightedCrSquared : sums.WeightedCr;
+            var denominator = memoryRule == MemoryRule.LShade ? sums.WeightedCr : sums.Weight;
+            var recoverCr = BitConverter.DoubleToInt64Bits(sums.MaxCr) > 0 && slotCr >= 0
+                && ExtendedMoments.NeedsRatio(numerator, denominator, sums.Weight, count);
+            var recoverF = ExtendedMoments.NeedsRatio(sums.WeightedFSquared, sums.WeightedF, sums.Weight, count);
+            if (recoverCr || recoverF)
+            {
+                var moments = AccumulateExtended(chunks, count, strategy, population);
+                if (recoverCr)
+                {
+                    slotCr = memoryRule == MemoryRule.Shade ? moments.Cr.Ratio(moments.Weight) : moments.CrSquared.Ratio(moments.Cr);
+                }
+
+                if (recoverF && moments.F.Mantissa > 0)
+                {
+                    slotF = moments.FSquared.Ratio(moments.F);
+                }
+            }
+
             adaptation[slot] = slotCr;
             adaptation[memorySize + slot] = slotF;
             memoryIndex[0] = (slot + 1) % memorySize;
         }
+    }
+
+    private static ExtendedMoments AccumulateExtended(int chunks, int count, StrategyViews strategy, PopulationViews population)
+    {
+        var total = default(ExtendedMoments);
+        for (var c = 0; c < chunks; c++)
+        {
+            var chunk = default(ExtendedMoments);
+            var first = c * ChunkSize;
+            var end = EndOf(first, ChunkSize, count);
+            for (var i = first; i < end; i++)
+            {
+                var parent = population.NextFitness[i];
+                var trial = population.CurrentFitness[i];
+                if (strategy.Outcomes[i] == Selection.Improved && double.IsFinite(parent) && double.IsFinite(trial))
+                {
+                    var weight = AdaptationRules.ExtendedWeight(parent, trial);
+                    chunk.Add(weight, strategy.CrossoverProbabilities[i], strategy.MutationForces[i]);
+                }
+            }
+
+            total.Combine(chunk);
+        }
+
+        return total;
     }
 
     /// <summary>

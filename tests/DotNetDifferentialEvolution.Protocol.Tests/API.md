@@ -12,7 +12,7 @@ fact was seen red on a mutation (this node's `BOOT.md`, acceptance criteria).
 | The public surface of every library assembly (CPU, GPU, Tests.Common, Benchmark) equals `PublicSurface.approved.txt` | `SurfaceTests` |
 | Every exported type is named under ✅ in its node's `API.md` | `CoverageTests` |
 | Every type's namespace is exactly its node's | `NamespaceTests` |
-| Every declaration in a C# block under ✅ exists, type and member | `DeclarationTests` |
+| Each supported declaration in a ✅ C# block matches the compiled type and member signature. Unlabelled blocks that look like declarations are reported at their opening fence. | `DeclarationTests` |
 | `## Dependencies` equals the real crossings: signatures, generic constraints and IL bodies | `DependencyTests` |
 | Every source the compiler read lies in a directory with `BOOT.md` and `API.md` | `CompiledSourceTests` |
 | The protocol linter passes with `--strict` | `LintTests` |
@@ -26,7 +26,25 @@ fact was seen red on a mutation (this node's `BOOT.md`, acceptance criteria).
 | Nothing in the tree suppresses a diagnostic: no `#pragma warning disable`, `#nullable disable`, suppression attribute, `NoWarn` beyond 1701/1702, `WarningsNotAsErrors`, rule set or severity below warning; no generated-code marker on authored code; no skipped test or hidden theory data; the root `Directory.Build.props` keeps the maximum (`TreatWarningsAsErrors`, `CodeAnalysisTreatWarningsAsErrors`, `EnableNETAnalyzers`, `AnalysisLevel` latest-all, `EnforceCodeStyleInBuild`, `WarningLevel` 9999, `Features` strict, `GenerateDocumentationFile`) | `NoSuppressionGuardTests` |
 | Every node path named in `ProtocolConfig` is a node; no library type in the global namespace | `ConfigTests` |
 
-The self-checks of the parsers (`ApiDeclarationsTests`, the helper cases in
+The C# check binds each block in its node namespace unless the block supplies one.
+Each explicitly listed base class or interface must occur in the compiled base chain or
+interface set, including inherited interfaces and their constructed generic arguments.
+A type or delegate can omit a `where` clause. Each shown clause must match the compiled
+constraints on that parameter, including constructor, nullability and named type constraints.
+The check also covers type kind and modifiers, constructors, positional records, delegates,
+methods and overloads, properties and accessors, fields, enum values and events.
+Member signatures include the result type, nullability, parameter names, types,
+modifiers and defaults. A mismatch identifies the Markdown file and line.
+Field signatures include the field type, modifiers and constant value. Generic method
+signatures include their constraints.
+
+An API document may show a subset of members. `CoverageTests` requires each exported
+library type to be named under ✅. `SurfaceTests` compares the assembly with its snapshot.
+Removing only a documented member, while the type is still named and the compiled
+surface is unchanged, can therefore pass all three checks.
+Consumer tests establish the documented behaviour.
+
+The self-checks of the parsers (`ApiDeclarationsTests`, `BuilderSignatureTests`, the helper cases in
 `CompiledSourceTests` and `ForbiddenCallTests`) guard the facts and claim nothing about
 the tree.
 

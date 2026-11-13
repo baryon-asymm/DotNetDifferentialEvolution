@@ -83,6 +83,15 @@ uniform sampler. You can build a second optimizer while the first is running. Ob
 passed explicitly, including an objective, sampler, stop rule or observer, are used by
 reference. Custom variants supply fresh state through [Variants](Variants/API.md).
 
+`WithDefaultSelectionStrategy()` creates a greedy selector at each `Build()` using
+the current genome size. A retained bounds stage can change that size in either
+direction for the next build. `WithSelectionStrategy(instance)` reuses that instance,
+so the caller supplies a rule compatible with the bounds for each build that uses it.
+
+⚠ 2026-11-13. The default selector previously captured the genome size when selected.
+Changing the bounds through a retained stage could let a build succeed and then fault
+its first generation while copying a survivor (`BuilderBoundsTests`).
+
 ## Optimizer ✅
 
 ```csharp
@@ -102,7 +111,7 @@ the same task is returned until disposal. An already canceled token on the first
 cancels the task before any generation. Mid-run cancellation is observed at the barrier.
 
 `Dispose` requests shutdown at the generation barrier. If the run is active there, its
-task completes as canceled. A worker or callback failure still faults the task.
+task completes as canceled. A captured worker or callback exception faults the task.
 External callers wait for every worker thread to exit. A call from the optimizer's own
 worker requests shutdown and returns so that its callback can finish. Disposal is idempotent.
 
@@ -126,7 +135,11 @@ is the supported path.
 | A variant's `Validate` rejects the configuration | `InvalidOperationException` from `Build` |
 | `RunAsync` while the run is in progress | `InvalidOperationException` |
 | `RunAsync` after disposal | `ObjectDisposedException` |
-| The objective, a hook, the observer or the stop rule throws during a run | the task faults with an `AggregateException` of the worker exceptions ([handlers](Controllers/WorkerControllerEventHandlers/API.md)) |
+| The worker captures an exception from the objective, a hook, the observer or the stop rule | The task faults with an `AggregateException` of the captured exceptions ([handlers](Controllers/WorkerControllerEventHandlers/API.md)) |
+| A callback throws `OutOfMemoryException` on a worker thread | The exception escapes the worker and can terminate the process |
+
+⚠ 2026-11-13: the earlier table described every callback exception as a task fault.
+A child-process objective throwing `OutOfMemoryException` confirmed the exception to this rule.
 
 ## Side effects
 

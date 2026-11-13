@@ -15,6 +15,7 @@ parameters), **S5** (selection outcomes and each configuration's tie rule) and *
 | 1b | `DonorPickTests` | test kernel `DonorPickKernel` on the CPU accelerator, 10⁵ picks per i, N = 4 and 50 |
 | 1c | `CrossoverTests` | `DeStep.BuildTrial` on the host over CPU-accelerator buffers, `ScriptedDraws` |
 | 1d | `RepairTests` | the same, mutants out of the box on both sides |
+| F6 | `FiniteBoundsTests` | launch the shared sampler and cross known mutants before selection, on ILGPU CPU, CUDA and OpenCL |
 | 1e | `SurvivalTests` | `DeStep.Survives`, the fitness values of the CPU `SelectionStrategyTests` |
 | 1f | `BestPickTests` | `BestPick.IndexOf([NaN, 3, 1, 1])` |
 | 1g | `CpuParityTests` | CPU `MutationStrategy.Mutate` on `RecordingRandomProvider`, replayed into the GPU step |
@@ -86,10 +87,16 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 - A kernel-compiled type of the tests (`DonorPickKernel`,
   `GenerationSlotTests.ShiftedSphere`) is internal, never private: ILGPU's
   `ILGPURuntime` assembly sees internals only.
-- `Unit` for host calls, `Integration` for a kernel launch on the CPU accelerator; no
-  test here needs a GPU.
+- `Unit` for host calls, `Integration` for a kernel launch on the CPU accelerator,
+  and `Gpu` for launches on CUDA and OpenCL.
 
 ## Acceptance criteria
+
+- [x] 2026-11-13, `FiniteBoundsTests` passed on ILGPU CPU, CUDA and OpenCL. Sampling
+      is compared to exact power-of-two scaling on a box of width 2¹⁰²⁴. The repair
+      inputs include both infinities, NaN and a fixed subnormal. Sampling and repair
+      both returned infinity before F6 on each backend. OpenCL also exposed a wrong
+      midpoint for NaN when the ordered comparisons preceded the NaN check.
 
 - [x] Green: 2026-10-03, 19 cases in 7 test classes, on the host or on ILGPU's CPU accelerator.
 - [x] 1b red: 2026-10-03, scratch mutation `DrawOther` returning `candidate` (no skip of

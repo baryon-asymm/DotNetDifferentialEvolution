@@ -42,7 +42,7 @@ public class DifferentialEvolutionBuilder
     private Func<IPopulationSamplingMaker>? _createPopulationSampler;
 
     private IMutationStrategy? _mutationStrategy;
-    private ISelectionStrategy? _selectionStrategy;
+    private Func<int, ISelectionStrategy>? _createSelectionStrategy;
     private ITerminationStrategy? _terminationStrategy;
 
     private IControlParameterProvider? _controlParameterProvider;
@@ -254,7 +254,7 @@ public class DifferentialEvolutionBuilder
         _preparedVariant = new PreparedVariant(configuration, setup);
         _mutationStrategy = null;
         _controlParameterProvider = null;
-        _selectionStrategy = null;
+        _createSelectionStrategy = null;
 
         return this;
     }
@@ -293,7 +293,7 @@ public class DifferentialEvolutionBuilder
     {
         ArgumentNullException.ThrowIfNull(selectionStrategy);
 
-        _selectionStrategy = selectionStrategy;
+        _createSelectionStrategy = _ => selectionStrategy;
 
         return this;
     }
@@ -301,7 +301,7 @@ public class DifferentialEvolutionBuilder
     /// <inheritdoc />
     public ITerminationConditionRequired WithDefaultSelectionStrategy()
     {
-        _selectionStrategy = new SelectionStrategy(_lowerBound.Length);
+        _createSelectionStrategy = static genomeSize => new SelectionStrategy(genomeSize);
 
         return this;
     }
@@ -456,7 +456,7 @@ public class DifferentialEvolutionBuilder
         {
             MutationStrategy = _mutationStrategy ?? setup.MutationStrategy,
             ControlParameterProvider = _controlParameterProvider ?? setup.ControlParameterProvider,
-            SelectionStrategy = _selectionStrategy ?? setup.SelectionStrategy
+            SelectionStrategy = _createSelectionStrategy?.Invoke(configuration.GenomeSize) ?? setup.SelectionStrategy
         };
     }
 
@@ -935,7 +935,8 @@ public interface IMutationStrategyRequired
 public interface ISelectionStrategyRequired
 {
     /// <summary>
-    /// Sets a custom survival rule.
+    /// Sets a custom survival rule. Each build uses the supplied instance, which must
+    /// support the genome size configured for that build.
     /// </summary>
     /// <param name="selectionStrategy">The selection strategy.</param>
     /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
@@ -947,6 +948,7 @@ public interface ISelectionStrategyRequired
     /// good, so the population can drift across a plateau instead of freezing on it, and a run can
     /// never get worse.
     /// </summary>
+    /// <remarks>Each build creates this rule for the current bounds' genome size.</remarks>
     /// <returns>An instance of <see cref="ITerminationConditionRequired"/> to set the termination condition.</returns>
     ITerminationConditionRequired WithDefaultSelectionStrategy();
 }
