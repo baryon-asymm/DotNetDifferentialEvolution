@@ -251,7 +251,7 @@ public class OrchestratorWorkerHandler : IWorkerPassLoopDoneHandler
     /// <returns>The index of the best individual in the population.</returns>
     private int GetBestIndividualIndex(
         WorkerController masterWorker,
-        Span<double> populationFfValues)
+        ReadOnlySpan<double> populationFfValues)
     {
         var slaveWorkers = _slaveWorkers.Span;
 
