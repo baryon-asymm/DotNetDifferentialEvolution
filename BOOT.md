@@ -14,7 +14,8 @@ The repository builds two NuGet packages of Differential Evolution (DE) for .NET
   archived; rebuilt as 1.0.0 on 2026-10-03.
 
 ⚠ 2026-11-13: the earlier package summary listed CPU 6.0.0 and GPU 1.0.0 as current.
-The project files specify 6.0.1 and 1.2.0 respectively and own these version numbers.
+At the time of that correction the project files specified 6.0.1 and 1.2.0 respectively;
+the linked project files own the current versions.
 The summary also named only DE/rand/1/bin. The [GPU contract](src/DotNetDifferentialEvolution.GPU/API.md)
 lists the other fixed schemes and adaptive variants supported by the builder.
 

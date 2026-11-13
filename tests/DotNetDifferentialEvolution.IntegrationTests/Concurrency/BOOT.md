@@ -67,8 +67,11 @@ Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 - [ ] ⚠ The leak and heap checks were not shown red: no mutation leaked a worker or
       memory in this pass.
 - [x] 2026-11-12, `ACanceledRunDisposesWithoutHanging` and `ActiveRunLifecycleIsSafe`.
-      ⚠ The former implementation waited for loop-exit flags. External `Dispose` now joins
-      the worker threads ([Controllers](../../../src/DotNetDifferentialEvolution/Controllers/API.md)).
+      ⚠ 2026-11-13: previous criterion: “⚠ `ACanceledRunDisposesWithoutHanging` says
+      `Dispose` "joins" every worker thread; it waits until each has left its loop
+      ([Controllers](../../../src/DotNetDifferentialEvolution/Controllers/API.md)).”
+      Since the lifecycle fix, external `Dispose` joins the worker threads; the two tests
+      above exercise cancellation and active disposal.
 
 ## Taboos
 

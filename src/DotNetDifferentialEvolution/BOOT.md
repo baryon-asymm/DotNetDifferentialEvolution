@@ -97,6 +97,10 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 - [x] Completed runs release worker resources: 2026-10-02, `WorkerLifecycleTests`,
       `CancellationTests`, `ResourceUsageTests`. ⚠ 2026-11-12: these tests had also been
       cited for active disposal. Disposing mid-generation could hang or strand the task.
+      ⚠ 2026-11-13: previous criterion: “Build, run, cancel and dispose leave no workers
+      or threads behind: 2026-10-02, `WorkerLifecycleTests` (2), `CancellationTests` (5),
+      `ResourceUsageTests` (1).” The original evidence covered completed runs; the
+      separate active-run criterion below covers disposal during a generation.
 - [x] 2026-11-12, `ActiveRunLifecycleIsSafe` checks active reentry with either token,
       disposal with one and four workers, and disposal inside an observer.
 - [x] 2026-11-12, `OptimizersBuiltTogetherHaveIndependentAdaptiveState` compares two
@@ -110,7 +114,10 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       `With…` that takes an object.
 - [x] 2026-11-12, `DeVariantTests.AThirdPartyVariantIsConfiguredWithTheProblemDimensions`
       changes the population size after variant selection and verifies the new setup.
-      ⚠ The earlier open criterion relied on the staged order alone.
+      ⚠ 2026-11-13: previous criterion: “⚠ A variant is configured when it is chosen,
+      against the population size and bounds of that moment. The staged order makes them
+      final by then; nothing else guards it.” Reusing a saved builder stage invalidates
+      that assumption; each build now configures its own variant with its final dimensions.
 
 ## Lifecycle and builder verification on 2026-11-13
 

@@ -4,7 +4,7 @@ Notable changes to the GPU package, released from `gpu-v*` tags. Versions follow
 [semantic versioning](https://semver.org/). The release workflow takes the notes of a version
 from its `## <version>` section below.
 
-## Unreleased
+## 1.2.1
 
 - Uniform sampling and mutation repair keep genes inside finite bounds even when the box width
   or the sum used for midpoint repair exceeds `double.MaxValue`.

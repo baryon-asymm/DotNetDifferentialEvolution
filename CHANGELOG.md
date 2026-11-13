@@ -7,7 +7,7 @@ against the previously released package on every build, and the differences it f
 in `src/DotNetDifferentialEvolution/CompatibilitySuppressions.xml`. Behavioural changes are a
 different matter — nothing can detect those automatically, so they are called out explicitly.
 
-## Unreleased
+## 6.0.2
 
 - Uniform sampling and mutation repair keep genes inside finite bounds even when the box width
   or the sum used for midpoint repair exceeds `double.MaxValue`.
