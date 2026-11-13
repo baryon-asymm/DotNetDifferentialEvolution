@@ -19,7 +19,7 @@ public sealed partial class NoSuppressionGuardTests
 
     /// <summary>The <c>NoWarn</c> tokens that are not a suppression: the SDK's own binding-redirect defaults and the
     /// reference to the inherited value.</summary>
-    private static readonly HashSet<string> AllowedNoWarn = new(StringComparer.OrdinalIgnoreCase) { "1701", "1702", "CS1701", "CS1702", "$(NoWarn)" };
+    private static readonly string[] AllowedNoWarn = ["1701", "1702", "CS1701", "CS1702", "$(NoWarn)"];
 
     [GeneratedRegex(@"^\s*#\s*pragma\s+warning\s+disable\b", RegexOptions.Multiline)]
     private static partial Regex PragmaDisablePattern();
@@ -285,7 +285,7 @@ public sealed partial class NoSuppressionGuardTests
     }
 
     private static IEnumerable<string> DisallowedNoWarn(string value) =>
-        value.Split([';', ',', ' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries).Where(code => !AllowedNoWarn.Contains(code.Trim()));
+        value.Split([';', ',', ' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries).Where(code => !AllowedNoWarn.Contains(code.Trim(), StringComparer.OrdinalIgnoreCase));
 
     private static bool IsGeneratedFileName(string name) =>
         name.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".g.i.cs", StringComparison.OrdinalIgnoreCase)
