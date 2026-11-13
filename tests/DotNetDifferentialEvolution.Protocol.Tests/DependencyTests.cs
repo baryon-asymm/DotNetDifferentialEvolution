@@ -39,7 +39,7 @@ public sealed class DependencyTests
         var declaredPaths = declared.Select(d => d.RelativePath).ToHashSet(StringComparer.Ordinal);
         foreach (var used in crossings.Keys.Where(used => !declaredPaths.Contains(used)))
         {
-            yield return $"{boot} does not declare {usedNodes[used].Name}, but {node.Name} uses its types: {string.Join(", ", crossings[used].Take(6))}" +
+            yield return $"{boot} does not declare {usedNodes[used].Name}, but {node.Name} uses its types: {string.Join(", ", crossings[used].Order(StringComparer.Ordinal).Take(6))}" +
                          (crossings[used].Count > 6 ? $" and {crossings[used].Count - 6} more" : string.Empty);
         }
 
@@ -62,9 +62,9 @@ public sealed class DependencyTests
 
     /// <summary>Every neighbour or ancestor node a node's own types refer to, with every (type → referenced type) pair
     /// that shows it; <see cref="ProblemsOf"/> names the first six.</summary>
-    private static (SortedDictionary<string, SortedSet<string>> Crossings, Dictionary<string, Node> UsedNodes) Crossings(Node node)
+    private static (SortedDictionary<string, HashSet<string>> Crossings, Dictionary<string, Node> UsedNodes) Crossings(Node node)
     {
-        var crossings = new SortedDictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+        var crossings = new SortedDictionary<string, HashSet<string>>(StringComparer.Ordinal);
         var usedNodes = new Dictionary<string, Node>(StringComparer.Ordinal);
         foreach (var type in NodeAssemblies.TypesOf(node))
         {
@@ -83,7 +83,8 @@ public sealed class DependencyTests
                 usedNodes[target.RelativePath] = target;
                 if (!crossings.TryGetValue(target.RelativePath, out var users))
                 {
-                    crossings[target.RelativePath] = users = new SortedSet<string>(StringComparer.Ordinal);
+                    users = [];
+                    crossings.Add(target.RelativePath, users);
                 }
 
                 _ = users.Add(TypeShape.SimpleName(TypeShape.Outermost(type)) + " → " + TypeShape.SimpleName(referenced));
