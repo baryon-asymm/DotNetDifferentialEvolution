@@ -2,7 +2,8 @@
 
 **When:** the repository is empty or nearly empty; there is no code yet.
 **Mode:** design (`AGENTS.md`, §4): code and scaffolding are not created at all.
-**Input:** `AGENTS.md`, `CLAUDE.md` and `tools/protocol-lint/` lie at the root.
+**Input:** the chosen tree root contains `AGENTS.md` and `tools/protocol-lint/`.
+Projects using the optional Claude Code loader keep it at the repository root.
 **Output of one session:** the root pair of documents + the first-level nodes with
 their pairs, the linter green, a queue of nodes to bring to sufficiency.
 
@@ -10,10 +11,9 @@ Fill in the `<…>` and hand the text below to the agent.
 
 ---
 
-We are starting a new project under the document-tree protocol. Read `AGENTS.md` at
-the repository root in full: it is the protocol, and in everything concerning work
-with the tree it outranks this message. If anything here contradicts it, it is right,
-and tell me so.
+We are starting a new project under the document-tree protocol. Read the root
+`AGENTS.md` in full. Apply its §10 rule for session templates and explicit owner
+decisions, including any changes the owner has already authorized for this task.
 
 The mode is **design** (§4). You write only `BOOT.md` and `API.md`. Code, project
 files, package manifests, module and class stubs: **none of these are created**, not
@@ -64,10 +64,11 @@ node has not yet been brought to sufficiency, write in its `BOOT.md` an explicit
 of what is missing, in `## Acceptance criteria` or in a separate `## Open questions`
 section. Silent incompleteness is worse than a declared one: code will be written from it.
 
-**5. Check.** Run `python tools/protocol-lint/protocol_lint.py .`. There must be no
-errors; explain or remove the warnings. Note: the linter treats any directory with
-code, a manifest or a document as a node. If it sees nodes you did not create, there
-is code in the repository and this is already brownfield (prompt 2).
+**5. Check.** From the tree root run
+`python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates --strict`.
+Keep any additional project source roots and exclusions in this command. Require
+exit 0. Installed tools already have their own nodes. If application code predates
+this session, use the inventory in prompt 2.
 
 **Report at the end of the session:** which nodes were created; which of them are
 already sufficient for autonomous coding and which are not, and what they lack; which

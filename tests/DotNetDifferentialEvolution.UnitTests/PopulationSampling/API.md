@@ -8,6 +8,7 @@ Nothing outward. What this node proves about uniform initial sampling.
 |---|---|---|
 | Every gene lands inside its own dimension's bounds | `SamplesEveryGeneWithinItsPerDimensionBounds` | ✅ |
 | The whole buffer is written | `FillsTheEntireBuffer` | ✅ |
+| Finite intervals give the expected rounded gene with one scripted draw, including an overflowing width and endpoint overshoot | `SamplesFiniteIntervals` | ✅ |
 
 ## Tests ✅
 
@@ -17,5 +18,6 @@ public class UniformRandomSamplingMakerTests
 {
     public void SamplesEveryGeneWithinItsPerDimensionBounds();
     public void FillsTheEntireBuffer();
+    public void SamplesFiniteIntervals(double lower, double upper, double draw, double expected);
 }
 ```

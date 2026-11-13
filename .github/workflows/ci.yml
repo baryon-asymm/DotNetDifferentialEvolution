@@ -12,6 +12,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       # docs/ALGORITHMS.md maps each formula onto the file that implements it. A rename that
       # orphans one of those links leaves the document rendering correctly and claiming something
@@ -32,7 +34,13 @@ jobs:
           python-version: '3.12'
 
       - name: Protocol lint
-        run: python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates
+        run: python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates --strict
+
+      - name: Preserve acceptance criteria on the merged candidate
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REVISION: ${{ github.event.pull_request.base.sha }}
+        run: python -X utf8 tools/protocol-lint/history_guard.py --criteria-only . "$BASE_REVISION" HEAD
 
       - name: Protocol linter self-tests
         run: |

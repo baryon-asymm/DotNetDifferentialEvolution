@@ -65,8 +65,15 @@ public class UniformRandomSamplingMaker : IPopulationSamplingMaker
         for (var i = 0; i < population.Length; i++)
         {
             var geneIndex = i % genomeSize;
-            population[i] = random.NextDouble() * (_upperBound.Span[geneIndex] - _lowerBound.Span[geneIndex])
-                            + _lowerBound.Span[geneIndex];
+            var lower = _lowerBound.Span[geneIndex];
+            var upper = _upperBound.Span[geneIndex];
+            var draw = random.NextDouble();
+            var width = upper - lower;
+            // A finite box can be wider than double.MaxValue. Its endpoints then have opposite signs.
+            var sample = double.IsPositiveInfinity(width) && double.IsFinite(lower) && double.IsFinite(upper)
+                ? (1.0 - draw) * lower + draw * upper
+                : draw * width + lower;
+            population[i] = sample > upper && lower <= upper ? upper : sample;
         }
     }
 }

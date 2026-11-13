@@ -48,7 +48,7 @@ internal sealed class GenerationBookkeeping : IDisposable
     private Action<AcceleratorStream, Index1D, ArrayView<int>, ArrayView<double>, ArrayView<double>, int, ArrayView<int>>? _copyToArchive;
     private Action<AcceleratorStream, Index1D, ParameterRule, int, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>>? _largestWeightsPass;
     private Action<AcceleratorStream, Index1D, ParameterRule, int, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>, ArrayView<double>>? _sumSuccesses;
-    private Action<AcceleratorStream, Index1D, ParameterRule, int, ArrayView<double>, double, int, MemoryRule, ArrayView<double>, ArrayView<int>, ArrayView<int>>? _adapt;
+    private Action<AcceleratorStream, Index1D, ParameterRule, int, ArrayView<double>, double, int, MemoryRule, StrategyViews, ArrayView<int>, PopulationViews, int>? _adapt;
     private Action<AcceleratorStream, Index1D, PopulationViews, int, StrategyViews, int>? _compact;
     private Action<AcceleratorStream, Index1D, ArrayView<double>, ArrayView<int>, ArrayView<double>, double, int, int, ArrayView<int>>? _stagnate;
 
@@ -315,7 +315,7 @@ internal sealed class GenerationBookkeeping : IDisposable
         }
 
         Required(_sumSuccesses)(_stream, chunks, _plan.Rule, count, WideChunkSize, Views, views.NextFitness, views.CurrentFitness, _largestWeights, _partials);
-        Required(_adapt)(_stream, 1, _plan.Rule, chunks, _partials, _plan.AdaptationRate, _plan.MemorySize, _plan.LShade ? MemoryRule.LShade : MemoryRule.Shade, Views.Adaptation, _memoryIndex, Views.Stop);
+        Required(_adapt)(_stream, 1, _plan.Rule, chunks, _partials, _plan.AdaptationRate, _plan.MemorySize, _plan.LShade ? MemoryRule.LShade : MemoryRule.Shade, Views, _memoryIndex, views, count);
     }
 
     /// <summary>Whether the ranking limit of a population of <paramref name="populationSize"/> is timed: on CUDA and OpenCL, above the floor (check A3).</summary>
@@ -471,7 +471,7 @@ internal sealed class GenerationBookkeeping : IDisposable
         {
             _sumSuccesses = Load<Action<AcceleratorStream, Index1D, ParameterRule, int, int, StrategyViews, ArrayView<double>, ArrayView<double>, ArrayView<double>, ArrayView<double>>>(
                 chunks, nameof(BookkeepingKernels.SumSuccesses));
-            _adapt = Load<Action<AcceleratorStream, Index1D, ParameterRule, int, ArrayView<double>, double, int, MemoryRule, ArrayView<double>, ArrayView<int>, ArrayView<int>>>(
+            _adapt = Load<Action<AcceleratorStream, Index1D, ParameterRule, int, ArrayView<double>, double, int, MemoryRule, StrategyViews, ArrayView<int>, PopulationViews, int>>(
                 1, nameof(BookkeepingKernels.Adapt));
             if (plan.Rule == ParameterRule.Shade)
             {

@@ -3,7 +3,7 @@
 **When:** periodically: after several coding sessions, before a release, after a
 large branch is merged.
 **Mode:** design (code is only read).
-**Output:** corrected claims with a trace of the correction, and a list of divergences.
+**Output:** an audit report. Apply document corrections only when the owner requests edits.
 
 This is the half of the work the machine does not take: **whether the document speaks
 truly about the code it names correctly.** By this point the linter and the reflection
@@ -12,13 +12,15 @@ checks are green; the audit starts where they end.
 ---
 
 An audit of the subtree `<path; or "the whole tree">`. The mode is design: code is
-read, not edited. Read `AGENTS.md`, especially §8 and §13.
+read, not edited. In report-only mode (the default), return findings in the report and
+leave the tree as found. Run checks that create artifacts on a disposable copy. If the
+owner requests a report with fixes, apply the documented corrections below. Read `AGENTS.md`, especially §8 and §13.
 
 For every node of the subtree, starting from the leaves:
 
 1. **Invariants.** For each, find in the code the place that makes it true, and name
    it. An invariant for which no place was found is either wrong or held by
-   convention: in the first case correct it with a ⚠ trace; in the second, add what
+   convention: record the correction with a proposed ⚠ trace, or explain what convention
    holds it and what happens if the convention is broken.
 2. **Absolute words.** Find "the only", "all", "never", "always", "nothing …" and check
    each with a search over the tree. They are the first to break: the number of places
@@ -41,12 +43,12 @@ For every node of the subtree, starting from the leaves:
    variables, queues: everything that is not a type)? Has a descendant loosened an
    ancestor's frame?
 
-**How to correct:** only documents, only within the bounds of the audited subtree, and
+**When edits were requested:** only documents, only within the bounds of the audited subtree, and
 every correction of a claim with a trace (§8): ⚠, the date, what stood before, why it
 was wrong. Do not correct claims about foreign nodes: leave a proposal (§11).
 
 **Report:** how many claims were checked and how many turned out wrong (this is the
-measure of the audit's usefulness); every corrected one in a single line "was / is /
+measure of the audit's usefulness); each finding with its evidence and proposed or applied correction in a single line "was / is /
 why"; the divergences "as is / as it should be" found that must be resolved by code
 rather than by a document; hidden deviations; proposals for foreign nodes; what the
 checks of §13 would not have caught, and whether a new check is worth adding.

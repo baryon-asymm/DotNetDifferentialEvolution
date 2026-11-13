@@ -44,10 +44,9 @@ internal static class CrossoverHelper
     /// </summary>
     /// <remarks>
     /// <para>
-    /// A randomly chosen gene index (<c>jrand</c>) is always taken from the mutant so the
-    /// trial differs from its parent in at least one dimension — the canonical guarantee of
-    /// binomial crossover. An out-of-bound gene is reflected halfway back toward the parent
-    /// gene (<c>(bound + x_i) / 2</c>), the repair rule of the JADE/SHADE/L-SHADE papers.
+    /// A randomly chosen gene index (<c>jrand</c>) always takes the mutant through repair.
+    /// An out-of-bound gene is reflected halfway back toward the parent gene, the repair
+    /// rule of the JADE/SHADE/L-SHADE papers. A NaN mutant inherits the parent's gene.
     /// </para>
     /// <para>
     /// This loop runs once per gene of every trial of every generation, which makes it the
@@ -78,13 +77,18 @@ internal static class CrossoverHelper
             if (i == guaranteedGeneIndex || randomSource.NextULong() <= crossoverThreshold)
             {
                 var parentGene = population[individualOffset + i];
-                if (trialIndividual[i] < lowerBound[i])
+                var mutantGene = trialIndividual[i];
+                if (mutantGene < lowerBound[i])
                 {
-                    trialIndividual[i] = (lowerBound[i] + parentGene) / 2.0;
+                    trialIndividual[i] = Midpoint(lowerBound[i], parentGene);
                 }
-                else if (trialIndividual[i] > upperBound[i])
+                else if (mutantGene > upperBound[i])
                 {
-                    trialIndividual[i] = (upperBound[i] + parentGene) / 2.0;
+                    trialIndividual[i] = Midpoint(upperBound[i], parentGene);
+                }
+                else if (double.IsNaN(mutantGene))
+                {
+                    trialIndividual[i] = parentGene;
                 }
             }
             else
@@ -92,5 +96,11 @@ internal static class CrossoverHelper
                 trialIndividual[i] = population[individualOffset + i];
             }
         }
+    }
+
+    private static double Midpoint(double bound, double parent)
+    {
+        var sum = bound + parent;
+        return double.IsFinite(sum) ? sum / 2.0 : bound / 2.0 + parent / 2.0;
     }
 }

@@ -3,11 +3,14 @@
 ## Purpose
 
 The CPU Differential Evolution package, `DotNetDifferentialEvolution` on nuget.org
-(6.0.0 in the csproj, 5.1.0 the latest published): multi-threaded, SIMD-accelerated, classic DE with several
+([project file](DotNetDifferentialEvolution.csproj)): multi-threaded, SIMD-accelerated, classic DE with several
 mutation schemes plus jDE, JADE, SHADE and L-SHADE, built through a staged fluent
 builder. The objective contract and the solution type come from the shared
 `DotNetOptimization.Abstractions` package, so one objective drives every optimizer of
 that family.
+
+⚠ 2026-11-13: the summary still named 6.0.0 as the project version after the 6.0.1 update.
+The project file above carries the current version.
 
 This node owns the two entry points, `DifferentialEvolutionBuilder` and
 `DifferentialEvolution`; everything else is a child.
@@ -41,6 +44,19 @@ This node owns the two entry points, `DifferentialEvolutionBuilder` and
   `SeededReproducibilityTests.TheSameSeedReproducesTheRunExactly`,
   `TheSameSeedReproducesTheInitialPopulationToo` and
   `AnAdaptiveVariantIsReproducibleIncludingItsArchiveEviction`.
+- A build owns its adaptive preset state and built-in uniform sampler. Caller-supplied
+  objects retain their identity across builds. Custom variants create mutable components
+  per setup. ⚠ 2026-11-12: only fresh builders were covered by the seeded checks above.
+  Reusing one builder could reset an active run's generator and share its adaptation memory.
+- Each build constructs an explicitly requested default selector for its current genome
+  size. A caller-supplied selector keeps its identity. Selecting a variant clears either
+  override so that the variant supplies its own survival rule.
+  ⚠ 2026-11-13. The default selector previously captured the size at
+  `WithDefaultSelectionStrategy()`. `BuilderBoundsTests` reproduced a failed survivor
+  copy after a retained bounds stage changed dimensions from 2 to 3 and from 3 to 2.
+- The optimizer accepts one start. An active repeat preserves the running task and token.
+  Disposal requests cancellation at the barrier. External disposal joins every worker.
+  A worker can request disposal from its own callback and continue to the barrier.
 - **The initial population is evaluated once, single-threaded, through
   `Evaluate(genes)`, and counted.** `EvaluationCount` starts at `N`; the best index and
   the fitness ranking are computed before the first generation. During the run the
@@ -67,6 +83,10 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
+- [x] 2026-11-13, `BuilderBoundsTests.DefaultSelectionUsesEachBuildsGenomeSize`
+      runs both optimizers after resizing the box in either direction and checks
+      every survivor against the fixed coordinates of its respective box.
+
 - [x] The package builds with 0 warnings and its unit and integration suites pass:
       2026-10-02, local run of the CI filters (232 unit, 70 integration); the full
       integration set including `Slow` 76/76.
@@ -74,8 +94,17 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       (3 tests).
 - [x] Parallel runs converge without data-race corruption, oversubscribed included:
       2026-10-02, `ParallelDeterminismTests` (3 tests).
-- [x] Build, run, cancel and dispose leave no workers or threads behind: 2026-10-02,
-      `WorkerLifecycleTests` (2), `CancellationTests` (5), `ResourceUsageTests` (1).
+- [x] Completed runs release worker resources: 2026-10-02, `WorkerLifecycleTests`,
+      `CancellationTests`, `ResourceUsageTests`. ⚠ 2026-11-12: these tests had also been
+      cited for active disposal. Disposing mid-generation could hang or strand the task.
+      ⚠ 2026-11-13: previous criterion: “Build, run, cancel and dispose leave no workers
+      or threads behind: 2026-10-02, `WorkerLifecycleTests` (2), `CancellationTests` (5),
+      `ResourceUsageTests` (1).” The original evidence covered completed runs; the
+      separate active-run criterion below covers disposal during a generation.
+- [x] 2026-11-12, `ActiveRunLifecycleIsSafe` checks active reentry with either token,
+      disposal with one and four workers, and disposal inside an observer.
+- [x] 2026-11-12, `OptimizersBuiltTogetherHaveIndependentAdaptiveState` compares two
+      seeded builds for each of jDE, JADE, SHADE and L-SHADE.
 - [x] The children are described: 2026-10-02, brownfield slices 3 to 5 (commits
       `1faf888`, `c293ccb`, `c8bf78f`).
 - [x] ⚠ The validation baseline was 4.0.0 although 4.1.0 and 5.1.0 shipped, so the
@@ -83,9 +112,24 @@ Inherited from the root ([BOOT.md](../../BOOT.md)). In addition:
       baseline 5.1.0, suppression file regenerated (`dotnet pack … -p:ApiCompatGenerateSuppressionFile=true`).
 - [ ] ⚠ `WithPopulationUpdateHandler` accepts `null` without a check, unlike every other
       `With…` that takes an object.
-- [ ] ⚠ A variant is configured when it is chosen, against the population size and
-      bounds of that moment. The staged order makes them final by then; nothing else
-      guards it.
+- [x] 2026-11-12, `DeVariantTests.AThirdPartyVariantIsConfiguredWithTheProblemDimensions`
+      changes the population size after variant selection and verifies the new setup.
+      ⚠ 2026-11-13: previous criterion: “⚠ A variant is configured when it is chosen,
+      against the population size and bounds of that moment. The staged order makes them
+      final by then; nothing else guards it.” Reusing a saved builder stage invalidates
+      that assumption; each build now configures its own variant with its final dimensions.
+
+## Lifecycle and builder verification on 2026-11-13
+
+The 2026-11-12 criteria were rechecked on Git tree `7b7dc4e91f02259ad4b3b84afb6e0c23f7d4248a`.
+Run from the root after a Release solution build:
+
+- `dotnet test tests/DotNetDifferentialEvolution.IntegrationTests -c Release --no-build --blame-hang-timeout 4m`
+  passed 87/87, including the five `ActiveRunLifecycleIsSafe` cases, the four
+  `OptimizersBuiltTogetherHaveIndependentAdaptiveState` presets and `ACanceledRunDisposesWithoutHanging`.
+- `dotnet test tests/DotNetDifferentialEvolution.UnitTests -c Release --no-build --blame-hang-timeout 4m`
+  passed 264/264, including `DeVariantTests.AThirdPartyVariantIsConfiguredWithTheProblemDimensions`
+  and `DeVariantTests.RepeatedBuildsKeepTheStrategiesSetAfterTheVariant`.
 
 ## Taboos
 

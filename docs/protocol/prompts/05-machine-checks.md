@@ -30,10 +30,20 @@ paid for; none of them needs to be repeated.
 2. **Every exported type is named in the `API.md` of its node.** The snapshot does not
    catch this: it is generated from the same code. A node is determined by the
    **directory path** from the tree root.
-3. **Every declaration under ✅ exists**: both the type and the member. Strictness is
-   tied to the marks: a block under ⏳ is not checked, a document without marks counts
-   as ✅ throughout. Names, not full signatures: the signatures are already pinned by
-   the snapshot, and a second copy of them in prose is a second thing to keep in agreement.
+3. **Every declaration under ✅ matches a callable contract.** Resolve the documented
+   owner and compare each declaration with a specific compiled member by kind, name,
+   return type, parameter order and types, names, modifiers and optional defaults.
+   Show the document location, its signature and the compiled candidates on a mismatch.
+   Report unsupported declaration syntax at its source line. A document may show a subset
+   of the surface. Check unmarked documents as implemented and skip blocks marked ⏳.
+   Compare the documented type kind, accessibility and contract modifiers with the
+   built type as well. In .NET this includes record classes and structs, readonly
+   and ref structs, and static, abstract or sealed classes. Prove both checks on
+   an unchanged assembly and snapshot by changing one parameter type and then one
+   type header in the document. Exercise the supported Markdown language tags
+   and fence forms with the same incorrect signature. Include comma-separated
+   fence options and a missing language label on a declaration beside a correctly
+   labelled block. Give the author the opening line when the label is required.
 4. **The declared dependencies match the real ones.** The real ones are read from the
    signatures **and from the method bodies** (bytecode, AST, imports: whatever the
    language gives): a static call names the type in no signature. Check in both
@@ -43,6 +53,10 @@ paid for; none of them needs to be repeated.
 
 **Mandatory conditions:**
 
+- For a material promise about units, errors, bounds or side effects, cite a consumer
+  test in the relevant API section. The test calls the public API and asserts the
+  documented observable result. Change the implementation once with the signature
+  intact and confirm that this test fails.
 - **Every check is shown red once.** Break exactly what it guards (rename a member in
   `API.md`; remove a dependency line; add a public type and do not describe it; put a
   ✅ on something nonexistent), make sure it fails and that the message contains the

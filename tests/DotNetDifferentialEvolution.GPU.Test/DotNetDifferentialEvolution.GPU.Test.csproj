@@ -3,6 +3,8 @@
     <!-- Common settings (TFM, nullable, RollForward, …) come from tests/Directory.Build.props. -->
     <PropertyGroup>
         <IsTestProject>true</IsTestProject>
+        <!-- The stagnation regression runs the public solver in a child with a hard deadline. -->
+        <GenerateProgramFile>false</GenerateProgramFile>
     </PropertyGroup>
 
     <ItemGroup>

@@ -34,7 +34,7 @@ internal readonly record struct SuccessSums(
         WeightedCrSquared + weight * crossoverProbability * crossoverProbability,
         WeightedF + weight * mutationForce,
         WeightedFSquared + weight * mutationForce * mutationForce,
-        crossoverProbability > MaxCr ? crossoverProbability : MaxCr);
+        MaxProbability(crossoverProbability, MaxCr));
 
     /// <summary>These sums with a later chunk's sums added last.</summary>
     /// <param name="later">The later chunk's sums.</param>
@@ -45,5 +45,10 @@ internal readonly record struct SuccessSums(
         WeightedCrSquared + later.WeightedCrSquared,
         WeightedF + later.WeightedF,
         WeightedFSquared + later.WeightedFSquared,
-        later.MaxCr > MaxCr ? later.MaxCr : MaxCr);
+        MaxProbability(later.MaxCr, MaxCr));
+
+    // CR lies in [0,1]. Its bits order positive values even when the backend flushes
+    // subnormals in floating comparisons. The initial +0 also wins over -0.
+    private static double MaxProbability(double candidate, double incumbent) =>
+        BitConverter.DoubleToInt64Bits(candidate) > BitConverter.DoubleToInt64Bits(incumbent) ? candidate : incumbent;
 }

@@ -16,8 +16,11 @@ Nothing outward. What this node proves about `AlgorithmExecutor`'s own guard.
 [Trait("Category", "Unit")]
 public class AlgorithmExecutorTests
 {
-    public void AHandBuiltContextWithoutAProviderIsRefused(IMutationStrategy mutationStrategy);
-    public void TheSameStrategyIsAcceptedWhenTheContextHasAProvider(IMutationStrategy mutationStrategy);
+    public void AHandBuiltContextWithoutAProviderIsRefused(string strategyName);
+    public void TheSameStrategyIsAcceptedWhenTheContextHasAProvider(string strategyName);
     public void AStrategyThatCarriesItsOwnParametersNeedsNoProvider();
 }
 ```
+
+⚠ 2026-11-13 — Signature verification found that the two provider cases take a strategy
+name. The previous declarations showed an `IMutationStrategy` argument.

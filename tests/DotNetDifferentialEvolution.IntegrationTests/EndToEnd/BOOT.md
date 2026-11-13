@@ -55,6 +55,11 @@ Inherited from the parent ([BOOT.md](../BOOT.md)).
 
 ## Acceptance criteria
 
+- [x] 2026-11-13, `BuilderBoundsTests.DefaultSelectionUsesEachBuildsGenomeSize`.
+      A retained bounds stage resizes the box after default selection. Both builds run
+      one generation in their own fixed box. Before the fix, 2 → 3 faulted on a short
+      destination and 3 → 2 on an out-of-range slice.
+
 - [x] Green: 2026-10-02, 34 cases in 6 classes (adaptive 4, benchmarks 16 of which 4
       `Slow`, schemes 5, examples 3, local search 2, population size 4).
 - [x] Non-degenerate: 2026-10-02, scratch clone of `a504474`. Selection never taking an

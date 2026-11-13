@@ -16,6 +16,8 @@ Everything not listed here is internal structure and may change.
 
 <Semantics: preconditions and postconditions, units, ranges, how a call can end,
 thread safety.>
+<For a material behavioural promise, give one observable example and cite the
+consumer test that checks its result through this API.>
 
 ## Errors
 

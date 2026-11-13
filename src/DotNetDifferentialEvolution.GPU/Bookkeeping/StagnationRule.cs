@@ -19,8 +19,7 @@ internal static class StagnationRule
     /// <returns>Whether the run stops.</returns>
     public static bool Apply(double best, double threshold, int maxStagnationStreak, ref double lastBest, ref int streak)
     {
-        var difference = Math.Abs(best - lastBest);
-        if (difference > threshold)
+        if (ExceedsThreshold(best, lastBest, threshold))
         {
             lastBest = best;
             streak = 0;
@@ -31,5 +30,23 @@ internal static class StagnationRule
         }
 
         return streak >= maxStagnationStreak;
+    }
+
+    private static bool ExceedsThreshold(double best, double lastBest, double threshold)
+    {
+        // OpenCL can lower the branch on > to an inverted <=, which disagrees on NaN.
+        if (double.IsNaN(best) || double.IsNaN(lastBest) || double.IsNaN(threshold))
+        {
+            return false;
+        }
+
+        if (!double.IsFinite(best) || !double.IsFinite(lastBest))
+        {
+            // Equal infinities have an undefined difference. Every other such distance is +infinity.
+            return best != lastBest && threshold < double.PositiveInfinity;
+        }
+
+        // Finite endpoints can still give +infinity on overflow, a change above any finite threshold.
+        return Math.Abs(best - lastBest) > threshold;
     }
 }

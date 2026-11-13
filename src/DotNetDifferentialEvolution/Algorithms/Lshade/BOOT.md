@@ -23,6 +23,8 @@ spent.
   `LShadeStrategyTests.AfterGenerationKeepsTheMemoryFiniteWhenTheImprovementsOverflowTheSums`,
   `AfterGenerationWeighsAnImprovementNearTheLargestDoubleAgainstOneOfOne` and
   `AfterGenerationBelowTheOverflowBoundEqualsTheUnscaledArithmeticBitForBit`.
+- Both Lehmer means use [SHADE's weight scale](../Shade/BOOT.md), including for subnormal
+  improvements and differences of finite fitness values larger than `double.MaxValue`.
 - **Arguments that would fail silently are refused at construction** (`c54fa57`). Held
   by `ConstructorRejectsANonPositiveEvaluationBudget`,
   `ConstructorRejectsANegativeArchiveSizeRate`, `ConstructorValidatesMinimumPopulationSize`.
@@ -47,6 +49,11 @@ Inherited from the parent ([BOOT.md](../../BOOT.md)). In addition:
 
 ## Acceptance criteria
 
+- [x] 2026-11-13, `ShadeStrategyTests.ExtremeProductsRetainRepresentableMeans`: both Lehmer
+      means recover constant tiny parameters and the mixed ½ result. A positive CR of ε
+      among signed-zero CR values keeps the slot nonterminal.
+- [x] F7, 2026-11-13: the L-SHADE rows of `ShadeStrategyTests.ExtremeImprovementsRetainTheirRelativeWeights`
+      give (F, CR) = (7/10, 1/2) for weights ε and 3ε, and (19/28, 11/20) for MaxValue and 2·MaxValue.
 - [x] Reduction, rounding, memory rules and argument checks pass: 2026-10-02,
       `LShadeStrategyTests` (9 tests, local run).
 - [x] L-SHADE converges on Rosenbrock: 2026-10-02,
@@ -54,6 +61,13 @@ Inherited from the parent ([BOOT.md](../../BOOT.md)). In addition:
       shrinking live size: `PopulationSizeReportingTests` (integration, full local run).
 - [ ] ⚠ The archive capacity is rounded on every resize, where Tanabe's reference
       truncates on resize and rounds only initially (documented divergence, `a88001a`).
+
+## Verification on 2026-11-13
+
+Git tree `7b7dc4e91f02259ad4b3b84afb6e0c23f7d4248a`, after a Release solution build:
+`dotnet test tests/DotNetDifferentialEvolution.UnitTests -c Release --no-build --blame-hang-timeout 4m`
+passed 264/264, including `ShadeStrategyTests.ExtremeProductsRetainRepresentableMeans` and `ShadeStrategyTests.ExtremeImprovementsRetainTheirRelativeWeights`.
+Both L-SHADE product and improvement checks passed, including the subnormal and overflow improvement rows.
 
 ## Taboos
 

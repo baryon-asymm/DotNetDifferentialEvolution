@@ -3,6 +3,8 @@
     <!-- Common settings (TFM, nullable, RollForward, …) come from tests/Directory.Build.props. -->
     <PropertyGroup>
         <IsTestProject>true</IsTestProject>
+        <!-- Run lifecycle probes in a child process so a deadlock or unhandled worker exception cannot take down xUnit. -->
+        <GenerateProgramFile>false</GenerateProgramFile>
     </PropertyGroup>
 
     <ItemGroup>

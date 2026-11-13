@@ -22,7 +22,10 @@ public class LShadeStrategy : ShadeStrategy
 }
 ```
 
-`AfterGeneration` does SHADE's bookkeeping, then the reduction: planned size
+`AfterGeneration` uses [SHADE's improvement weights](../Shade/API.md) for both Lehmer means,
+including tiny improvements and differences of finite endpoints larger than `double.MaxValue`.
+Both Lehmer means use the extended-exponent sums when their products approach underflow.
+It then applies the reduction, with planned size
 `round((N_min − N_init) · min(1, evals / maxEvals) + N_init)` (half away from zero),
 clamped to `[N_min, current]`. If smaller than the current size, the best survivors (by
 the ranking, rebuilt here only if the mutation strategy did not declare one) are compacted

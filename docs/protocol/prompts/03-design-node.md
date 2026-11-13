@@ -11,9 +11,10 @@ insufficient with a list of what is missing and on whom it depends.
 A design session on the node `<path to the node>`.
 
 Carry out the start procedure (`AGENTS.md`, §10): the protocol, the upward chain of
-`BOOT.md` to the root, the `API.md` of the neighbours from this node's
+`BOOT.md` to the root, the `API.md` of declared ancestor dependencies and neighbours from this node's
 `## Dependencies` section, then the linter. The mode is **design**: code is not
-edited, scaffolding is not created.
+edited, scaffolding is not created. A size-related move may append entries to the node's
+`HISTORY.md` or move active criteria and evidence into the node's linked `ACCEPTANCE.md` (§15).
 
 The task of the session: `<what is wanted from the node: bring to sufficiency / revise
 the contract / split into child nodes / close a divergence from the list>`.
@@ -27,7 +28,8 @@ Order:
    node from scratch without reading the neighbours' code and without asking
    questions. Write out the list of decisions it will have to make on its own. Each
    decision is either an answer in `BOOT.md` or a question to me. Show me this list:
-   it is the measure of sufficiency.
+   it is the measure of sufficiency. Give a fresh implementer a representative input. If a
+   placeholder prevents them deriving its expected result, record the unanswered question.
 3. **Edit the documents.** Invariants as checkable wordings; dependencies in canonical
    form; acceptance criteria such that a check can be written from them, not a report.
    The contract in `API.md`: what does not exist yet under ⏳; what exists under ✅

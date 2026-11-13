@@ -1,3 +1,4 @@
+using DotNetDifferentialEvolution.Algorithms.Lshade;
 using DotNetDifferentialEvolution.Algorithms.Shade;
 using DotNetDifferentialEvolution.GenerationStrategies;
 using DotNetDifferentialEvolution.Models;
@@ -23,11 +24,82 @@ public class ShadeStrategyTests
     private static ScriptedRandomProvider CellRevealingDraws() =>
         new(ints: [0], doubles: [0.5, 0.75, 0.5]);
 
+    /// <summary>Finite fitness differences retain their relative weights at either end of the double range.</summary>
+    /// <param name="lShade">Whether CR uses the Lehmer mean.</param>
+    /// <param name="overflow">Whether the second difference overflows (1:2), or both are subnormal (1:3).</param>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void ExtremeImprovementsRetainTheirRelativeWeights(bool lShade, bool overflow)
+    {
+        const int count = 4;
+        var strategy = lShade ? new LShadeStrategy(count, 100, 0, 1) : new ShadeStrategy(count, 1);
+        var context = ProblemContextHelper.CreateContext(count, new SphereEvaluator(2), new LimitGenerationNumberTerminationStrategy(1));
+        var records = new TrialRecord[]
+        {
+            new() { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = overflow ? double.MaxValue : double.Epsilon, TrialFfValue = 0, UsedF = 0.25, UsedCr = 0.75 },
+            new() { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = overflow ? double.MaxValue : double.Epsilon, TrialFfValue = overflow ? -double.MaxValue : -2 * double.Epsilon, UsedF = 0.75, UsedCr = 0.25 },
+            new() { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = double.PositiveInfinity, TrialFfValue = 0, UsedF = 1, UsedCr = 1 },
+            new() { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 1, TrialFfValue = double.NegativeInfinity, UsedF = 1, UsedCr = 1 },
+        };
+
+        strategy.AfterGeneration(new GenerationContext(context), records);
+        UnscaledShadeMemory.ReadBack(strategy, 0, terminal: false, out var f, out var cr);
+
+        Assert.Equal(overflow ? 19.0 / 28 : 0.7, f);
+        var expectedCr = overflow ? (lShade ? 11.0 / 20 : 5.0 / 12) : (lShade ? 0.5 : 0.375);
+        Assert.Equal(expectedCr, cr);
+    }
+
     /// <summary>
     /// A success-history memory needs at least one slot, so a memory size of zero is rejected.
     /// </summary>
     [Fact]
     public void ConstructorThrowsWhenMemorySizeIsNotPositive() => _ = Assert.Throws<ArgumentOutOfRangeException>(() => new ShadeStrategy(PopulationSize, memorySize: 0));
+
+    /// <summary>The written means retain representable ratios when individual products lose precision.</summary>
+    /// <param name="lShade">Whether CR uses the Lehmer mean.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ExtremeProductsRetainRepresentableMeans(bool lShade)
+    {
+        const int count = 4;
+        var strategy = lShade ? new LShadeStrategy(count, 100, 0, 1) : new ShadeStrategy(count, 1);
+        var context = ProblemContextHelper.CreateContext(count, new SphereEvaluator(2), new LimitGenerationNumberTerminationStrategy(1));
+        var tiny = Math.ScaleB(1, -1000);
+        var factor = Math.ScaleB(1, -54);
+        var small = Math.ScaleB(1, -600);
+        (double W1, double W2, double X1, double X2, double Lehmer, double Arithmetic)[] cases =
+        [
+            (Math.ScaleB(1, -969), Math.ScaleB(1, -968), factor, factor, factor, factor),
+            (1, 1, small, small, small, small),
+            (1, tiny, tiny, 1, 0.5, 2 * tiny),
+            (Math.ScaleB(1, 1000), Math.ScaleB(1, -50), Math.ScaleB(1, -1050), 1, 0.5, Math.ScaleB(1, -1049)),
+            (tiny, 2 * tiny, tiny, tiny, tiny, tiny),
+            (1, 1, double.Epsilon, double.Epsilon, double.Epsilon, double.Epsilon),
+        ];
+        foreach (var (w1, w2, x1, x2, lehmer, arithmetic) in cases)
+        {
+            var records = new TrialRecord[count];
+            records[0] = new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = w1, UsedF = x1, UsedCr = x1 };
+            records[^1] = new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = w2, UsedF = x2, UsedCr = x2 };
+            strategy.AfterGeneration(new GenerationContext(context), records);
+            UnscaledShadeMemory.ReadBack(strategy, 0, terminal: false, out var f, out var cr);
+            Assert.Equal(lehmer, f);
+            Assert.Equal(lShade ? lehmer : arithmetic, cr);
+        }
+
+        var zeros = new TrialRecord[count];
+        zeros[0] = new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 1, UsedF = small, UsedCr = -0.0 };
+        zeros[^1] = new TrialRecord { Outcome = SelectionOutcome.TrialImproved, ParentFfValue = 1, UsedF = small, UsedCr = double.Epsilon };
+        strategy.AfterGeneration(new GenerationContext(context), zeros);
+        UnscaledShadeMemory.ReadBack(strategy, 0, terminal: false, out var tinyF, out var tinyCr);
+        Assert.Equal(small, tinyF);
+        Assert.Equal(lShade ? double.Epsilon : 0.0, tinyCr);
+    }
 
     /// <summary>
     /// The memory slot receives the improvement-weighted arithmetic mean of the successful CR values

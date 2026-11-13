@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace DotNetDifferentialEvolution.Protocol.Tests;
 
@@ -9,6 +10,27 @@ namespace DotNetDifferentialEvolution.Protocol.Tests;
 internal static class TypeShape
 {
     private const BindingFlags Declared = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+
+    /// <summary>A C# record struct has no CLR flag. Roslyn always synthesizes the two self-equality operators
+    /// (explicit declarations are forbidden) and implements IEquatable&lt;Self&gt;, even with a custom PrintMembers.</summary>
+    public static bool IsRecordStruct(Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        if (!type.IsValueType || !type.GetInterfaces().Any(i => i.IsGenericType &&
+            i.GetGenericTypeDefinition() == typeof(IEquatable<>) && i.GetGenericArguments()[0] == type))
+        {
+            return false;
+        }
+
+        bool HasSynthesizedOperator(string name)
+        {
+            var op = type.GetMethod(name, BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly,
+                binder: null, types: [type, type], modifiers: null);
+            return op?.ReturnType == typeof(bool) && op.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false);
+        }
+
+        return HasSynthesizedOperator("op_Equality") && HasSynthesizedOperator("op_Inequality");
+    }
 
     /// <summary>The name without the generic arity suffix.</summary>
     public static string SimpleName(Type type)

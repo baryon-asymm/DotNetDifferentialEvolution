@@ -32,7 +32,9 @@ None.
 
 Outside the tree: xUnit 2.9.3, Microsoft.NET.Test.Sdk 17.14.1, xunit.runner.visualstudio
 3.1.4; Python 3.8+ on `PATH` as `python` (the lint fact); the kit `reference/dotnet/` of
-the `boot-api-protocol` skill, as of 2026-10-02. Added 2026-10-03: Microsoft.CodeAnalysis.CSharp
+the `boot-api-protocol` skill. The initial import used the 2026-10-02 kit. The declaration
+checks use its 2026-11-12 .NET reference with the adaptations recorded below.
+Added 2026-10-03: Microsoft.CodeAnalysis.CSharp
 5.0.0, the semantic model of check 8c. It is the version APT pins
 (`AerospacePropellantThermodynamics`, `Directory.Packages.props`), and the NuGet audit of
 this repository, whose advisories fail the build, reports nothing against it.
@@ -81,6 +83,19 @@ Each one is marked in the code at the place it changes.
 - ⚠ **The kit's files were adapted to the repository's maximum diagnostics on
   2026-10-03** (namespace, generated regexes, naming, XML documentation): behaviour
   unchanged.
+- ⚠ **Declaration checks updated from the 2026-11-12 .NET reference on 2026-11-13.**
+  Roslyn binds the shown signatures against assembly metadata. For a node whose assembly
+  grants friend access, the document compilation takes a friend name so internal types
+  and enum defaults bind as in the owning assembly. Without it, `OpenForTiming` resolved
+  `Backend` to ILGPU's type and the three enum defaults of `StepParameters` appeared null.
+  Test assembly imports include `Xunit` for attributes such as `Trait`. The empty root
+  namespace needs no wrapper. The declaration and surface checks share the kit's
+  record-struct detection through the compiler-generated equality operators.
+- ⚠ 2026-11-13 — Independent mutations added `IAsyncDisposable` to `DifferentialEvolution`
+  and changed the GPU bounds builder's `struct` constraint to `class`. Both passed the kit
+  checker. This node checks explicit base entries against the full compiled ancestry and
+  explicit type-parameter clauses against the compiled constraints. A document may show
+  a subset of the surface (kit prompt 05). Reverse coverage is per exported type.
 - ⚠ **The GPU package's guards (added 2026-10-03), adapted from APT.** The source is
   `AerospacePropellantThermodynamics`, commit `5fdd82c`, `tests/Protocol.Tests/`. Each
   adapted file cites it in its doc comment. The GPU package's `ACCEPTANCE.md` (v1 checks
@@ -135,6 +150,19 @@ Each one is marked in the code at the place it changes.
 
 ## Acceptance criteria
 
+- [x] 2026-11-13, `DeclarationBaseListTests` and `DeclarationConstraintTests`: the
+      previous checker accepted three false base entries and three false type constraints.
+      The corrected checker rejects them while accepting partial and inherited base lists,
+      constructed generic interfaces, and correct or omitted type-parameter clauses.
+- [x] 2026-11-13, `DeclarationFieldTests` and `RejectsChangedMethodConstraint`: changing
+      a constant value, field type, readonly modifier or method constraint produces a mismatch.
+      `BuilderContractMayOmitWithSeed` exercises member omission with its owner still named.
+
+- [x] 2026-11-13, `BuilderSignatureTests`: the compiled CPU builder matches
+      `IDifferentialEvolutionBuilder WithSeed(int seed)`. Each independent change to the
+      return type, parameter type, name, count or default produces a diagnostic at the
+      documented method line with both signatures.
+
 - [x] All facts green on the unmutated tree: 2026-10-03, 46 of 46, `dotnet test
       tests/DotNetDifferentialEvolution.Protocol.Tests -c Release` (local, Windows 11,
       .NET SDK 10.0.112).
@@ -188,6 +216,13 @@ Each one is marked in the code at the place it changes.
 - [x] Green in CI: 2026-10-03, GitHub Actions run 37090681168 on PR #12, commit `4b5d35b`, all steps green (the step "Integration tests (excluding slow and
       GPU)", which runs this node on ubuntu-latest). The job log needs a sign-in and was
       not read, so the per-test count in CI is not recorded.
+
+## Verification on 2026-11-13
+
+Git tree `7b7dc4e91f02259ad4b3b84afb6e0c23f7d4248a`, after a Release solution build:
+`dotnet test tests/DotNetDifferentialEvolution.Protocol.Tests -c Release --no-build --blame-hang-timeout 4m`
+passed 73/73 with zero skips. This run includes `DeclarationTests`, `BuilderSignatureTests`,
+`DeclarationBaseListTests`, `DeclarationConstraintTests` and `DeclarationFieldTests`.
 
 ## Taboos
 

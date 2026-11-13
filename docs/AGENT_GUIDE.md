@@ -96,7 +96,8 @@ double Evaluate(int workerIndex, ReadOnlySpan<double> genes);
 - **Returning `NaN` is safe.** NaN is ranked worse than every real value, so a NaN individual is
   replaceable and can never become the incumbent best. It is the correct return for "this point is
   infeasible"; returning `double.MaxValue` also works but distorts nothing less.
-- The engine never calls `Evaluate` with an out-of-box vector: genes are repaired before evaluation.
+- With finite bounds, the built-in sampler and mutation schemes keep every evaluated gene in the box,
+  including at the extremes of `double`. A custom sampler or mutation strategy must supply in-box genes.
 
 ## 3. Choosing a variant
 
@@ -169,9 +170,11 @@ guessing:
    you read from it changes. Anything that must outlive the call needs
    `GetSnapshot(deepCopy: true)`; the default `deepCopy: false` keeps referencing the population's
    own gene array.
-5. **`DifferentialEvolution` is one-shot and `IDisposable`.** A second `RunAsync` returns the
-   already-completed task rather than starting a new search. To run again, build again. Dispose it,
-   or the worker threads outlive the run — `using var` is the correct default.
+5. **Each optimizer runs once.** Store the task returned by `RunAsync`. A call during the run
+   throws `InvalidOperationException` and preserves the first token. A call after completion
+   returns the same task until disposal. Use `using var` for each optimizer. To run another search,
+   call `Build()` again. Built-in adaptive presets and uniform sampling have separate state in
+   each build. An explicitly supplied object, such as a stateful stop rule, is shared by reference.
 6. **`WithShade` is SHADE 1.0** (CEC 2013), not the SHADE 1.1 the authors distribute as source. The
    two differ in the memory update. `WithLShade` is built on 1.1, as the L-SHADE paper specifies.
 7. **A tie is resolved per variant.** SHADE and L-SHADE take a trial equal to its parent, JADE keeps
@@ -208,6 +211,11 @@ var population = await de.RunAsync(cancellationToken);
 Observed at the next generation barrier, so a run with an expensive objective stops within roughly
 one generation rather than instantly, with the population in a consistent state. The task completes
 as canceled (`OperationCanceledException`).
+
+An external `Dispose()` during a run waits for the current generation and for all workers to
+exit. Observe cancellation by awaiting the original task. Inside an objective or observer
+running on this optimizer's worker, `Dispose()` requests shutdown and returns so the callback
+can finish. A subsequent `RunAsync` on a disposed optimizer throws `ObjectDisposedException`.
 
 ## 9. Extending it
 

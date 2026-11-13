@@ -34,7 +34,8 @@ internal static class AdaptationRules        // host and device (S7)
     public const double TerminalCr = -1.0;
     public const double InitialValue = 0.5;
     public static double WeightOf(ParameterRule rule, int outcome, double parentFitness, double trialFitness);
-    public static double ScaleOf(double largestWeight, int count);          // S19
+    public static double ScaleOf(double largestWeight, int count);          // S19, F7
+    public static double ScaledWeight(double weight, double scale, double parentFitness, double trialFitness);
     public static void UpdateJadeMeans(SuccessSums sums, double adaptationRate, ref double meanCr, ref double meanF);
     public static bool UpdateShadeSlot(SuccessSums sums, bool lShade, ref double slotCr, ref double slotF);
 }
@@ -96,7 +97,7 @@ internal sealed record BookkeepingPlan(
     int PopulationSize, int GenomeSize, SchemeKind Scheme, ParameterRule Rule,
     int ArchiveCapacity, int MemorySize, double AdaptationRate, bool LShade,
     double InitialMutationForce, double InitialCrossoverProbability,
-    (double, int)? Stagnation)               // (threshold, max streak)
+    (double Threshold, int MaxStreak)? Stagnation)
 {
     public bool NeedsBestIndex { get; }      // best/1, best/2, current-to-best/1, a stop rule
     public bool NeedsRanking { get; }        // current-to-pbest/1
@@ -120,7 +121,14 @@ internal sealed class GenerationBookkeeping : IDisposable
 }
 ```
 
+⚠ 2026-11-13 — Signature verification found that the `Stagnation` tuple previously shown
+without element names exposes `Threshold` and `MaxStreak` in the assembly.
+
 - Every kernel reads the stop word first and returns when it is set.
+- For the public finite, nonnegative threshold, `StagnationRule.Apply` advances the streak
+  on NaN, equal infinities and changes exactly at the threshold. A transition between
+  distinct ordered scores with infinite distance resets the streak, including when
+  subtracting two finite scores overflows. Only a reset replaces the reference score.
 - Every kernel a plan uses is loaded in the constructor, once, through `KernelLoader` with the
   largest extent it is launched with (checks A10, A2), and none afterwards: the two fills;
   with `NeedsRanking`, `RankByCounting` (N_init up to the ranking limit, or L-SHADE, whose
@@ -131,13 +139,19 @@ internal sealed class GenerationBookkeeping : IDisposable
   L-SHADE; `Stagnate` with a stagnation rule. The seams `Rank`, `RankByCounting`,
   `RankByBitonicNetwork` and `FindBest` need their kernels in the plan and throw
   `InvalidOperationException` otherwise.
-- SHADE's weights are scaled before they are summed (check S19, added 2026-10-08):
-  `ScaleOf(largestWeight, count)` is `largestWeight` when it exceeds
-  `double.MaxValue / (2·count)`, else 1.0. `LargestWeights` (one thread per wide chunk,
-  SHADE and L-SHADE only, one double per wide chunk in a buffer allocated under SHADE only)
-  runs before `SumSuccesses`, which takes the maximum over the wide chunks' largest weights
-  and adds `weight / scale`, skipping the division when the scale is 1.0 (it changes no
-  bit); JADE's scale is 1.
+- Under SHADE, `WeightOf` returns NaN for an unusable trial, the difference for finite
+  endpoints, and +∞ when that difference overflows. `LargestWeights` finds one maximum per
+  wide chunk, explicitly excluding NaN and retaining +∞ as the overflow signal.
+  `SumSuccesses` passes the generation maximum to `ScaleOf`, then uses
+  `ScaledWeight` for each usable trial. Below 2⁻⁹⁷⁰ the divisor is 2⁻¹⁰²². Above
+  `double.MaxValue / (2·count)` the divisor is the maximum, with +∞ selecting a common
+  division by MaxValue using halved endpoints. Otherwise the divisor is 1. JADE uses 1.
+  ⚠ 2026-11-13 (F7): S19 previously specified a divisor of 1 throughout the low range
+  and skipped overflowing differences. The extreme-weight tests exercise the revised contract.
+- `Adapt` also receives the population views and active count. If weighted products or
+  their quotient approach underflow it rereads successes and combines extended-exponent
+  moments in chunk order. Each memory value uses the ordinary result when its own ratio
+  is safe. The maximum CR distinguishes positive subnormal CR from either signed zero.
 - The sums (`SumSuccesses`, then `Adapt` over its partials) run in chunks of 1 024
   individuals, S7's order. The passes whose result cannot depend on their order, the best
   index (`BestOfChunks`, then `BestOfPartials` over the wide chunks in order), the improved

@@ -82,6 +82,10 @@ Outside the tree: Python 3.8+ (standard library), `unittest` for the self-test.
 - The size check and the citation check run unconditionally: a flag a caller can
   forget is not a check, and a known backlog is declared by the nodes that carry it
   (`AGENTS.md` §12, §13), not by a switch that lets the linter stay silent about it.
+- A project may opt a specific first-party source directory back into the scan with
+  `--source-root`; its dependency and build subdirectories keep their usual exclusions.
+  Acceptance checks include nested headings and validate calendar dates. Relative document
+  links must resolve to files.
 - The `--exclude` option and the built-in exclusion of dot directories and build
   directories apply to every check alike, the new ones included; the tree's own command
   (`CLAUDE.md`) passes `--exclude templates` so that the document templates are not read
@@ -106,6 +110,17 @@ Outside the tree: Python 3.8+ (standard library), `unittest` for the self-test.
   named node lacks), plus one for `--exclude`, which no fact guarded before.
 
 ## Acceptance criteria
+
+- [x] 2026-11-13 An ordinary branch that changes both code and acceptance
+      documents retains active criteria and evidence from the integration target.
+      A malformed pointer and a checkbox archived only in history are reported by
+      the standalone guard. Covered by `test_history_guard.py` and
+      `test_ordinary_mixed_branch_cannot_drop_a_criterion`.
+
+- [x] 2026-11-12 During a §15 move, dropping an active criterion from a leaf's
+      external acceptance file, separating it from its evidence, collapsing repeated
+      occurrences, or moving it only into history fails `test_history_guard.py`.
+      Moving the same criterion and evidence into a permitted current section passes.
 
 - [x] Every check is proven non-degenerate: exactly one breakage is applied to a
       conformant tree and the check turns red — 68 tests, none skipped

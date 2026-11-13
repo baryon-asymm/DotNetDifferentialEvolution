@@ -14,10 +14,12 @@ The checks are frozen; their numbers are copied, never chosen here.
 | Check | Test | How |
 |---|---|---|
 | S7 | `AdaptationParityTests` | the rules against `JadeStrategy`, `ShadeStrategy`, `LShadeStrategy` after `AfterGeneration`, read back through `GetControlParameters`; the kernels against the rules in chunks |
+| F7 | `ExtremeImprovementTests` | read the slot back from ILGPU CPU, CUDA and OpenCL against rational known answers for tiny and overflowing differences in separate chunks |
 | S8 | `ArchiveParityTests` | the rule against `UpdateArchive` through `JadeStrategy` on a recording provider; the kernels against the rule on stream-1 draws |
 | S9, S10 | `RankingTests` | both rankings and the best-index passes against host orders and `BestPick` |
 | S11 | `LShadeReductionTests` | the schedule's known answers; a CPU-package and a GPU run side by side; the reduction pass |
 | S12 | `StagnationTests` | the rule against `StagnationStreakTerminationStrategy`; runs that stop |
+| S12 | `StagnationProcessTests` | bounded public runs on each explicit backend with constant scores, threshold equality and finite subtraction overflow |
 | A3 (CI) | `FitnessOrderTests` | `OrderKey`'s known answers, every NaN, 20 000 random pairs against `KeyOf` |
 | A3 ⚠ (CI) | `RankingCalibrationTests` | `LimitOf` against a scripted time that records the n asked |
 | A3 ⚠, A4 ⚠ (CI) | `RankingTests`, `WideChunkTests` | the CPU instance's L = 2 048 and a forced limit; `WideChunkSizeOf`'s known answers, the instance's fixed chunk, the best index under forced chunks |
@@ -69,12 +71,24 @@ xUnit 2.9.3.
 
 Inherited from the parent ([BOOT.md](../BOOT.md)). In addition:
 
-- Every case carries a category. Only `BookkeepingTimingTests` needs a GPU (category `Gpu`,
-  CUDA and OpenCL, this machine's devices, run by hand); every other case runs in CI on the
-  CPU accelerator.
+- Every case carries a category. CI uses the CPU accelerator. The physical-device cases
+  of `ExtremeImprovementTests`, `StagnationProcessTests` and `BookkeepingTimingTests` explicitly open CUDA or OpenCL
+  and carry category `Gpu`.
 
 ## Acceptance criteria
 
+- [x] 2026-11-13, `StagnationProcessTests` checks six public stopping generations per
+      backend in separate CPU, CUDA and OpenCL children. An observer cancels a run reaching
+      generation 7 and the parent enforces a process deadline. The unguarded comparison
+      triggered cancellation on gfx1036 for both constant infinities and NaN.
+- [x] 2026-11-13, `OpenClExcludesUnusableRecordsBeforeReducingWeights` on gfx1036 checks
+      the maxima and the six entries of each sum chunk directly, before the final memory
+      update can recover a corrupted ordinary sum. Red on the unguarded maximum.
+- [x] 2026-11-13, `ExtremeImprovementTests`: the real slot retains subnormal parameters,
+      combines extreme products across chunk boundaries and distinguishes a single ε CR
+      from an all-zero CR set on CPU, CUDA and OpenCL.
+- [x] F7, 2026-11-13: `ExtremeImprovementTests` read both SHADE and L-SHADE slots on the
+      CPU accelerator and on CUDA and OpenCL. The previous arithmetic failed on all three.
 - [x] S7–S12 are green and each was red once on its named mutation: 2026-10-05, the
       evidence and the mutations in [Bookkeeping/ACCEPTANCE.md](../../../src/DotNetDifferentialEvolution.GPU/Bookkeeping/ACCEPTANCE.md).
 - [x] A3 ⚠ and A4 ⚠ are green, in CI and under **Gpu**, and each was red on its named

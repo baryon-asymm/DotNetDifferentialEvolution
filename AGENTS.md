@@ -25,6 +25,9 @@
 >
 > Version 3.2 (2026-10-01) was measured on the AerospacePropellantThermodynamics and
 > CompositePropellantMicrostructure trees; its additions are listed in Appendix D.
+> The kit revision of 2026-11-12 clarifies access to ancestor contracts, document
+> moves, specification readiness and checks of changed consumer contracts.
+> The 2026-11-13 revision clarifies the scope of an owner's workflow decision in §10.
 
 ---
 
@@ -100,7 +103,7 @@ by **direction**.
 
 | Direction | Nodes | What is accessible |
 |---|---|---|
-| **Up** | ancestors up to the root (and the external ancestor, §1) | **read** `BOOT.md` |
+| **Up** | ancestors up to the root (and the external ancestor, §1) | **read** `BOOT.md` and the `API.md` of a declared ancestor dependency (§6) |
 | **Sideways** | neighbours | **read** `API.md` |
 | **Here and down** | current + descendants (recursively) | **read and write** everything (see §5: the file type depends on the mode) |
 
@@ -127,8 +130,8 @@ files the agent may change.
 ### Design mode — human + agent, together
 
 The goal is to build or rework the context tree. Decisions about abstractions,
-contracts and boundaries are made. **Code is untouchable**: the agent touches only
-`BOOT.md` and `API.md`. Scaffolding (project files, class stubs, empty modules) is
+contracts and boundaries are made. **Code is untouchable**: the agent edits the node documents, including its own
+`ACCEPTANCE.md` and append-only `HISTORY.md` during a §15 move. Scaffolding (project files, class stubs, empty modules) is
 code too.
 
 Exit of the mode: every touched `BOOT.md` has been brought to **sufficiency** (§6).
@@ -145,10 +148,10 @@ current task, not as a design session.
 Access to foreign nodes (§3) does **not** depend on the mode. The mode restricts only
 which file types the agent may change in the current node and its descendants.
 
-| | `BOOT.md` | `API.md` | Code |
+| | `BOOT.md`, `API.md` and `ACCEPTANCE.md` | `HISTORY.md` | Code |
 |---|---|---|---|
-| **Design** | write | write | read only |
-| **Coding** | write | write | write |
+| **Design** | write | append entries (§15) | read only |
+| **Coding** | write | append entries (§15) | write |
 
 ## 6. Transition criterion: BOOT.md sufficiency
 
@@ -157,8 +160,8 @@ transition design → coding is legitimate only when the node's `BOOT.md` is
 self-sufficient for autonomous implementation without a human.
 
 The readiness criterion is not "we described the idea" but "an agent will write the
-code from this alone, without reading the neighbours' code". A node's `BOOT.md`
-counts as sufficient when it contains six sections:
+code from this alone, without reading the neighbours' code". Every node's `BOOT.md`
+requires the following six sections:
 
 - [ ] `## Purpose` — what this level is and why it exists;
 - [ ] `## Invariants` — what must remain true always;
@@ -169,7 +172,10 @@ counts as sufficient when it contains six sections:
 
 **The headings are canonical and are checked by the machine letter by letter** (§13).
 The language of the body is free; the headings are not translated. Additional
-sections are allowed; the six mandatory ones are not optional.
+sections are allowed. The lint establishes structure. To assess sufficiency, give an implementer
+a representative decision and its acceptance example. Using the permitted documents, the
+implementer must be able to derive the expected result. An unspecified essential invariant
+returns to design with the missing decision recorded.
 
 **The format of `## Dependencies` is canonical too**, because the machine reads it and
 compares it with the real couplings in the code:
@@ -214,7 +220,7 @@ Every declaration in `API.md` is marked with a status, usually in the section he
 `## Entry point ✅` or `## Entry point ⏳`.
 
 - ✅ — implemented: the code block under such a heading **is checked against the
-  code**: every named type and every member must exist;
+  code**: each supported declaration must identify its owner and the concrete member signature (§13);
 - ⏳ — planned: the block is a design sketch and is not checked against the build.
 
 The nearest mark **above** a code block decides its fate; a document without a single
@@ -281,6 +287,12 @@ reconstruction.
 
 ## 10. Start procedure
 
+The root `AGENTS.md` governs work in the tree. Session templates supply defaults.
+An explicit decision by the project owner can change the workflow for a named task
+or revise a standing rule. Apply that decision within its stated scope. When a task
+appears to conflict with a rule and the owner's intent is unclear, identify the
+rule and ask only about the affected action. Cross-node contracts follow §11.
+
 In any node, before doing anything, the agent:
 
 1. reads the root `AGENTS.md` — the **protocol** (this file);
@@ -288,12 +300,14 @@ In any node, before doing anything, the agent:
    external ancestor, if there is one — **context and frame** — and the current node's
    own `ACCEPTANCE.md`, if its `BOOT.md` points to one; an ancestor's `ACCEPTANCE.md` is
    that ancestor's evidence, not frame, and is not read;
-3. reads the `API.md` of the neighbours listed in the `## Dependencies` of the current
+3. reads the `API.md` of the neighbours and ancestors listed in the `## Dependencies` of the current
    node — **contracts**;
 4. determines the mode (design / coding) and acts within its bounds;
 5. runs the checks of §13 before starting the work and after finishing it. A red check
    **before** the start means the tree has already diverged from the code: first find
-   out why, then work.
+   out why, then work. During initial brownfield reconstruction (§9), record the outstanding
+   diagnostics by path and rule. Each slice clears its own findings and introduces none
+   elsewhere. The finished tree passes the full project command.
 
 ## 11. Escalation: changes beyond the subtree
 
@@ -301,7 +315,8 @@ The agent may not change nodes outside its subtree. If the task requires changin
 neighbour's or an ancestor's `API.md` (for instance, a new interface is needed from
 outside), the agent **does not do it itself**. It stops and raises the change one
 level up, to where both affected nodes belong to one subtree. The decision to change
-the contract is made at the level that owns both.
+the contract is made at the level that owns both. For an incompatible change the
+orchestrator tests affected consumers in the merged candidate (§13).
 
 Having stopped, the agent leaves a **proposal**, not an edit: which contract, which
 change, why, which nodes are affected and what it will do once the decision is made.
@@ -359,7 +374,7 @@ implementation for .NET is in the kit, `reference/dotnet/`):
 |---|---|
 | the assembly's public surface matches the snapshot `PublicSurface.approved.txt` | §2 |
 | every exported type is named in the `API.md` of its node | §7 |
-| every declaration under ✅ exists — the type and the member | §7 |
+| every supported ✅ declaration matches its owner, member kind, parameters and result type | §7 |
 | the node's declared dependencies match the real ones — by the types in signatures **and in method bodies** | §6 |
 
 Mistakes already paid for; whoever writes the checks should know them in advance:
@@ -380,6 +395,11 @@ Mistakes already paid for; whoever writes the checks should know them in advance
 - **dependencies are read from method bodies too**: a static call names the type in
   no signature, and a node reaching a neighbour only that way passes the check
   undeclared.
+
+For a changed cross-node promise, exercise the consumer on the merged candidate. Record the
+command, test identifier, candidate revision or tree ID, and outcome so the reviewer can repeat it.
+Where the dependency map is incomplete, run the full applicable fast suite. Language-specific
+checks must state which signature forms they support and diagnose unsupported forms.
 
 On the surface snapshot: it is a **tripwire, not a contract**. A generated list carries
 no intent; the contract is the document. The snapshot makes it impossible to change
@@ -427,6 +447,9 @@ full text of ⚠ corrections, superseded measurements, sweeps and run tables —
 oldest first, to the node's append-only `HISTORY.md`, leaving a dated one-line pointer
 in place, and the linter reports the limit as an error unless the node declares the
 deviation (§12).**
+
+A document move preserves active criteria and their evidence in a current acceptance section
+or its linked `ACCEPTANCE.md`. A deliberate change to a criterion follows §6 separately.
 
 The details of that sentence:
 

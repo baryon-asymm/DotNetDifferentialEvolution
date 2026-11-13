@@ -195,12 +195,52 @@ public class DeVariantTests
     public void AThirdPartyVariantIsConfiguredWithTheProblemDimensions()
     {
         var variant = new RecordingVariant();
-
-        using var de = BuildPreset(builder => builder.WithVariant(variant));
-
+        var evaluator = Evaluator;
+        var sizeStage = DifferentialEvolutionBuilder.ForFunction(evaluator)
+            .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds());
+        var builder = sizeStage.WithPopulationSize(PopulationSize)
+            .WithUniformPopulationSampling()
+            .WithVariant(variant)
+            .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(1))
+            .UseProcessors(1);
         Assert.Equal(PopulationSize, variant.SeenConfiguration!.Value.PopulationSize);
         Assert.Equal(2, variant.SeenConfiguration.Value.GenomeSize);
         Assert.Equal(2, variant.SeenConfiguration.Value.LowerBound.Length);
+
+        _ = sizeStage.WithPopulationSize(PopulationSize + 1);
+        using var de = builder.Build();
+        Assert.Equal(PopulationSize + 1, variant.SeenConfiguration.Value.PopulationSize);
+        Assert.Equal(PopulationSize + 1, ContextOf(de).PopulationSize);
+    }
+
+    /// <summary>Explicit mutation, provider and selection set after a variant survive repeated builds.</summary>
+    [Fact]
+    public void RepeatedBuildsKeepTheStrategiesSetAfterTheVariant()
+    {
+        var evaluator = Evaluator;
+        var stage = DifferentialEvolutionBuilder.ForFunction(evaluator)
+            .WithBounds(evaluator.GetLowerBounds(), evaluator.GetUpperBounds())
+            .WithPopulationSize(PopulationSize)
+            .WithUniformPopulationSampling();
+        var builder = stage.WithJade()
+            .WithTerminationCondition(new LimitGenerationNumberTerminationStrategy(1))
+            .UseProcessors(1);
+        var mutation = new RandMutationStrategy();
+        var provider = new ConstantControlParameterProvider(0.7, 0.3);
+        var selection = new SelectionStrategy(genomeSize: 2);
+        _ = stage.WithMutationStrategy(mutation, provider).WithSelectionStrategy(selection);
+
+        using var first = builder.Build();
+        using var second = builder.Build();
+        foreach (var de in new[] { first, second })
+        {
+            Assert.Same(mutation, MutationStrategyOf(de));
+            Assert.Same(provider, ContextOf(de).ControlParameterProvider);
+            Assert.Same(selection, SelectionStrategyOf(de));
+            _ = Assert.IsType<JadeStrategy>(ContextOf(de).GenerationStrategy);
+        }
+
+        Assert.NotSame(ContextOf(first).GenerationStrategy, ContextOf(second).GenerationStrategy);
     }
 
     /// <summary>

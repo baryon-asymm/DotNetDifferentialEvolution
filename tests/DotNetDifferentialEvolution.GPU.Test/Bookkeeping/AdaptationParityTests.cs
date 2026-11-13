@@ -242,7 +242,8 @@ public class AdaptationParityTests
                     var weight = AdaptationRules.WeightOf(_rule, Outcome(records[i]), records[i].ParentFfValue, records[i].TrialFfValue);
                     if (!double.IsNaN(weight))
                     {
-                        chunk = chunk.Add(weight / scale, records[i].UsedCr, records[i].UsedF);
+                        var scaled = AdaptationRules.ScaledWeight(weight, scale, records[i].ParentFfValue, records[i].TrialFfValue);
+                        chunk = chunk.Add(scaled, records[i].UsedCr, records[i].UsedF);
                     }
                 }
 

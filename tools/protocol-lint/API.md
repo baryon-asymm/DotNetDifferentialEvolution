@@ -7,7 +7,7 @@ and may change.
 
 ```console
 $ python protocol_lint.py <tree-root> [--ext .sh,.ps1] [--exclude vendor]
-                          [--strict] [--no-heuristics] [--list-nodes]
+                          [--source-root PATH] [--strict] [--no-heuristics] [--list-nodes]
 ERROR 15    src/Orders/BOOT.md: 512 non-blank lines, over the 400-line limit for a leaf node; move what is no longer current truth to HISTORY.md, oldest superseded material first, or declare the deviation (AGENTS.md §12)
 ERROR 15    src/Orders/BOOT.md:37: points to HISTORY.md#ghost-anchor, which no anchor in src/Orders/HISTORY.md defines
 WARN  7     src/Orders/API.md:12: declares Ghost under a tick, and no source file of this node mentions it
@@ -19,6 +19,7 @@ protocol_lint: 2 errors, 1 warnings
 | `<tree-root>` | the tree root: the directory holding `AGENTS.md` |
 | `--ext` | additional source extensions, comma-separated |
 | `--exclude` | additional directory names to skip |
+| `--source-root PATH` | also scan this first-party directory inside the tree, e.g. `packages/orders/src`; repeat for additional roots. Normal child exclusions still apply |
 | `--strict` | warnings also produce a non-zero exit code |
 | `--no-heuristics` | skip the textual check of names under ✅ |
 | `--list-nodes` | print the nodes found and exit |
@@ -48,7 +49,7 @@ included:
 - it must stand beside a `BOOT.md` whose `## Acceptance criteria` is the one line
   `→ [ACCEPTANCE.md](ACCEPTANCE.md)`, and that pointer must resolve to a file: a
   pointer without a file and a file without a pointer are each an `ERROR`;
-- a ticked criterion in it carries a date, a `WARN` like the one in a `BOOT.md`; the
+- a ticked criterion in it carries a valid YYYY-MM-DD calendar date, a `WARN` like the one in a `BOOT.md`; the
   whole file is read, with or without a `## Acceptance criteria` heading;
 - it is held to 400 non-blank lines: an `ERROR` over it, or, when the node's own
   `BOOT.md` carries a line starting `⚠ Declared deviation, §15:`, a `WARN` quoting that
@@ -72,10 +73,39 @@ anchor are all an `ERROR` naming the anchor. The one string this never resolves 
 placeholder written as an example, an anchor starting with `<`: it is no citation to
 begin with.
 
+## Document moves ✅
+
+Run `python history_guard.py <repo> <merge-base> <branch> <node> [<node> ...]`
+with every node involved in the move. Exit 1 reports missing text, lost active
+criteria and other move violations. A current checkbox and its evidence must survive
+in a named node's acceptance section or its linked `ACCEPTANCE.md`, including repeated
+occurrences. An archived quotation can preserve a historical note. A deliberate
+revision of a criterion is a separate change under §6.
+
+`python history_guard.py --criteria-only <repo> <target> <merged-tree>` checks
+the changed nodes during branch acceptance. It compares the integration commit
+with the tree about to be published. The branch may also edit code. A criterion
+can move between changed nodes or be completed with dated evidence. To close an
+item, keep its wording and attach a reference such as `(2026-11-13, BoundsTest)`.
+The citation can also follow a date-prefixed item, for example
+`2026-11-13: Lower bound holds. (BoundsTest).`. Keep the citation complete.
+An exception added after its closing delimiter changes the claim and follows §6.
+Within a citation, semicolons separate sources or measurements. Each part needs a
+reference identifier, a quoted or linked source, or a recorded numeric observation.
+For a §6 revision, state the successor and put a dated ⚠ note beside it with the
+old wording and the reason for the change. One replacement accounts for one
+old occurrence. An empty successor, a template field such as `<A checkable claim>`
+or a marker such as `Placeholder.` or `N/A.` cannot retire a criterion. The check recognizes
+these explicit forms. The reviewer judges whether the new claim addresses the
+requirement and whether the cited evidence supports it.
+Both forms reject an external acceptance file whose pointer shares its section
+with other content. They retain criteria from an existing malformed file while
+checking its repair. Both commands return zero on success and one on a violation.
+
 ## Python module ✅
 
 ```python
-def lint(root, extra_extensions=(), extra_excluded=(), heuristics=True): ...
+def lint(root, extra_extensions=(), extra_excluded=(), heuristics=True, source_roots=()): ...
 def main(argv=None): ...
 
 class Finding:                 # level: ERROR | WARN, article, where, message

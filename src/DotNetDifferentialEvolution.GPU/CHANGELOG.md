@@ -4,6 +4,16 @@ Notable changes to the GPU package, released from `gpu-v*` tags. Versions follow
 [semantic versioning](https://semver.org/). The release workflow takes the notes of a version
 from its `## <version>` section below.
 
+## 1.2.1
+
+- Uniform sampling and mutation repair keep genes inside finite bounds even when the box width
+  or the sum used for midpoint repair exceeds `double.MaxValue`.
+- SHADE and L-SHADE retain the relative weights of subnormal fitness improvements and of
+  improvements between finite scores whose difference overflows when updating F/CR memory.
+  Small F and CR retain representable means when weighted products underflow. On OpenCL,
+  a skipped trial following a success can no longer replace the chunk maximum with NaN.
+- On OpenCL, a stagnation limit now stops a run whose best score remains NaN or infinity.
+
 ## 1.2.0
 
 Where the first population comes from; without the new calls every run is 1.1.0's, bit for bit.

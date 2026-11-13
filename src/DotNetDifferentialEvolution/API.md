@@ -78,6 +78,20 @@ by `workerIndex`. `Build` samples and evaluates the initial population (single-t
 the legacy `MutationStrategy`, which carries its own F and CR; the other four fixed-F
 schemes get a `ConstantControlParameterProvider`.
 
+Each `Build` allocates separate state for the built-in adaptive variants and the built-in
+uniform sampler. You can build a second optimizer while the first is running. Objects
+passed explicitly, including an objective, sampler, stop rule or observer, are used by
+reference. Custom variants supply fresh state through [Variants](Variants/API.md).
+
+`WithDefaultSelectionStrategy()` creates a greedy selector at each `Build()` using
+the current genome size. A retained bounds stage can change that size in either
+direction for the next build. `WithSelectionStrategy(instance)` reuses that instance,
+so the caller supplies a rule compatible with the bounds for each build that uses it.
+
+⚠ 2026-11-13. The default selector previously captured the genome size when selected.
+Changing the bounds through a retained stage could let a build succeed and then fault
+its first generation while copying a survivor (`BuilderBoundsTests`).
+
 ## Optimizer ✅
 
 ```csharp
@@ -91,11 +105,19 @@ public class DifferentialEvolution : IDisposable
 ```
 
 `RunAsync` starts the workers and returns the task of the final `Population` (read it
-through its cursor, [Models](Models/API.md)). After the run has finished, calling it
-again returns the same completed task; calling it while the run is in progress throws.
-A token already canceled completes the task as canceled before any generation;
-cancellation mid-run is observed at the generation barrier and completes the task as
-canceled. `Dispose` stops every worker and waits until each has left its loop.
+through its cursor, [Models](Models/API.md)). During the run a second call throws
+synchronously and preserves the first task and its cancellation token. After completion
+the same task is returned until disposal. An already canceled token on the first call
+cancels the task before any generation. Mid-run cancellation is observed at the barrier.
+
+`Dispose` requests shutdown at the generation barrier. If the run is active there, its
+task completes as canceled. A captured worker or callback exception faults the task.
+External callers wait for every worker thread to exit. A call from the optimizer's own
+worker requests shutdown and returns so that its callback can finish. Disposal is idempotent.
+
+⚠ 2026-11-12: the former contract said disposal always waited for every worker.
+Mid-generation disposal could hang and a repeated call with a canceled token could
+complete the running task from the wrong thread. Both cases were reproduced in child processes.
 
 The public constructor is for hand-wired engines (tests, custom executors); the builder
 is the supported path.
@@ -112,7 +134,12 @@ is the supported path.
 | Strategy reads F and CR, no provider configured | `InvalidOperationException` from `Build` |
 | A variant's `Validate` rejects the configuration | `InvalidOperationException` from `Build` |
 | `RunAsync` while the run is in progress | `InvalidOperationException` |
-| The objective, a hook, the observer or the stop rule throws during a run | the task faults with an `AggregateException` of the worker exceptions ([handlers](Controllers/WorkerControllerEventHandlers/API.md)) |
+| `RunAsync` after disposal | `ObjectDisposedException` |
+| The worker captures an exception from the objective, a hook, the observer or the stop rule | The task faults with an `AggregateException` of the captured exceptions ([handlers](Controllers/WorkerControllerEventHandlers/API.md)) |
+| A callback throws `OutOfMemoryException` on a worker thread | The exception escapes the worker and can terminate the process |
+
+⚠ 2026-11-13: the earlier table described every callback exception as a task fault.
+A child-process objective throwing `OutOfMemoryException` confirmed the exception to this rule.
 
 ## Side effects
 

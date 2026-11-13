@@ -19,7 +19,7 @@ mode (design or coding), the linter before and after the work.
 
 ## Commands
 
-- Protocol lint: `python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates`
+- Protocol lint: `python -X utf8 tools/protocol-lint/protocol_lint.py . --exclude templates --strict`
   (`--exclude templates` keeps the kit's document templates from being read as nodes)
 - Build: `dotnet build DotNetDifferentialEvolution.sln -c Release`
 - Tests, fast set: `dotnet test DotNetDifferentialEvolution.sln -c Release --no-build --filter "Category=Unit"`

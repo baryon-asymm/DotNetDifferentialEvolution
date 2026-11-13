@@ -31,17 +31,31 @@ generation itself stays in [Kernels](../Kernels/API.md).
 - **Deterministic sums.** Every sum runs in index order within chunks of 1 024 and over
   the chunks in chunk order; no floating-point atomic anywhere. For N ≤ 1 024 that is
   the CPU package's order bit for bit (S7).
-- **SHADE's weights are scaled before they can overflow a sum** (S19). A pass finds each
-  chunk's largest weight; when the generation's largest exceeds `double.MaxValue / (2N)`
-  every weight is divided by it, else the weights are used as they are (division by 1.0
-  changes no bit). Two finite improvements near `double.MaxValue` otherwise sum to `+∞`,
-  and `∞/∞` writes `NaN` into the memory. The CPU package's `ShadeStrategy` applies the
-  same rule. The parts: `AdaptationRules.ScaleOf(double largestWeight, int count)` returns
-  the divisor (`largestWeight > double.MaxValue / (2.0 * count) ? largestWeight : 1.0`); the
-  kernel `LargestWeights` (one thread per chunk, the chunk's largest SHADE weight from
-  `WeightOf`, 0 when none) runs under SHADE and L-SHADE only, before `SumSuccesses`;
-  `SumSuccesses` takes the chunks' largest weights, takes their maximum, and adds
-  `weight / scale` (JADE: scale 1). The sums keep their index order.
+- **SHADE and L-SHADE use one weight scale across all chunks** (S19, F7).
+  `LargestWeights` takes the maximum difference from improved trials with finite endpoints
+  in each wide chunk. `SumSuccesses` takes the maximum across chunks before forming any products.
+  `WeightOf` marks an excluded record with NaN. Reject that marker before comparing maxima.
+  ⚠ 2026-11-13: the previous maximum relied on `weight > maximum` alone. On gfx1036 the
+  generated OpenCL selected the candidate when `weight <= maximum` was false, including NaN.
+  This corrupted the raw sums even in generations whose final memory the extended pass recovered.
+  For a finite maximum above `double.MaxValue / (2N)`, divide weights by that maximum.
+  An overflowing difference selects `(parent/2 − trial/2) / (double.MaxValue/2)` for every weight.
+  Below 2⁻⁹⁷⁰, subtract the endpoints in units of 2⁻¹⁰²², decoding subnormal significands
+  from their bits. This also handles a device reporting a zero maximum for subnormal differences.
+  Otherwise use the original weights. JADE uses unit weights for improved trials.
+  ⚠ 2026-11-13 (F7): the previous rule skipped overflowing differences and applied no scale at
+  the low end. The extreme-weight memory checks in `ExtremeImprovementTests` exposed both cases.
+- **Check the ordinary moment sums before writing each ratio.** For numerator A, denominator B
+  and N active trials, A ≤ max(N, B)·2⁻⁹⁶⁹ or B ≤ Σw·2⁻⁹⁶⁹ selects extended-exponent
+  recomputation. The second bound covers a subnormal parameter whose product with a large
+  weight contributes materially to the Lehmer denominator.
+  The existing final adaptation thread rereads the active records only on this route (O(N)).
+  It accumulates all five nonnegative moments in each chunk and aligns each exponent again
+  when adding that chunk to the total. Only the affected ratio uses these sums. There is no
+  extra kernel launch or host transfer. This path retains binary64 significand precision.
+  A subnormal quotient is packed from its bits, rounded to nearest even.
+  The maximum CR uses ordered binary64 bits from +0, including across chunks. An all-zero
+  CR set skips CR recomputation. L-SHADE stores the terminal sentinel for that set.
 - **The archive is the CPU package's loop, parallel** (S8): an improved parent's fill
   position is the archive size before the generation plus the number of improved parents
   before it; below the capacity it is its slot, at or above it the parent draws a
@@ -50,6 +64,12 @@ generation itself stays in [Kernels](../Kernels/API.md).
 - **Pure functions under every kernel.** Each rule (the order, the adaptation updates,
   the slot draw, L-SHADE's schedule, the stop rule) is a static function the kernels
   call and the tests call on the host, against the CPU package's classes.
+- **Stagnation compares the original scores** (S12). NaN in either score or equal
+  infinities count one generation toward the streak and preserve the last reference score.
+  Distinct ordered scores involving infinity have infinite distance. For finite scores
+  use binary64 absolute subtraction, including overflow, and reset only above the threshold.
+  ⚠ 2026-11-13: the former unguarded comparison kept resetting the streak for a constant
+  infinity or NaN on physical OpenCL. The public child-process test reproduced all three cases.
 - **After the stop rule fires, nothing writes.** Every kernel of a later generation,
   the generation kernel included, returns at once; the host restores its own counters to
   the generation that stopped (check S12).

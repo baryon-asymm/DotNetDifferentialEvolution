@@ -8,10 +8,12 @@ handler. The node owns the worker; its child owns what happens at the barrier.
 
 ## Invariants
 
-- **A worker is a failure boundary.** Any exception from the objective or a strategy is
-  captured and handed to the orchestrator, never left to crash the thread. Held by the
-  `catch (Exception)` (CA1031 suppressed with that reason) and
-  `WorkerControllerTests.PropagatesFitnessFunctionExceptionAndStops`.
+- **A worker reports captured exceptions to the orchestrator.** The filter
+  `IsCapturedForTheOrchestrator` lets `OutOfMemoryException` escape the worker thread.
+  See `WorkerControllerTests.PropagatesFitnessFunctionExceptionAndStops`.
+  ⚠ 2026-11-13: the previous invariant described an unconditional catch and a CA1031
+  suppression. Source inspection and an out-of-memory exception thrown in a child-process
+  objective confirmed the filter and process termination.
 - **The release handshake is two volatile flags** (`_passLoopPermitted`,
   `_isPassLoopCompleted`); the orchestrator's read of a worker's non-volatile exception
   field relies on the volatile read before it as an acquire fence (`1993d46`). Held by
@@ -20,9 +22,14 @@ handler. The node owns the worker; its child owns what happens at the barrier.
   oversubscription test.
 - **Stop and start can be repeated and leave a consistent state.** Held by
   `WorkerControllerTests.RandomStopAndStartKeepsConsistentStateThenTerminates` (`Slow`).
+- After starting the native thread, `Start` yields until the worker publishes readiness.
+  A pending `Thread.Interrupt` stays pending through this handshake.
 - **Repeated build-run-dispose leaks neither controllers nor threads.** Held by
   `WorkerLifecycleTests` and `ResourceUsageTests.RepeatedRunsDoNotGrowManagedHeapUnbounded`
   (`Slow`).
+- An optimizer disposing during a generation leaves the worker's pass and stop flags
+  to the orchestrator. `DisposeWhenStopped` releases idle controllers immediately
+  and active controllers on loop exit. An external disposer joins the threads.
 
 ## Dependencies
 

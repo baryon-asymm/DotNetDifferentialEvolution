@@ -6,6 +6,7 @@ Nothing outward. What this node proves about the package used through its builde
 
 | Claim | Confirmed by | State |
 |---|---|---|
+| After the bounds stage changes dimension, default selection copies every survivor using that build's genome size | `BuilderBoundsTests` | ✅ |
 | jDE, JADE and SHADE reach Rosenbrock 2-D's optimum (1e-6, genes 1e-3); L-SHADE does on a 200 000-evaluation budget | `AdaptiveVariantsConvergenceTests` | ✅ (one run, seed 1) |
 | Classic DE reaches 1e-6 on five unimodal functions; SHADE reaches 1e-4 on seven multimodal ones | `BenchmarkConvergenceTests` | ✅ (one run, seed 1) |
 | L-SHADE reaches `1e-2·max(1, |f*|)` on Schwefel 2-D, Styblinski-Tang 2-D, Rastrigin 5-D, Ackley 5-D in 300 000 evaluations | `BenchmarkConvergenceTests` (`Slow`) | ✅ local only |
@@ -18,6 +19,11 @@ Nothing outward. What this node proves about the package used through its builde
 ## Tests ✅
 
 ```csharp
+[Trait("Category", "Integration")]
+public class BuilderBoundsTests
+{
+    public async Task DefaultSelectionUsesEachBuildsGenomeSize(int firstSize, int secondSize);
+}
 [Trait("Category", "Integration")]
 public class AdaptiveVariantsConvergenceTests
 {

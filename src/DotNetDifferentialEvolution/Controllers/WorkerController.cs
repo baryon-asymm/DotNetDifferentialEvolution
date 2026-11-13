@@ -13,6 +13,7 @@ public class WorkerController : IDisposable
     private readonly object _lock = new();
 
     private bool _isDisposed;
+    private bool _disposeWhenStopped;
     private readonly string _workerThreadName;
 
     private volatile bool _isPassLoopCompleted;
@@ -63,6 +64,9 @@ public class WorkerController : IDisposable
     /// Gets the index of the best handled individual.
     /// </summary>
     public int BestHandledIndividualIndex => _bestHandledIndividualIndex;
+
+    /// <summary>Whether the calling thread executes this worker.</summary>
+    internal bool IsCurrentThread => _workerThread == Thread.CurrentThread;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkerController"/> class.
@@ -191,6 +195,14 @@ public class WorkerController : IDisposable
         finally
         {
             _isRunning = false;
+            // Stop waits for the flag above while holding the controller lock.
+            lock (_lock)
+            {
+                if (_disposeWhenStopped)
+                {
+                    Dispose();
+                }
+            }
         }
     }
 
@@ -216,18 +228,20 @@ public class WorkerController : IDisposable
     {
         EnsureRunReadyState();
 
-        _workerThread = new Thread(RunWorkerLoop)
+        var thread = new Thread(RunWorkerLoop)
         {
             Name = _workerThreadName,
             Priority = ThreadPriority.Highest
         };
 
-        _workerThread.Start();
+        thread.Start();
+        _workerThread = thread;
 
-        var spinWait = new SpinWait();
+        // The native thread has started. Keep this handshake free of interruptible
+        // sleeps so the caller cannot report startup failure for a live worker.
         while (_isPreparingToRun)
         {
-            spinWait.SpinOnce();
+            _ = Thread.Yield();
         }
     }
 
@@ -248,12 +262,31 @@ public class WorkerController : IDisposable
     /// </summary>
     private void StopAndWaitUntilWorkerStopped()
     {
-        _workerShouldStop = true;
+        RequestStop();
 
         var spinWait = new SpinWait();
         while (_isRunning)
         {
             spinWait.SpinOnce();
+        }
+    }
+
+    /// <summary>Signals a worker to exit without waiting on a callback it may be running.</summary>
+    internal void RequestStop() => _workerShouldStop = true;
+
+    /// <summary>Waits for the thread, including its cleanup, to exit.</summary>
+    internal void WaitForExit() => _workerThread?.Join();
+
+    /// <summary>Releases the controller when its owner has finished stopping the whole generation.</summary>
+    internal void DisposeWhenStopped()
+    {
+        lock (_lock)
+        {
+            _disposeWhenStopped = true;
+            if (!_isRunning)
+            {
+                Dispose();
+            }
         }
     }
 

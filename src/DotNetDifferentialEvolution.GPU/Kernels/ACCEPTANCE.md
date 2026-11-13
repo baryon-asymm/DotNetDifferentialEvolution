@@ -315,3 +315,18 @@ through the package's internal access.
 - [x] **I7, on the device.** **Gpu**, CUDA: I2, I3's zero-width box and seeded equality, and
       I5's reproduction of S, for every strategy.
       2026-10-27, 32 `…OnCuda` cases; the orchestrator's run: the Gpu category 102/102.
+
+## Finite bounds
+
+- [x] 2026-11-13, `Kernels/FiniteBoundsTests` on the ILGPU CPU accelerator, CUDA and
+      OpenCL. The original sampling and repair each produced infinity on every backend.
+      Generation-zero samples now match known values on a box of width 2¹⁰²⁴, an
+      ordinary interval and a fixed coordinate. Crossed infinities take the positive
+      and negative midpoints, a NaN takes its parent and a fixed subnormal is preserved.
+
+## Finite bounds verification on 2026-11-13
+
+Git tree `7b7dc4e91f02259ad4b3b84afb6e0c23f7d4248a`, after a Release solution build:
+`dotnet test tests/DotNetDifferentialEvolution.GPU.Test -c Release --no-build --filter "Category!=Gpu|FullyQualifiedName~ExtremeImprovementTests|FullyQualifiedName~FiniteBoundsTests" --blame-hang-timeout 5m --blame-hang-dump-type none`
+passed 588/588. The filter includes all six `FiniteBoundsTests` cases:
+`SamplesOnCpu`, `RepairsOnCpu`, and the CUDA and OpenCL rows of `SamplesOnDevice` and `RepairsOnDevice`.
